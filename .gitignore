@@ -8,3 +8,6 @@ artifacts/
 *.log
 *.key
 skills-main/
+dist/
+.tmp_core/
+err.txt

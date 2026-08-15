@@ -24,7 +24,7 @@ DIST = ROOT / "dist"
 EXCLUDE_DIRS = {
     ".git", "__pycache__", ".venv", "venv", "node_modules", "dist", "build",
     ".mypy_cache", ".pytest_cache", ".ruff_cache", "artifacts", ".cargo",
-    "target", "site-packages", "skills-main",
+    "target", "site-packages", "skills-main", ".tmp_core",
 }
 EXCLUDE_FILES = {".DS_Store", "Thumbs.db"}
 EXCLUDE_SUFFIXES = {".pyc", ".pyo", ".pyd", ".so", ".exe", ".dll", ".pdb", ".log", ".sha256"}
