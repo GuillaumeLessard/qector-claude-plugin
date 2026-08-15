@@ -1,5 +1,6 @@
 {
   "name": "qector-tools",
+  "description": "QECTOR quantum-error-correction toolkit: strict-math skills, focused agents, reproducible commands, and an app-free qector-decoder-v3 MCP server for local QEC engineering.",
   "owner": {
     "name": "Guillaume Lessard / iD01t Productions"
   },
