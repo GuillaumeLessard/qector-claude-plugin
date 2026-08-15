@@ -66,6 +66,13 @@ claude plugin install qector@qector-tools
 For the public GitHub source, use
 `claude plugin marketplace add GuillaumeLessard/qector-claude-plugin`.
 
+### Prebuilt archives
+
+A single-skill ZIP for the claude.ai custom-skill uploader and a full plugin
+ZIP for `claude --plugin-dir` are generated from `bin/pro_pack.py` and shipped
+under `dist/` with `.sha256` sidecars. See "Packaging and Distribution" in the
+repository `README.md` for details.
+
 ## Strict Mathematics
 
 - Arithmetic is over F2.

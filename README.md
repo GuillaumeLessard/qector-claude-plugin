@@ -147,12 +147,54 @@ licenses and terms.
 ## Repository Layout
 
 - `.claude-plugin/`: plugin and marketplace manifests.
+- `bin/`: runtime, validation, and artifact helpers.
 - `skills/`: QECTOR domain skills.
 - `agents/`: custom QEC agents.
 - `commands/`: local slash-command workflows.
-- `bin/`: runtime, validation, and artifact helpers.
 - `mcp/`: standalone server and client templates.
 - `docs/`: public user and math-validation documentation.
 - `tests/`: executable device-local obligations.
+
+## Packaging and Distribution
+
+This repository is a multi-skill Claude Code plugin. Do **not** upload the
+whole repository as a single `claude.ai` custom skill — the skill uploader
+accepts exactly one top-level folder and rejects ZIP entries that contain
+Windows backslashes, which is the cause of the
+"Zip file contains path with invalid characters" error.
+
+Use `bin/pro_pack.py` to produce correctly-formed archives. It writes every
+ZIP entry name with forward slashes (`/`) and filters out Windows-reserved
+characters (`< > : " | ? *`) and control bytes.
+
+```text
+python bin/pro_pack.py --all
+```
+
+This produces two verified archives under `dist/`:
+
+- `qector-qector-core-skill.zip` — a single-skill ZIP for the claude.ai
+  custom-skill uploader. It contains one top-level `qector-core/` folder with
+  `SKILL.md` at its root. Upload this file directly; do not rename it to a
+  multi-skill bundle.
+- `qector-claude-plugin-v1.0.0.zip` — the full plugin ZIP for the Claude Code
+  plugin flow (`claude --plugin-dir`). It preserves the `.claude-plugin/`,
+  `skills/`, `hooks/`, and MCP server layout.
+
+Each archive is accompanied by a `.sha256` sidecar. Regenerate them whenever a
+skill or its references change:
+
+```text
+python bin/pro_pack.py --skill qector-core      # single-skill only
+python bin/pro_pack.py --plugin                 # full plugin only
+```
+
+For the public repository, install from GitHub instead of shipping an archive:
+
+```text
+claude plugin marketplace add GuillaumeLessard/qector-claude-plugin
+claude plugin install qector@qector-tools
+```
+
 
 Author: Guillaume Lessard / iD01t Productions, ORCID `0009-0000-3465-3753`.
