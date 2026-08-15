@@ -7,16 +7,64 @@ The primary product surface is the app-free library MCP server shipped in
 `mcp/mcp_server_library.py`. It runs locally against the published
 `qector-decoder-v3==1.0.0` wheel and does not require QECTOR Workbench.
 
+## Quick Start
+
+```bash
+# 1. Clone and install
+git clone https://github.com/GuillaumeLessard/qector-claude-plugin.git
+cd qector-claude-plugin
+python -m pip install -r requirements.txt
+python bin/qector_runtime_check.py
+
+# 2. Validate and launch with Claude Code
+claude plugin validate "<PLUGIN_ROOT>" --strict
+claude --plugin-dir "<PLUGIN_ROOT>"
+
+# 3. Or install from GitHub marketplace
+claude plugin marketplace add GuillaumeLessard/qector-claude-plugin
+claude plugin install qector@qector-tools
+```
+
 ## What Ships
 
-- Strict-math QEC skills grounded in the QECTOR reference-manual contract.
-- Focused researcher, developer, validator, sysadmin, and hardware agents.
-- Reproducible commands for runtime inspection, math obligations, and local LER sweeps.
-- A local stdio MCP server with explicit schemas and fail-closed error handling.
-- Public F2 ground-truth helpers and device-local validation tests.
-- Claude Code marketplace metadata in `.claude-plugin/marketplace.json`.
+- **7 strict-math QEC skills** grounded in the QECTOR reference-manual contract
+- **5 focused agents**: researcher, developer, validator, sysadmin, hardware engineer
+- **3 reproducible commands**: runtime inspection, math obligations, local LER sweeps
+- **1 local stdio MCP server** with explicit schemas and fail-closed error handling
+- **Public F2 ground-truth helpers** and device-local validation tests
+- **Claude Code marketplace metadata** in `.claude-plugin/marketplace.json`
 
-## Runtime
+## Skills & Agents Reference
+
+### Skills (`skills/`)
+| Skill | Purpose |
+|-------|---------|
+| `qector-core` | Core QEC primitives, decoding workflows, F2 algebra |
+| `qector-researcher` | Literature review, experiment design, threshold analysis |
+| `qector-developer` | SDK integration, decoder benchmarking, CI/CD for QEC |
+| `qector-validator` | Mathematical obligation checks, device-local proof runs |
+| `qector-sysadmin` | Runtime health, resource bounds, deployment hygiene |
+| `qector-hardware-engineer` | Device characterization, noise modeling, hardware constraints |
+| `qector-educator` | Tutorial generation, concept explanation, learning paths |
+
+### Agents (`agents/`)
+| Agent | Specialization |
+|-------|----------------|
+| `qec-researcher.md` | Academic research, paper reproduction, threshold sweeps |
+| `qec-developer.md` | Code integration, API design, performance tuning |
+| `qec-validator.md` | Formal verification, mathematical proof checking |
+| `qec-sysadmin.md` | Operations, monitoring, incident response |
+| `qec-hardware-engineer.md` | Physical qubit characterization, cryogenic systems |
+
+### Commands (`commands/`)
+| Command | Description |
+|---------|-------------|
+| `qec-facts.md` | Quick reference: codes, decoders, thresholds |
+| `qec-threshold-sweep.md` | Run local LER sweeps with Wilson intervals |
+| `qec-validate-mcp.md` | Validate MCP server tools and schemas |
+
+### Hooks (`hooks/`)
+- `hooks.json` — Event-driven automation for skill/agent lifecycle
 
 Supported runtime: Python 3.9 or newer, `qector-decoder-v3==1.0.0`,
 `mcp==1.26.0`. Install the pinned dependencies with the same interpreter that
