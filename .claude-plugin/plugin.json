@@ -1,0 +1,10 @@
+{
+  "name": "qector",
+  "description": "Guillaume Lessard's local QECTOR quantum-error-correction plugin for Claude: strict-math skills, focused agents, reproducible commands, and an app-free qector-decoder-v3==1.0.0 MCP server with an optional Workbench extension.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Guillaume Lessard / iD01t Productions"
+  },
+  "repository": "https://github.com/GuillaumeLessard/qector-claude-plugin",
+  "license": "NOASSERTION"
+}
