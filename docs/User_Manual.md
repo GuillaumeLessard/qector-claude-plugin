@@ -102,7 +102,10 @@ a screening estimate, not a converged threshold.
 
 ## Public Contents
 
-- `skills/`: domain skills for math, core facts, research, development, education, operations, and hardware.
+- `skills/`: 24 skills - 7 QECTOR domain skills (math, core facts, research,
+  development, education, operations, hardware) plus 17 official Anthropic
+  skills (documents, spreadsheets, presentations, PDF, design, web, and
+  development tooling; see `THIRD_PARTY_NOTICES.md`).
 - `agents/`: focused QEC subagents.
 - `commands/`: reproducible local workflows.
 - `prompts/` and `mega_prompts/`: reusable Claude instructions.

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-16 - All-skills expansion
+
+- Expanded `skills/` to the full set: 7 QECTOR strict-math skills plus all 17
+  official Anthropic skills (docx, xlsx, pptx, pdf, doc-coauthoring,
+  canvas-design, frontend-design, web-artifacts-builder, webapp-testing,
+  algorithmic-art, theme-factory, slack-gif-creator, internal-comms,
+  brand-guidelines, claude-api, skill-creator, mcp-builder).
+- Added `THIRD_PARTY_NOTICES.md` for the official skills' licenses.
+- The upload ZIP now ships all 24 skills.
+
 ## 2026-08-16 - Repo split and claude.ai upload fix
 
 - Split the standalone CLI tooling out of the hosted plugin: `bin/`, `tests/`,

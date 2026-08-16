@@ -28,7 +28,9 @@ claude plugin install qector@qector-tools
 
 ## What Ships
 
-- **7 strict-math QEC skills** grounded in the QECTOR reference-manual contract
+- **24 skills**: 7 strict-math QEC skills grounded in the QECTOR
+  reference-manual contract plus 17 official Anthropic skills (document
+  processing, design, development, and web tooling)
 - **5 focused agents**: researcher, developer, validator, sysadmin, hardware engineer
 - **3 reproducible commands**: runtime inspection, math obligations, local LER sweeps
 - **1 local stdio MCP server** with explicit schemas and fail-closed error handling
@@ -41,7 +43,7 @@ tests ship in the companion repository
 
 ## Skills & Agents Reference
 
-### Skills (`skills/`)
+### Skills (`skills/`) — QECTOR
 | Skill | Purpose |
 |-------|---------|
 | `qector-core` | Core QEC primitives, decoding workflows, F2 algebra |
@@ -51,6 +53,29 @@ tests ship in the companion repository
 | `qector-sysadmin` | Runtime health, resource bounds, deployment hygiene |
 | `qector-hardware-engineer` | Device characterization, noise modeling, hardware constraints |
 | `qector-educator` | Tutorial generation, concept explanation, learning paths |
+
+### Skills (`skills/`) — Official Anthropic
+| Skill | Purpose |
+|-------|---------|
+| `docx` | Word document creation and editing |
+| `xlsx` | Excel spreadsheet creation and recalculation |
+| `pptx` | PowerPoint presentation creation |
+| `pdf` | PDF generation, inspection, and conversion |
+| `doc-coauthoring` | Co-authoring with versioned change tracking |
+| `canvas-design` | Claude Canvas design patterns and fonts |
+| `frontend-design` | Frontend UI design and implementation |
+| `web-artifacts-builder` | Web artifact scaffolding and delivery |
+| `webapp-testing` | Web app end-to-end testing workflows |
+| `algorithmic-art` | Generative algorithmic art |
+| `theme-factory` | Custom Claude Code theme creation |
+| `slack-gif-creator` | Slack GIF creation workflows |
+| `internal-comms` | Internal communication writing |
+| `brand-guidelines` | Brand and style guideline adherence |
+| `claude-api` | Claude API and SDK integration |
+| `skill-creator` | Agent skills authoring, evaluation, and assets |
+| `mcp-builder` | MCP server design and implementation |
+
+Official skills retain their own licenses; see `THIRD_PARTY_NOTICES.md`.
 
 ### Agents (`agents/`)
 | Agent | Specialization |
@@ -203,7 +228,7 @@ licenses and terms.
 - `scripts/`: hook helpers executed by `hooks/hooks.json` (never a `bin/`
   directory - claude.ai-hosted plugins may not ship top-level `bin/`
   executables).
-- `skills/`: QECTOR domain skills.
+- `skills/`: 24 QECTOR and official Anthropic skills.
 - `agents/`: custom QEC agents.
 - `commands/`: local slash-command workflows.
 - `mcp/`: standalone server and client templates.
@@ -248,8 +273,8 @@ This produces two verified archives under `dist/`:
   multi-skill bundle.
 - `qector-claude-plugin-v1.0.0.zip` — the full plugin ZIP for the Claude Code
   plugin flow (`claude --plugin-dir`) and for claude.ai plugin upload. It
-  preserves the `.claude-plugin/`, `skills/`, `hooks/`, `scripts/`, and MCP
-  server layout, and contains no `bin/` directory.
+  preserves the `.claude-plugin/`, `skills/` (all 24), `hooks/`, `scripts/`,
+  and MCP server layout, and contains no `bin/` directory.
 
 Each archive is accompanied by a `.sha256` sidecar. Regenerate them whenever a
 skill or its references change:
