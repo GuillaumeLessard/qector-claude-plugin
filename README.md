@@ -227,7 +227,7 @@ licenses and terms.
 - `scripts/`: hook helpers executed by `hooks/hooks.json` (never a `bin/`
   directory - claude.ai-hosted plugins may not ship top-level `bin/`
   executables).
-- `skills/`: 24 QECTOR and official Anthropic skills.
+- `skills/`: 23 QECTOR and official Anthropic skills.
 - `agents/`: custom QEC agents.
 - `commands/`: local slash-command workflows.
 - `mcp/`: standalone server and client templates.
