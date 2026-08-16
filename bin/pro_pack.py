@@ -26,7 +26,7 @@ EXCLUDE_DIRS = {
     ".mypy_cache", ".pytest_cache", ".ruff_cache", "artifacts", ".cargo",
     "target", "site-packages", "skills-main", ".tmp_core",
 }
-EXCLUDE_FILES = {".DS_Store", "Thumbs.db"}
+EXCLUDE_FILES = {".DS_Store", "Thumbs.db", "err.txt"}
 EXCLUDE_SUFFIXES = {".pyc", ".pyo", ".pyd", ".so", ".exe", ".dll", ".pdb", ".log", ".sha256"}
 FORBIDDEN_RE = re.compile(r'[<>:"|?*\x00-\x1f]')
 
