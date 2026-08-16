@@ -10,11 +10,12 @@ The primary product surface is the app-free library MCP server shipped in
 ## Quick Start
 
 ```bash
-# 1. Clone and install
+# 1. Clone this plugin and its companion toolbox
 git clone https://github.com/GuillaumeLessard/qector-claude-plugin.git
+git clone https://github.com/GuillaumeLessard/qector-claude-skills.git
 cd qector-claude-plugin
 python -m pip install -r requirements.txt
-python bin/qector_runtime_check.py
+python ../qector-claude-skills/bin/qector_runtime_check.py
 
 # 2. Validate and launch with Claude Code
 claude plugin validate "<PLUGIN_ROOT>" --strict
@@ -31,8 +32,12 @@ claude plugin install qector@qector-tools
 - **5 focused agents**: researcher, developer, validator, sysadmin, hardware engineer
 - **3 reproducible commands**: runtime inspection, math obligations, local LER sweeps
 - **1 local stdio MCP server** with explicit schemas and fail-closed error handling
-- **Public F2 ground-truth helpers** and device-local validation tests
+- **2 hook helpers** in `scripts/` (session banner, local tool-usage log)
 - **Claude Code marketplace metadata** in `.claude-plugin/marketplace.json`
+
+Runtime validation CLIs, the F2 ground-truth helpers, and the device-local
+tests ship in the companion repository
+[`GuillaumeLessard/qector-claude-skills`](https://github.com/GuillaumeLessard/qector-claude-skills).
 
 ## Skills & Agents Reference
 
@@ -72,7 +77,7 @@ will launch the MCP server:
 
 ```text
 python -m pip install -r requirements.txt
-python bin/qector_runtime_check.py
+python ../qector-claude-skills/bin/qector_runtime_check.py
 ```
 
 The runtime is supported in system Python and in a virtual environment:
@@ -81,7 +86,7 @@ The runtime is supported in system Python and in a virtual environment:
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python bin/qector_runtime_check.py
+python ..\qector-claude-skills\bin\qector_runtime_check.py
 ```
 
 The runtime check is device-local and produces no bundled evidence.
@@ -154,8 +159,8 @@ perform `initialize` and `tools/list` before using any tool.
 - Performance, hardware, GPU, threshold, and license state are device-local.
 - Fresh artifacts belong outside the plugin and use an external `.sha256` sidecar.
 
-The public mathematical source is `qector_math_ground_truth.py`. Run the local
-validation procedures with:
+The public mathematical source is `qector_math_ground_truth.py` in the
+`qector-claude-skills` repository. Run the local validation procedures there with:
 
 ```text
 python bin/run_manual_math_validation.py
@@ -165,7 +170,7 @@ python -m unittest discover -s tests -v
 For a fresh local sweep, write artifacts outside this repository:
 
 ```text
-python bin/run_threshold_sweep.py --family rotated_surface --distances 3 5 --error-rates 0.05 --trials 100 --seed 42 --out ..\qector-artifacts\device_sweep.json
+python ../qector-claude-skills/bin/run_threshold_sweep.py --family rotated_surface --distances 3 5 --error-rates 0.05 --trials 100 --seed 42 --out ..\qector-artifacts\device_sweep.json
 ```
 
 ## Optional Features
@@ -195,28 +200,44 @@ licenses and terms.
 ## Repository Layout
 
 - `.claude-plugin/`: plugin and marketplace manifests.
-- `bin/`: runtime, validation, and artifact helpers.
+- `scripts/`: hook helpers executed by `hooks/hooks.json` (never a `bin/`
+  directory - claude.ai-hosted plugins may not ship top-level `bin/`
+  executables).
 - `skills/`: QECTOR domain skills.
 - `agents/`: custom QEC agents.
 - `commands/`: local slash-command workflows.
 - `mcp/`: standalone server and client templates.
-- `docs/`: public user and math-validation documentation.
-- `tests/`: executable device-local obligations.
+- `docs/`: public user documentation.
+- `hooks/`: event-driven hook declarations.
+
+Runtime/validation CLI scripts, the ground truth, and the tests live in the
+companion [`qector-claude-skills`](https://github.com/GuillaumeLessard/qector-claude-skills)
+repository.
 
 ## Packaging and Distribution
 
-This repository is a multi-skill Claude Code plugin. Do **not** upload the
-whole repository as a single `claude.ai` custom skill — the skill uploader
-accepts exactly one top-level folder and rejects ZIP entries that contain
-Windows backslashes, which is the cause of the
-"Zip file contains path with invalid characters" error.
+This repository is a multi-skill Claude Code plugin that is also hosted on
+claude.ai. Two hosting rules drive the repository layout:
 
-Use `bin/pro_pack.py` to produce correctly-formed archives. It writes every
-ZIP entry name with forward slashes (`/`) and filters out Windows-reserved
-characters (`< > : " | ? *`) and control bytes.
+1. The claude.ai skill uploader accepts exactly one top-level folder and
+   rejects ZIP entries that contain Windows backslashes (the "Zip file contains
+   path with invalid characters" error). Never upload this whole repository as
+   a single custom skill.
+2. claude.ai-hosted plugins may not ship a top-level `bin/` directory, because
+   such executables are added to PATH on the CLI but are not shown on the admin
+   approval surface. Executable entry points must be declared via hooks,
+   commands, or `mcpServers` instead. This plugin keeps its hook helpers in
+   `scripts/` (declared in `hooks/hooks.json`) and its MCP server in `mcp/`
+   (declared in `.mcp.json`); all standalone CLI scripts live in the separate
+   `qector-claude-skills` repository.
+
+Use `bin/pro_pack.py` in the `qector-claude-skills` repository to produce the
+archives. It writes every ZIP entry name with forward slashes (`/`) and
+filters out Windows-reserved characters (`< > : " | ? *`) and control bytes:
 
 ```text
-python bin/pro_pack.py --all
+cd qector-claude-skills
+python bin/pro_pack.py --plugin-dir ..\qector-claude-plugin --all
 ```
 
 This produces two verified archives under `dist/`:
@@ -226,15 +247,16 @@ This produces two verified archives under `dist/`:
   `SKILL.md` at its root. Upload this file directly; do not rename it to a
   multi-skill bundle.
 - `qector-claude-plugin-v1.0.0.zip` — the full plugin ZIP for the Claude Code
-  plugin flow (`claude --plugin-dir`). It preserves the `.claude-plugin/`,
-  `skills/`, `hooks/`, and MCP server layout.
+  plugin flow (`claude --plugin-dir`) and for claude.ai plugin upload. It
+  preserves the `.claude-plugin/`, `skills/`, `hooks/`, `scripts/`, and MCP
+  server layout, and contains no `bin/` directory.
 
 Each archive is accompanied by a `.sha256` sidecar. Regenerate them whenever a
 skill or its references change:
 
 ```text
-python bin/pro_pack.py --skill qector-core      # single-skill only
-python bin/pro_pack.py --plugin                 # full plugin only
+python bin/pro_pack.py --plugin-dir ..\qector-claude-plugin --skill qector-core      # single-skill only
+python bin/pro_pack.py --plugin-dir ..\qector-claude-plugin --plugin                 # full plugin only
 ```
 
 For the public repository, install from GitHub instead of shipping an archive:

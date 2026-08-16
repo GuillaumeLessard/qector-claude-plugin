@@ -10,7 +10,7 @@ Install with:
 
 ```text
 python -m pip install -r requirements.txt
-python bin/qector_runtime_check.py
+python bin/qector_runtime_check.py   # from the qector-claude-skills repository
 ```
 
 ## Slide 2: Exact Library Tool Surface
@@ -32,7 +32,7 @@ interpreter for installation, runtime checks, and the MCP server:
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python bin/qector_runtime_check.py
+python bin/qector_runtime_check.py   # from the qector-claude-skills repository
 python mcp/mcp_server_library.py
 ```
 

@@ -10,7 +10,9 @@ Strict-math contract: skill `qector-math-foundations` (Theorems 1-2, Wilson CI
 `--family rotated_surface --distances 3 5 7 --error-rates 0.01 0.05 0.1 --trials 200 --seed 42 --out ..\qector-artifacts\sweep_d357.json`
 Defaults: family rotated_surface, distances 3 5 7, error-rates 0.01 0.05 0.1, trials 100, seed 42.
 
-1. Run the reference script: `python bin/run_threshold_sweep.py $ARGUMENTS`.
+1. Run the reference script from the `qector-claude-skills` repository:
+   `python bin/run_threshold_sweep.py $ARGUMENTS` (cloned alongside this
+   plugin; the hosted plugin itself ships no CLI scripts).
 2. Optionally cross-check with the library MCP server's `threshold_sweep` tool and
    ensure the two artifacts agree (same seed, same trials) - if they differ, report
    the discrepancy rather than picking one.

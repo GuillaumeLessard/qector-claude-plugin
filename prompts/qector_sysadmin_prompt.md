@@ -31,7 +31,8 @@ compliance, and performance of a QECTOR deployment, through Claude's MCP connect
   exposes it; treat all feature and license state as device-local.
 
 ### 3. Performance tuning
-- App-free: prefer `--error-rates` small in `bin/run_threshold_sweep.py`; the
+- App-free: prefer `--error-rates` small in `bin/run_threshold_sweep.py` (from
+  the `qector-claude-skills` repository); the
   library keeps no global parity-matrix cache to clear.
 - Workbench cache controls, if exposed, must be discovered through the target's
   `tools/list` response before use.

@@ -12,7 +12,7 @@ interpreter and an isolated virtual environment.
 
 ```text
 python -m pip install -r requirements.txt
-python bin/qector_runtime_check.py
+python bin/qector_runtime_check.py   # from the qector-claude-skills repository
 ```
 
 Windows virtual environment:
@@ -21,7 +21,7 @@ Windows virtual environment:
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python bin/qector_runtime_check.py
+python bin/qector_runtime_check.py   # from the qector-claude-skills repository
 ```
 
 The production runtime pins `qector-decoder-v3==1.0.0` and `mcp==1.26.0`.
@@ -69,9 +69,9 @@ For the public GitHub source, use
 ### Prebuilt archives
 
 A single-skill ZIP for the claude.ai custom-skill uploader and a full plugin
-ZIP for `claude --plugin-dir` are generated from `bin/pro_pack.py` and shipped
-under `dist/` with `.sha256` sidecars. See "Packaging and Distribution" in the
-repository `README.md` for details.
+ZIP for `claude --plugin-dir` are generated from `bin/pro_pack.py` in the
+`qector-claude-skills` repository and shipped under `dist/` with `.sha256` sidecars.
+See "Packaging and Distribution" in the repository `README.md` for details.
 
 ## Strict Mathematics
 
@@ -83,11 +83,12 @@ repository `README.md` for details.
 - Performance, GPU, and hardware claims are device-local and require fresh artifacts.
 
 The public executable ground truth is `qector_math_ground_truth.py`; its
-device-local obligations are in `tests/test_reference_manual_math.py`.
+device-local obligations are in `tests/test_reference_manual_math.py` and the
+validation CLI lives in the `qector-claude-skills` repository:
 
 ```text
-python bin/run_manual_math_validation.py
-python -m unittest discover -s tests -v
+python bin/run_manual_math_validation.py   # from qector-claude-skills
+python -m unittest discover -s tests -v    # from qector-claude-skills
 ```
 
 Threshold work is also device-local:
@@ -105,9 +106,12 @@ a screening estimate, not a converged threshold.
 - `agents/`: focused QEC subagents.
 - `commands/`: reproducible local workflows.
 - `prompts/` and `mega_prompts/`: reusable Claude instructions.
-- `mcp/`: library server, portable configuration examples, and validation protocol.
-- `qector_math_ground_truth.py` and `tests/`: public executable math obligations.
+- `mcp/`: library server and portable configuration examples.
+- `scripts/`: hook helpers referenced by `hooks/hooks.json`.
 - `governance/`: zero-egress and provenance rules.
+
+Validation CLIs, the public ground truth, and the executable math obligations
+live in the separate `qector-claude-skills` repository.
 
 No private transcripts, machine snapshots, internal authoring files, business
 proposals, or proprietary reference documents are included.

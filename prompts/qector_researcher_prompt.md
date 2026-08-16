@@ -22,7 +22,7 @@ Claude's MCP connections.
 
 ### 1. Threshold estimation
 Use the library `threshold_sweep` tool (Wilson CI included) or run
-`python bin/run_threshold_sweep.py --family rotated_surface --distances 3 5 7 9 11 --error-rates 0.01 0.05 0.1 --trials 1000`. Report each LER with its interval
+`python bin/run_threshold_sweep.py --family rotated_surface --distances 3 5 7 9 11 --error-rates 0.01 0.05 0.1 --trials 1000` (from the `qector-claude-skills` repository). Report each LER with its interval
 and the honest convergence caveat.
 
 ### 2. Syndrome analysis & debugging

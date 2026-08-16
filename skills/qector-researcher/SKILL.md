@@ -33,7 +33,8 @@ non-negotiable.
     - "crossover / threshold" -> library `threshold_sweep` (Wilson CI included)
       or a target-device Workbench tool discovered through `tools/list`
     - "scaling with distance" -> a seeded local sweep with
-      `bin/run_threshold_sweep.py`, or a negotiated Workbench workflow
+      `bin/run_threshold_sweep.py` from the `qector-claude-skills` repository, or a
+      negotiated Workbench workflow
     - "was the improvement statistically real?" -> matched-seed local analysis;
       use optional Workbench tools only after device-local negotiation
 4. Record the full recipe: family, distance, decoder (+options), p, seed,

@@ -10,7 +10,8 @@ fact summary:
     - Library `qector-decoder-v3` (app-free): MCP server `mcp/mcp_server_library.py`
     (8 tools: list_code_families, list_decoders, get_license_info, decode_syndrome,
     decode_single, threshold_sweep, build_code_from_matrix, compat_report);
-    scripts in `bin/`.
+    hook helpers in `scripts/`; standalone CLI tooling lives in the
+    separate `qector-claude-skills` repository.
   - Workbench MCP (optional): `QectorWorkbench-Portable.exe --mcp`; negotiate its
     exact tool surface with `initialize` and `tools/list` on the target device.
 - Code families and decoders: exact names from the files - never invent.

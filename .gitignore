@@ -7,7 +7,4 @@ artifacts/
 .mypy_cache/
 *.log
 *.key
-skills-main/
-dist/
-.tmp_core/
 err.txt

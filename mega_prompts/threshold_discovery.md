@@ -39,5 +39,6 @@ coset; 95% Wilson intervals; screening-estimate caveat).
 - Two-paragraph summary, math in strict LaTeX, tagging the noise model as
   `code_capacity` and stating the screening-estimate caveat.
 - Emit the raw JSON artifact outside the plugin with `python
-  bin/run_threshold_sweep.py --out ..\qector-artifacts\sweep.json`, record its
+  bin/run_threshold_sweep.py --out ..\qector-artifacts\sweep.json` (from the
+  `qector-claude-skills` repository), record its
   external SHA-256 sidecar, and cite DOI `10.5281/zenodo.21941046`.
