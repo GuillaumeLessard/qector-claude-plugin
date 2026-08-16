@@ -28,8 +28,8 @@ claude plugin install qector@qector-tools
 
 ## What Ships
 
-- **24 skills**: 7 strict-math QEC skills grounded in the QECTOR
-  reference-manual contract plus 17 official Anthropic skills (document
+- **23 skills**: 7 strict-math QEC skills grounded in the QECTOR
+  reference-manual contract plus 16 official Anthropic skills (document
   processing, design, development, and web tooling)
 - **5 focused agents**: researcher, developer, validator, sysadmin, hardware engineer
 - **3 reproducible commands**: runtime inspection, math obligations, local LER sweeps
@@ -70,7 +70,6 @@ tests ship in the companion repository
 | `theme-factory` | Custom Claude Code theme creation |
 | `slack-gif-creator` | Slack GIF creation workflows |
 | `internal-comms` | Internal communication writing |
-| `brand-guidelines` | Brand and style guideline adherence |
 | `claude-api` | Claude API and SDK integration |
 | `skill-creator` | Agent skills authoring, evaluation, and assets |
 | `mcp-builder` | MCP server design and implementation |

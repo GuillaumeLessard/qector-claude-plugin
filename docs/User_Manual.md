@@ -102,8 +102,8 @@ a screening estimate, not a converged threshold.
 
 ## Public Contents
 
-- `skills/`: 24 skills - 7 QECTOR domain skills (math, core facts, research,
-  development, education, operations, hardware) plus 17 official Anthropic
+- `skills/`: 23 skills - 7 QECTOR domain skills (math, core facts, research,
+  development, education, operations, hardware) plus 16 official Anthropic
   skills (documents, spreadsheets, presentations, PDF, design, web, and
   development tooling; see `THIRD_PARTY_NOTICES.md`).
 - `agents/`: focused QEC subagents.
