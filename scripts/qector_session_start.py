@@ -19,8 +19,8 @@ def main():
         except importlib.metadata.PackageNotFoundError:
             library_version = "not installed"
         print(
-            "QECTOR plugin active: skills=qector-math-foundations,qector-core,researcher,developer,"
-            "hardware-engineer,sysadmin,educator; agents=qec-researcher,"
+            "QECTOR plugin active: skills=qector-core,qector-math-foundations,qector-researcher,"
+            "qector-developer,qector-sysadmin,qector-hardware-engineer,qector-educator,run-qector; agents=qec-researcher,"
             "qec-developer,qec-validator,qec-hardware-engineer,qec-sysadmin"
         )
         print(f"Workbench MCP executable configured: {tool}; optional and device-local")

@@ -47,11 +47,13 @@ It exposes the eight local tools `list_code_families`, `list_decoders`,
 
 For Claude Code, use the root `.mcp.json` and validate/launch with
 `claude plugin validate "<PLUGIN_ROOT>" --strict` and
-`claude --plugin-dir "<PLUGIN_ROOT>"`. For Claude Desktop or another MCP
-client, copy `mcp/claude_desktop_config.json`, replace its
-`<PLUGIN_ROOT>` path, and run `initialize` followed by `tools/list` before any
-tool call. The optional Workbench configuration is a separate example and
-must be probed on the target device before use.
+`claude --plugin-dir "<PLUGIN_ROOT>"`. For Claude Desktop, follow
+[`mcp/CLAUDE_DESKTOP.md`](../mcp/CLAUDE_DESKTOP.md); it uses the same local
+stdio server and never requires a machine-specific path in the package. For
+another MCP client, use `mcp/mcp_config.json`, replace its `<PLUGIN_ROOT>`
+token, and run `initialize` followed by `tools/list` before any tool call. The
+optional Workbench configuration is a separate example and must be probed on
+the target device before use.
 
 The repository also includes `.claude-plugin/marketplace.json`. From the
 parent directory, a local marketplace test is:
@@ -96,6 +98,8 @@ low-trial sweep is a screening estimate, not a converged threshold.
 - `commands/`: reproducible local workflows.
 - `mcp/`: library server, hosted connector kit, and portable configuration examples.
 - `scripts/`: hook helpers referenced by `hooks/hooks.json`.
+- `LICENSE.md`: proprietary QECTOR plugin license.
+- `PRIVACY.md`: local and hosted privacy notice.
 
 No private transcripts, machine snapshots, internal authoring files, business
 proposals, or proprietary reference documents are included.

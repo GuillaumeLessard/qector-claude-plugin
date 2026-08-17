@@ -22,6 +22,9 @@ The `qector-decoder-v3` dependency is an upstream package with its own license
 and terms. This repository does not replace, extend, or sublicense those terms.
 Third-party dependencies retain their respective licenses.
 
+See [`LICENSE.md`](LICENSE.md) for the QECTOR plugin license and
+[`PRIVACY.md`](PRIVACY.md) for the repository privacy notice.
+
 To the maximum extent permitted by applicable law, Guillaume Lessard,
 iD01t Productions, and contributors are not liable for any direct, indirect,
 incidental, special, consequential, exemplary, or other damages arising from

@@ -12,8 +12,8 @@ Initial release.
 ### Added
 
 - **24 skills**: 8 QECTOR domain skills grounded in the reference-manual
-  contract (`qector-core`, `qector-researcher`, `qector-developer`,
-  `qector-validator`, `qector-sysadmin`, `qector-hardware-engineer`,
+  contract (`qector-core`, `qector-math-foundations`, `qector-researcher`,
+  `qector-developer`, `qector-sysadmin`, `qector-hardware-engineer`,
   `qector-educator`, `run-qector`) plus 16 official Anthropic skills.
 - **5 specialized agents**: researcher, developer, validator, sysadmin,
   hardware engineer.
@@ -26,12 +26,15 @@ Initial release.
 - **Distribution**: GitHub marketplace (`qector@qector-tools`), local
   `--plugin-dir` execution, and prebuilt upload archives in `dist/` with
   `.sha256` sidecars.
+- **Legal documents**: proprietary plugin license in `LICENSE.md` and privacy
+  notice in `PRIVACY.md`, with third-party terms preserved separately.
 
 ### Verified-API doctrine
 
 - Only the eight MCP tools form the stable contract.
 - Verified-but-non-frozen wheel surfaces (`rest_api` HTTP routes, gRPC,
-  metrics, mmap, decoder pool, Workbench MCP server) are real but labelled
-  provisional in the skill documentation.
+  metrics, mmap, decoder pool) are real but labelled provisional in the skill
+  documentation. Historical Workbench MCP source is not present in the
+  shipped wheel and is not part of the stable contract.
 - No invented APIs; every documented symbol is verified against the published
   wheel before it ships.
