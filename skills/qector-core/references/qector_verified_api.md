@@ -1,8 +1,8 @@
 # QECTOR Verified API Reference
 
 Source of truth: the QECTOR Decoder v3 reference manual v1.0.0 (DOI
-`10.5281/zenodo.21941046`), the public library API, and the device-local
-validation protocol in `mcp/VALIDATION_REPORT.md`. The reference manual is not
+`10.5281/zenodo.21941046`), the public library API, and device-local
+validation runs. The reference manual is not
 redistributed here. Do not treat unverified claims as fact.
 
 ## Library - qector_decoder_v3 (app-free)
@@ -23,6 +23,20 @@ corr = BlossomDecoder(checks, n_qubits=5).decode(syndrome)   # H @ corr == s
 Constructors: `(c2q, n_qubits=None, edge_weights=None)`; `decode(syndrome) ->
 np.ndarray`. `generate_surface_code_checks(d)` is legacy toric-weight-4, NOT
 graphlike - use `codes.rotated_surface_code(d)` for a graphlike surface code.
+
+**Legacy generators return `(checks, n_qubits)` tuples** - unpack before use,
+never pass the tuple as `c2q`. All three are verified to decode correctly on
+the shipped wheel:
+
+```
+checks, n = generate_repetition_code_checks(5)   # (4 checks, weight 2, n = 5)
+checks, n = generate_ring_code_checks(6)         # (36 checks, weight 2, n = 36)
+checks, n = generate_surface_code_checks(3)      # (18 checks, weight 4, n = 9)
+corr = BlossomDecoder(checks, n_qubits=n).decode(syndrome)
+```
+
+The legacy surface checks are toric-weight-4 (all checks weight 4, verified by
+row-weight inspection), i.e. NOT graphlike.
 
 **Composition with `codes`-module codes:** the `c2q` constructor argument is
 the check-to-qubits mapping (list of qubit indices per check). Pass
@@ -58,6 +72,15 @@ self-orthogonal: H H^T != 0 (e.g. `rotated_surface_code(5)` has a 12 x 25 H).
 They use the arbitrary-matrix/logical-coset branch of Theorem 2, not the
 self-orthogonal branch.
 
+**Logicals are per-code - verify, never assume:** `num_logical_qubits` and
+`logicals_matrix()` differ by family. `rotated_surface_code(d)` reports
+`num_logical_qubits == 1` with an ndarray; `toric_code(d)` reports 2;
+`color_code(d)` AND `unrotated_surface_code(d)` both report
+`num_logical_qubits == 0` with `logicals_matrix() is None` (verified). When a
+code provides no logicals matrix, the Theorem-2 logical-coset scoring needs an
+explicitly constructed logical basis (or an explicit statement that it is
+unavailable) - check per family, do not generalize from one code.
+
 ### DEM / routing / shims (manual 16.4-17, optional direct-wheel APIs)
 
 These surfaces are outside the default eight-tool MCP contract. Install and
@@ -72,6 +95,30 @@ using them; no Stim/DEM package is required for the library MCP server.
   metered telemetry `record_shots(n)` / `get_accumulated_shots()`; structured
   results `DecodeResult`. GPU: `CUDABatchDecoder.is_available()` is hardware;
   license tier is a separate gate. Wheels are CUDA-only; OpenCL = source build.
+
+### Verified wheel surfaces outside the 8-tool contract (all provisional)
+
+Real, present, and typed on the shipped wheel - verified by module listing,
+`.pyi` inspection, and direct calls. None of these are part of the stable
+8-tool MCP contract; they are provisional / non-frozen (1.0.0 API freeze note,
+changelog 0.7.0 -> 1.0.0):
+
+- `rest_api.py` - working FastAPI HTTP surface, localhost-only by design.
+  Routes: `/decode`, `/health`, `/version`, `/api/license/activate`,
+  `/api/license/info` (plus `/docs`, `/openapi.json`, `/redoc`).
+- Top-level exports (.pyi-confirmed): `get_decoder`, `get_decoder_pool`,
+  `clear_decoder_cache`, `decode_mmap`, `opencl_is_available`,
+  `run_grpc_server`, `start_metrics_server`.
+- Decoder caching: identity reuse and key discrimination both worked on the
+  tested paths; an earlier suspected cache bug was not reproduced in those
+  tests and could not be ruled out outside them - do not claim a cache bug.
+- The Workbench MCP server (`QectorWorkbench-Portable.exe --mcp`) is real
+  historical code (changelog 0.7.0 -> 1.0.0) but is absent from the shipped
+  wheel (file listing, pip RECORD, `--mcp` grep, filename search, pip cache)
+  and classified provisional / non-frozen in the 1.0.0 API freeze note.
+- `workbench.py` is a headless application controller (benchmark job queue,
+  JSON/CSV/PDF export); its docstring references a `run-qector` skill that is
+  not part of this package.
 
 ## Workbench MCP (optional stdio extension, launch `--mcp`)
 

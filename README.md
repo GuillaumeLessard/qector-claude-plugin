@@ -10,12 +10,10 @@ The primary product surface is the app-free library MCP server shipped in
 ## Quick Start
 
 ```bash
-# 1. Clone this plugin and its companion toolbox
+# 1. Clone this plugin
 git clone https://github.com/GuillaumeLessard/qector-claude-plugin.git
-git clone https://github.com/GuillaumeLessard/qector-claude-skills.git
 cd qector-claude-plugin
 python -m pip install -r requirements.txt
-python ../qector-claude-skills/bin/qector_runtime_check.py
 
 # 2. Validate and launch with Claude Code
 claude plugin validate "<PLUGIN_ROOT>" --strict
@@ -37,9 +35,9 @@ claude plugin install qector@qector-tools
 - **2 hook helpers** in `scripts/` (session banner, local tool-usage log)
 - **Claude Code marketplace metadata** in `.claude-plugin/marketplace.json`
 
-Runtime validation CLIs, the F2 ground-truth helpers, and the device-local
-tests ship in the companion repository
-[`GuillaumeLessard/qector-claude-skills`](https://github.com/GuillaumeLessard/qector-claude-skills).
+Runtime state (Python version, MCP version, wheel version, license tier) is
+verified device-local at launch; this plugin ships no internal validation
+scripts, test suites, or ground-truth data.
 
 ## Skills & Agents Reference
 
@@ -101,7 +99,6 @@ will launch the MCP server:
 
 ```text
 python -m pip install -r requirements.txt
-python ../qector-claude-skills/bin/qector_runtime_check.py
 ```
 
 The runtime is supported in system Python and in a virtual environment:
@@ -110,10 +107,11 @@ The runtime is supported in system Python and in a virtual environment:
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python ..\qector-claude-skills\bin\qector_runtime_check.py
 ```
 
-The runtime check is device-local and produces no bundled evidence.
+Verify the runtime inside Claude Code with the `qec-validate-mcp` command or
+the MCP server's `get_license_info` tool. Verification is device-local and
+produces no bundled evidence.
 
 ## Standalone MCP Server
 
@@ -183,18 +181,15 @@ perform `initialize` and `tools/list` before using any tool.
 - Performance, hardware, GPU, threshold, and license state are device-local.
 - Fresh artifacts belong outside the plugin and use an external `.sha256` sidecar.
 
-The public mathematical source is `qector_math_ground_truth.py` in the
-`qector-claude-skills` repository. Run the local validation procedures there with:
+The public mathematical source is the published `qector-decoder-v3==1.0.0`
+wheel. The MCP server enforces the contract at runtime: every correction is
+checked against `H c = s (mod 2)` before logical scoring.
+
+For a fresh local sweep, use the MCP server's `threshold_sweep` tool and write
+artifacts outside this repository:
 
 ```text
-python bin/run_manual_math_validation.py
-python -m unittest discover -s tests -v
-```
-
-For a fresh local sweep, write artifacts outside this repository:
-
-```text
-python ../qector-claude-skills/bin/run_threshold_sweep.py --family rotated_surface --distances 3 5 --error-rates 0.05 --trials 100 --seed 42 --out ..\qector-artifacts\device_sweep.json
+threshold_sweep --family rotated_surface --distances 3 5 --error-rates 0.05 --trials 100 --seed 42 --out ..\qector-artifacts\device_sweep.json
 ```
 
 ## Optional Features
@@ -213,8 +208,8 @@ Workbench tool is part of the standalone library contract.
 ## Security And Legal
 
 The default server is local stdio. Do not send circuits, syndromes, matrices,
-credentials, or generated artifacts to external services. Review
-`governance/security_playbook.md` before deployment.
+credentials, or generated artifacts to external services; all QEC compute
+stays on the device.
 
 This plugin is provided **AS IS** and without warranty to the maximum extent
 permitted by applicable law. See `DISCLAIMER.md`. The upstream
@@ -234,10 +229,6 @@ licenses and terms.
 - `docs/`: public user documentation.
 - `hooks/`: event-driven hook declarations.
 
-Runtime/validation CLI scripts, the ground truth, and the tests live in the
-companion [`qector-claude-skills`](https://github.com/GuillaumeLessard/qector-claude-skills)
-repository.
-
 ## Packaging and Distribution
 
 This repository is a multi-skill Claude Code plugin that is also hosted on
@@ -252,19 +243,10 @@ claude.ai. Two hosting rules drive the repository layout:
    approval surface. Executable entry points must be declared via hooks,
    commands, or `mcpServers` instead. This plugin keeps its hook helpers in
    `scripts/` (declared in `hooks/hooks.json`) and its MCP server in `mcp/`
-   (declared in `.mcp.json`); all standalone CLI scripts live in the separate
-   `qector-claude-skills` repository.
+   (declared in `.mcp.json`).
 
-Use `bin/pro_pack.py` in the `qector-claude-skills` repository to produce the
-archives. It writes every ZIP entry name with forward slashes (`/`) and
-filters out Windows-reserved characters (`< > : " | ? *`) and control bytes:
-
-```text
-cd qector-claude-skills
-python bin/pro_pack.py --plugin-dir ..\qector-claude-plugin --all
-```
-
-This produces two verified archives under `dist/`:
+Two verified archives are shipped prebuilt in `dist/` (each with a `.sha256`
+sidecar):
 
 - `qector-qector-core-skill.zip` — a single-skill ZIP for the claude.ai
   custom-skill uploader. It contains one top-level `qector-core/` folder with
@@ -272,16 +254,11 @@ This produces two verified archives under `dist/`:
   multi-skill bundle.
 - `qector-claude-plugin-v1.0.0.zip` — the full plugin ZIP for the Claude Code
   plugin flow (`claude --plugin-dir`) and for claude.ai plugin upload. It
-  preserves the `.claude-plugin/`, `skills/` (all 24), `hooks/`, `scripts/`,
-  and MCP server layout, and contains no `bin/` directory.
+  preserves the `.claude-plugin/`, `skills/` (23), `hooks/`, `scripts/`, and
+  MCP server layout, and contains no `bin/` directory.
 
-Each archive is accompanied by a `.sha256` sidecar. Regenerate them whenever a
-skill or its references change:
-
-```text
-python bin/pro_pack.py --plugin-dir ..\qector-claude-plugin --skill qector-core      # single-skill only
-python bin/pro_pack.py --plugin-dir ..\qector-claude-plugin --plugin                 # full plugin only
-```
+Regenerate the archives from the source-of-truth repository whenever a skill
+or its references change; every ZIP entry name uses forward slashes (`/`).
 
 For the public repository, install from GitHub instead of shipping an archive:
 

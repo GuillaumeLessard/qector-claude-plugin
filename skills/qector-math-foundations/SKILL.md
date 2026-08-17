@@ -62,7 +62,7 @@ graphlike code and syndrome, unweighted batch kernels give c_GPU(s) = c_CPU(s).
 
 Cite by number (e.g. "Theorem 14"), never paraphrase a theorem as your own.
 
-## Rule M3 - Verified-API-only math (chapter 16 + VALIDATION_REPORT)
+## Rule M3 - Verified-API-only math (chapter 16)
 
 - Only stable symbols may appear in delivered code: `UnionFindDecoder`,
   `FastUnionFindDecoder`, `BlossomDecoder`, `SparseBlossomDecoder`,
@@ -74,6 +74,13 @@ Cite by number (e.g. "Theorem 14"), never paraphrase a theorem as your own.
   AutoDecoder ordering, and upstream network services) may be used but must be
   labelled Provisional and never quoted as contract. The bundled local stdio
   MCP wrapper is the supported service surface in this package.
+- Verified-but-non-frozen wheel surfaces exist and are real (rest_api HTTP
+  routes, run_grpc_server, start_metrics_server, decode_mmap,
+  get_decoder/get_decoder_pool/clear_decoder_cache, opencl_is_available -
+  see qector-core `references/qector_verified_api.md`): treat them as
+  Provisional, never as stable contract.
+- Legacy generators return `(checks, n_qubits)` tuples - unpack before
+  passing to a decoder.
 - `seed=` is not a kwarg of `random_error`; use rng=np.random.default_rng(seed).
   `logicals_matrix()` and `parity_check_matrix()` are methods (call them).
 

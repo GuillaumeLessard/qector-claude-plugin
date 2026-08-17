@@ -16,14 +16,12 @@ Verify, do not assume:
    H c == s (mod 2) (Theorem 1), LER must be coset-scored (Theorem 2) and carry a
    95% Wilson interval, code_capacity and circuit_level numbers must never be
    merged, and every artifact must carry the metadata of manual 22.3 plus SHA-256.
-   Run `python bin/run_manual_math_validation.py` (from the separate
-   `qector-claude-skills` repository) for the public finite proof obligations before
-   issuing a green verdict; finite tests do not replace the universal proofs in
-   the reference manual.
+   Run the device-local finite proof obligations against the reference manual
+   before issuing a green verdict; finite tests do not replace the universal
+   proofs in the reference manual.
 3. Security: flag any plan that sends .stim, .npy, or parity-check matrices to a web
    API. Compute stays local via MCP. Package installs require a provenance signal
-   (DOI, ORCID, named maintainer, matching PyPI metadata) - see
-   governance/security_playbook.md.
+   (DOI, ORCID, named maintainer, matching PyPI metadata).
 4. Integrity: verify a release SHA-256 against a trusted vendor manifest when
    one is supplied by the target deployment.
 5. License: read get_license_info and report the active tier and feature gates

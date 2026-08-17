@@ -27,6 +27,6 @@ Workbench only: get_server_env / get_config / set_config; reset_config requires
  confirmation. Strict math: follow skills/qector-math-foundations (H c == s (mod 2) in every
 decode; 95% Wilson CIs; Provisional surfaces warn, never present as production).
 
-Security: enforce zero-egress (governance/security_playbook.md); verify package
-provenance before any install an agent performs; never upload local quantum artifacts
-externally.
+Security: enforce zero-egress (no .stim/.npy/parity uploads to external
+services); verify package provenance before any install an agent performs;
+never upload local quantum artifacts externally.

@@ -10,13 +10,12 @@ Strict-math contract: skill `qector-math-foundations` (Theorems 1-2, Wilson CI
 `--family rotated_surface --distances 3 5 7 --error-rates 0.01 0.05 0.1 --trials 200 --seed 42 --out ..\qector-artifacts\sweep_d357.json`
 Defaults: family rotated_surface, distances 3 5 7, error-rates 0.01 0.05 0.1, trials 100, seed 42.
 
-1. Run the reference script from the `qector-claude-skills` repository:
-   `python bin/run_threshold_sweep.py $ARGUMENTS` (cloned alongside this
-   plugin; the hosted plugin itself ships no CLI scripts).
-2. Optionally cross-check with the library MCP server's `threshold_sweep` tool and
-   ensure the two artifacts agree (same seed, same trials) - if they differ, report
-   the discrepancy rather than picking one.
+1. Run the seeded sweep through the library MCP server's `threshold_sweep`
+   tool with `$ARGUMENTS`.
+2. Verify the artifact passes the faithfulness harness (H c == s mod 2 per
+   trial) and report the violation count; a low-trial run is a screening
+   estimate, never a converged threshold.
 3. Report: markdown table of logical_error_rate with the 95% Wilson interval per
-    (distance, p); the LaTeX summary; the actual Theorem-1 harness violation count;
+   (distance, p); the LaTeX summary; the actual Theorem-1 harness violation count;
    the code_capacity tag; and the caveat that low-trial LER is a screening estimate,
    never a converged threshold. Cite the artifact path and its SHA-256.

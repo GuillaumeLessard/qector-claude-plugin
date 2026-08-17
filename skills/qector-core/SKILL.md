@@ -26,17 +26,22 @@ than inventing behavior. All mathematical claims must satisfy the rules in
    (library MCP server: list_code_families, list_decoders, get_license_info,
    decode_syndrome, decode_single, threshold_sweep, build_code_from_matrix,
    compat_report). Valid alone; this is the preferred development path.
-2. **QECTOR Workbench MCP server - optional desktop extension.** Launch
-   `QectorWorkbench-Portable.exe --mcp` only when the app is installed. Its
-   exact tools, version, license, and hardware status are device-local and must
-   be negotiated with `initialize` and `tools/list`. Fully optional: nothing
-   about the library surface depends on it.
+2. **QECTOR Workbench MCP server - optional desktop extension.** Real
+   historically developed surface (changelog 0.7.0 -> 1.0.0), explicitly
+   classified provisional / non-frozen in the 1.0.0 API freeze note, and
+   absent from the shipped `qector-decoder-v3` wheel (file listing, pip
+   RECORD, `--mcp` grep, pip cache). Launch `QectorWorkbench-Portable.exe
+   --mcp` only when the app is installed. Its exact tools, version, license,
+   and hardware status are device-local and must be negotiated with
+   `initialize` and `tools/list`. Fully optional: nothing about the library
+   surface depends on it.
 
 ## Device-Local Wire Contract
 
 - Library server: 8 tools, pinned production runtime `mcp==1.26.0` using the
-  low-level `mcp.server.Server` adapter. See `mcp/VALIDATION_REPORT.md` for
-  the fresh validation protocol.
+  low-level `mcp.server.Server` adapter. Device-local validation runs against
+  the reference manual; no internal validation transcripts ship in this
+  package.
 - Workbench negotiation is required on every device before any Workbench tool
   name is used. No Workbench transcript or hardware snapshot is bundled.
 
@@ -70,7 +75,10 @@ than inventing behavior. All mathematical claims must satisfy the rules in
    self-orthogonal branch.
 2. **No invented tools/APIs.** Only the library's 8 tools are callable by
    default. Workbench tools are callable only after that device's `tools/list`
-   response has been inspected.
+   response has been inspected. Verified-but-non-frozen wheel surfaces exist
+   (rest_api HTTP, gRPC, metrics, mmap, decoder pool - see
+   `references/qector_verified_api.md`); any code using them is provisional
+   and must be labelled as such, never presented as the stable contract.
 3. **No speed superlatives** without a dated, reproducible artifact (manual
    chapter 22.5).
 4. **No CPU/GPU assumptions**: use `cuda_is_available()` for a direct-wheel

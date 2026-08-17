@@ -49,7 +49,7 @@ never import a status from another machine.
 
 ## Security posture
 
-Enforce the zero-egress rule from `governance/security_playbook.md`: no
+Enforce the zero-egress rule: no
 `.stim`/`.npy`/parity matrices to external services; all compute stays local
 via the MCP server. Verify provenance before installing any package the agent
 is asked to execute.
