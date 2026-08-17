@@ -1,43 +1,56 @@
-# QECTOR Claude Plugin
+# QECTOR Claude Skills — All-In-One
 
-Local quantum-error-correction engineering for Claude Code, built for
+The complete quantum-error-correction engineering kit for Claude, built for
 `qector-decoder-v3` by Guillaume Lessard / iD01t Productions.
 
-The primary product surface is the app-free library MCP server shipped in
-`mcp/mcp_server_library.py`. It runs locally against the published
-`qector-decoder-v3==1.0.0` wheel and does not require QECTOR Workbench.
+This repository is the **source of truth** for the hosted plugin surface
+(skills, agents, commands, hooks, app-free MCP server, hosted connector). The
+claude.ai-hosted plugin and its prebuilt archives are published separately in
+[`GuillaumeLessard/qector-claude-plugin`](https://github.com/GuillaumeLessard/qector-claude-plugin).
+
+## Why Two Repositories?
+
+claude.ai-hosted plugins may not ship a top-level `bin/` directory, because
+such executables are added to PATH on the CLI but are not shown on the admin
+approval surface. Executable entry points must be declared via hooks,
+commands, or `mcpServers` instead.
+
+- This repository is the **source**: the hosted-plugin surface plus the
+  `mcp/connector/` deployment kit.
+- The **plugin** repository ships only the hosted-plugin surface (`scripts/`
+  hook helpers, `mcp/` server, skills, agents, commands) and the prebuilt
+  upload archives in `dist/`.
 
 ## Quick Start
 
 ```bash
-# 1. Clone this plugin
-git clone https://github.com/GuillaumeLessard/qector-claude-plugin.git
-cd qector-claude-plugin
+# 1. Clone
+git clone https://github.com/GuillaumeLessard/qector-claude-skills.git
+cd qector-claude-skills
 python -m pip install -r requirements.txt
 
-# 2. Validate and launch with Claude Code
+# 2. Validate and launch with Claude Code (this repo works as a local plugin)
 claude plugin validate "<PLUGIN_ROOT>" --strict
 claude --plugin-dir "<PLUGIN_ROOT>"
 
-# 3. Or install from GitHub marketplace
+# 3. Or install the hosted plugin from the GitHub marketplace
 claude plugin marketplace add GuillaumeLessard/qector-claude-plugin
 claude plugin install qector@qector-tools
 ```
 
 ## What Ships
 
-- **23 skills**: 7 strict-math QEC skills grounded in the QECTOR
+- **24 skills**: 8 strict-math QEC skills grounded in the QECTOR
   reference-manual contract plus 16 official Anthropic skills (document
   processing, design, development, and web tooling)
 - **5 focused agents**: researcher, developer, validator, sysadmin, hardware engineer
 - **3 reproducible commands**: runtime inspection, math obligations, local LER sweeps
 - **1 local stdio MCP server** with explicit schemas and fail-closed error handling
+- **1 hosted custom connector** (`mcp/connector/`): Streamable HTTP MCP
+  endpoint with `/health`, optional bearer auth, and a Docker image - register
+  it in claude.ai as a custom connector
 - **2 hook helpers** in `scripts/` (session banner, local tool-usage log)
 - **Claude Code marketplace metadata** in `.claude-plugin/marketplace.json`
-
-Runtime state (Python version, MCP version, wheel version, license tier) is
-verified device-local at launch; this plugin ships no internal validation
-scripts, test suites, or ground-truth data.
 
 ## Skills & Agents Reference
 
@@ -51,6 +64,7 @@ scripts, test suites, or ground-truth data.
 | `qector-sysadmin` | Runtime health, resource bounds, deployment hygiene |
 | `qector-hardware-engineer` | Device characterization, noise modeling, hardware constraints |
 | `qector-educator` | Tutorial generation, concept explanation, learning paths |
+| `run-qector` | Headless Workbench controller: benchmark jobs, .stim/.dem runs, artifact export |
 
 ### Skills (`skills/`) — Official Anthropic
 | Skill | Purpose |
@@ -91,7 +105,10 @@ Official skills retain their own licenses; see `THIRD_PARTY_NOTICES.md`.
 | `qec-validate-mcp.md` | Validate MCP server tools and schemas |
 
 ### Hooks (`hooks/`)
-- `hooks.json` — Event-driven automation for skill/agent lifecycle
+- `hooks.json` — SessionStart banner and PostToolUse usage log, backed by the
+  helpers in `scripts/`.
+
+## Runtime
 
 Supported runtime: Python 3.9 or newer, `qector-decoder-v3==1.0.0`,
 `mcp==1.26.0`. Install the pinned dependencies with the same interpreter that
@@ -101,17 +118,7 @@ will launch the MCP server:
 python -m pip install -r requirements.txt
 ```
 
-The runtime is supported in system Python and in a virtual environment:
-
-```text
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
-
-Verify the runtime inside Claude Code with the `qec-validate-mcp` command or
-the MCP server's `get_license_info` tool. Verification is device-local and
-produces no bundled evidence.
+The runtime is supported in system Python and in a virtual environment.
 
 ## Standalone MCP Server
 
@@ -136,40 +143,10 @@ The transport is local stdio only. The server validates binary inputs, enforces
 resource bounds, checks every correction against `H c = s (mod 2)`, and returns
 MCP tool errors without exposing tracebacks.
 
-## Claude Code
-
 The root `.mcp.json` uses `${CLAUDE_PLUGIN_ROOT}` and is ready for plugin-local
-execution. Validate and launch the plugin with:
-
-```text
-claude plugin validate "<PLUGIN_ROOT>" --strict
-claude --plugin-dir "<PLUGIN_ROOT>"
-```
-
-The plugin contains `.claude-plugin/marketplace.json` with marketplace name
-`qector-tools`. From the parent directory, test the local marketplace with:
-
-```text
-claude plugin marketplace add ./<PLUGIN_ROOT>
-claude plugin install qector@qector-tools
-```
-
-For the public repository, use:
-
-```text
-claude plugin marketplace add GuillaumeLessard/qector-claude-plugin
-claude plugin install qector@qector-tools
-```
-
-## Other MCP Clients
-
-For Claude Desktop or a generic MCP client, copy the appropriate template:
-
-- `mcp/claude_desktop_config.json`
-- `mcp/mcp_config.json`
-
-Replace `<PLUGIN_ROOT>` with the package's absolute path before launch. Then
-perform `initialize` and `tools/list` before using any tool.
+execution. For Claude Desktop or a generic MCP client, copy
+`mcp/claude_desktop_config.json`, replace `<PLUGIN_ROOT>` with the package's
+absolute path, and perform `initialize` and `tools/list` before using any tool.
 
 ## Mathematical Contract
 
@@ -181,16 +158,8 @@ perform `initialize` and `tools/list` before using any tool.
 - Performance, hardware, GPU, threshold, and license state are device-local.
 - Fresh artifacts belong outside the plugin and use an external `.sha256` sidecar.
 
-The public mathematical source is the published `qector-decoder-v3==1.0.0`
-wheel. The MCP server enforces the contract at runtime: every correction is
-checked against `H c = s (mod 2)` before logical scoring.
-
-For a fresh local sweep, use the MCP server's `threshold_sweep` tool and write
-artifacts outside this repository:
-
-```text
-threshold_sweep --family rotated_surface --distances 3 5 --error-rates 0.05 --trials 100 --seed 42 --out ..\qector-artifacts\device_sweep.json
-```
+The F2 obligations are validated device-local against the reference manual;
+the validation tooling is internal and not distributed in this repository.
 
 ## Optional Features
 
@@ -205,34 +174,23 @@ QECTOR Workbench is a separate optional application. Its tool names, schemas,
 hardware, and license state must be negotiated on the target device; no
 Workbench tool is part of the standalone library contract.
 
-## Security And Legal
-
-The default server is local stdio. Do not send circuits, syndromes, matrices,
-credentials, or generated artifacts to external services; all QEC compute
-stays on the device.
-
-This plugin is provided **AS IS** and without warranty to the maximum extent
-permitted by applicable law. See `DISCLAIMER.md`. The upstream
-`qector-decoder-v3` package and all third-party dependencies retain their own
-licenses and terms.
-
-## Repository Layout
-
-- `.claude-plugin/`: plugin and marketplace manifests.
-- `scripts/`: hook helpers executed by `hooks/hooks.json` (never a `bin/`
-  directory - claude.ai-hosted plugins may not ship top-level `bin/`
-  executables).
-- `skills/`: 23 QECTOR and official Anthropic skills.
-- `agents/`: custom QEC agents.
-- `commands/`: local slash-command workflows.
-- `mcp/`: standalone server and client templates.
-- `docs/`: public user documentation.
-- `hooks/`: event-driven hook declarations.
-
 ## Packaging and Distribution
 
-This repository is a multi-skill Claude Code plugin that is also hosted on
-claude.ai. Two hosting rules drive the repository layout:
+Prebuilt archives are generated from this repository's source and shipped in
+the companion
+[`qector-claude-plugin`](https://github.com/GuillaumeLessard/qector-claude-plugin)
+repository under `dist/` with `.sha256` sidecars:
+
+- `qector-qector-core-skill.zip` — a single-skill ZIP for the claude.ai
+  custom-skill uploader. It contains one top-level `qector-core/` folder with
+  `SKILL.md` at its root. Upload this file directly; do not rename it to a
+  multi-skill bundle.
+- `qector-claude-plugin-v1.0.0.zip` — the full plugin ZIP for the Claude Code
+  plugin flow (`claude --plugin-dir`) and for claude.ai plugin upload. It
+  preserves the `.claude-plugin/`, `skills/`, `agents/`, `commands/`,
+  `hooks/`, `scripts/`, and `mcp/` layout, and contains no `bin/` directory.
+
+Two hosting rules drive the layout:
 
 1. The claude.ai skill uploader accepts exactly one top-level folder and
    rejects ZIP entries that contain Windows backslashes (the "Zip file contains
@@ -241,31 +199,36 @@ claude.ai. Two hosting rules drive the repository layout:
 2. claude.ai-hosted plugins may not ship a top-level `bin/` directory, because
    such executables are added to PATH on the CLI but are not shown on the admin
    approval surface. Executable entry points must be declared via hooks,
-   commands, or `mcpServers` instead. This plugin keeps its hook helpers in
-   `scripts/` (declared in `hooks/hooks.json`) and its MCP server in `mcp/`
-   (declared in `.mcp.json`).
+   commands, or `mcpServers` instead.
 
-Two verified archives are shipped prebuilt in `dist/` (each with a `.sha256`
-sidecar):
-
-- `qector-qector-core-skill.zip` — a single-skill ZIP for the claude.ai
-  custom-skill uploader. It contains one top-level `qector-core/` folder with
-  `SKILL.md` at its root. Upload this file directly; do not rename it to a
-  multi-skill bundle.
-- `qector-claude-plugin-v1.0.0.zip` — the full plugin ZIP for the Claude Code
-  plugin flow (`claude --plugin-dir`) and for claude.ai plugin upload. It
-  preserves the `.claude-plugin/`, `skills/` (23), `hooks/`, `scripts/`, and
-  MCP server layout, and contains no `bin/` directory.
-
-Regenerate the archives from the source-of-truth repository whenever a skill
-or its references change; every ZIP entry name uses forward slashes (`/`).
-
-For the public repository, install from GitHub instead of shipping an archive:
+For the public plugin, install from GitHub instead of shipping an archive:
 
 ```text
 claude plugin marketplace add GuillaumeLessard/qector-claude-plugin
 claude plugin install qector@qector-tools
 ```
 
+## Repository Layout
+
+- `.claude-plugin/`: plugin and marketplace manifests.
+- `skills/`: 24 QECTOR and official Anthropic skills.
+- `agents/`: custom QEC agents.
+- `commands/`: local slash-command workflows.
+- `hooks/` + `scripts/`: hook declarations and their helpers (the hosted
+  plugin's executable entry points).
+- `mcp/`: standalone server and client templates, plus the hosted connector
+  deployment kit (`mcp/connector/`).
+- `docs/`: the public user manual.
+
+## Security And Legal
+
+The default server is local stdio. Do not send circuits, syndromes, matrices,
+credentials, or generated artifacts to external services; zero-egress is
+enforced by the skills and agents in this package.
+
+This project is provided **AS IS** and without warranty to the maximum extent
+permitted by applicable law. See `DISCLAIMER.md`. The upstream
+`qector-decoder-v3` package and all third-party dependencies retain their own
+licenses and terms.
 
 Author: Guillaume Lessard / iD01t Productions, ORCID `0009-0000-3465-3753`.
