@@ -24,6 +24,18 @@ Constructors: `(c2q, n_qubits=None, edge_weights=None)`; `decode(syndrome) ->
 np.ndarray`. `generate_surface_code_checks(d)` is legacy toric-weight-4, NOT
 graphlike - use `codes.rotated_surface_code(d)` for a graphlike surface code.
 
+**Composition with `codes`-module codes:** the `c2q` constructor argument is
+the check-to-qubits mapping (list of qubit indices per check). Pass
+`Code.check_to_qubits` - never `Code.parity_check_matrix()`. Feeding the raw
+H matrix raises an opaque `ValueError` ("The truth value of an array with more
+than one element is ambiguous"):
+
+```python
+c = codes.rotated_surface_code(5)
+dec = BlossomDecoder(c.check_to_qubits, n_qubits=c.n_qubits)  # NOT c.parity_check_matrix()
+corr = dec.decode(syndrome)                                   # H @ corr == s (mod 2)
+```
+
 ### codes module (verify on the target device)
 ```
 >>> from qector_decoder_v3 import codes
@@ -31,11 +43,20 @@ graphlike - use `codes.rotated_surface_code(d)` for a graphlike surface code.
 >>> c.n_qubits
 >>> c.n_checks
 ```
-`Code` attributes: `H`, `check_to_qubits`, `description`, `distance`,
+`Code` attributes: `check_to_qubits`, `description`, `distance`,
 `n_checks`, `n_qubits`, `name`, `qubit_weights`, ... Methods (call with
-parens): `parity_check_matrix()`, `logicals_matrix()`,
-`random_error(p, rng=rng)`, `syndrome(error)`. `seed=` is NOT valid; use
+parens): `H()`, `is_matching_graph()`, `parity_check_matrix()`,
+`logicals_matrix()`, `random_error(p, rng=rng)`, `syndrome(error)`. `H()`
+returns the same matrix as `parity_check_matrix()`; `H` itself is a bound
+method, not a matrix. `seed=` is NOT valid; use
 `rng=np.random.default_rng(seed)`.
+
+**Matching-graph codes:** `rotated_surface_code(d)`, `unrotated_surface_code(d)`,
+`toric_code(d)`, `heavy_hex_code(d)`, and `color_code(d)` return single-sector
+matching-graph codes (`is_matching_graph()` is True) whose H is not
+self-orthogonal: H H^T != 0 (e.g. `rotated_surface_code(5)` has a 12 x 25 H).
+They use the arbitrary-matrix/logical-coset branch of Theorem 2, not the
+self-orthogonal branch.
 
 ### DEM / routing / shims (manual 16.4-17, optional direct-wheel APIs)
 
@@ -72,6 +93,11 @@ contract.
 - For self-orthogonal stabilizer/CSS checks (`H H^T = 0`), score the logical
   coset ker(H) / im(H^T), never raw correction equality (Theorem 2). Arbitrary
   matrices require code-provided logical and stabilizer spaces.
+- Graphlike `codes` families (`rotated_surface_code`, `unrotated_surface_code`,
+  `toric_code`, `heavy_hex_code`, `color_code`) are single-sector
+  matching-graph codes with `H H^T != 0`: use the arbitrary-matrix/logical-coset
+  branch of Theorem 2 (code-provided logical/stabilizer spaces), never the
+  self-orthogonal branch.
 - LER reports: Wilson 95% CI, z = 1.959963985; tag code_capacity vs
   circuit_level and refuse cross-model comparison (15.3).
 - Every artifact carries the required metadata (22.3) + SHA-256.

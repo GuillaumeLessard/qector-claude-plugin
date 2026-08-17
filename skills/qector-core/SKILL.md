@@ -62,7 +62,12 @@ than inventing behavior. All mathematical claims must satisfy the rules in
 1. **Strict math first**: read `skills/qector-math-foundations` before any
    number is produced. H c == s (mod 2) is checked after every decode
    (Theorem 1); LER reports need 95% Wilson intervals; never compare
-   code_capacity vs circuit_level numbers.
+   code_capacity vs circuit_level numbers. The graphlike `codes` families
+   (`rotated_surface_code`, `unrotated_surface_code`, `toric_code`,
+   `heavy_hex_code`, `color_code`) are single-sector matching-graph codes with
+   `H H^T != 0` (e.g. `rotated_surface_code(5)` has a 12 x 25 H), so they use
+   the arbitrary-matrix/logical-coset branch of Theorem 2, never the
+   self-orthogonal branch.
 2. **No invented tools/APIs.** Only the library's 8 tools are callable by
    default. Workbench tools are callable only after that device's `tools/list`
    response has been inspected.
