@@ -47,8 +47,9 @@ It exposes the eight local tools `list_code_families`, `list_decoders`,
 
 For Claude Code, use the root `.mcp.json` and validate/launch with
 `claude plugin validate "<PLUGIN_ROOT>" --strict` and
-`claude --plugin-dir "<PLUGIN_ROOT>"`. For Claude Desktop, follow
-[`mcp/CLAUDE_DESKTOP.md`](../mcp/CLAUDE_DESKTOP.md); it uses the same local
+`claude --plugin-dir "<PLUGIN_ROOT>"`. For Claude Desktop, start with
+[`CLAUDE_DESKTOP.md`](../CLAUDE_DESKTOP.md) and use the detailed guide at
+[`mcp/CLAUDE_DESKTOP.md`](../mcp/CLAUDE_DESKTOP.md). It uses the same local
 stdio server and never requires a machine-specific path in the package. For
 another MCP client, use `mcp/mcp_config.json`, replace its `<PLUGIN_ROOT>`
 token, and run `initialize` followed by `tools/list` before any tool call. The

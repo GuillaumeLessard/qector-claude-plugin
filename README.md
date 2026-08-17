@@ -17,6 +17,7 @@ prebuilt upload archives live in
 - [Why Two Repositories?](#why-two-repositories)
 - [Features](#features)
 - [Installation](#installation)
+- [Claude Desktop](#claude-desktop)
 - [Supported Surfaces](#supported-surfaces)
 - [Requirements](#requirements)
 - [What's Inside](#whats-inside)
@@ -84,10 +85,16 @@ claude --plugin-dir "<PLUGIN_ROOT>"
 
 The root `.mcp.json` uses `${CLAUDE_PLUGIN_ROOT}` and is ready for plugin-local
 execution. For Claude Desktop, follow
-[`mcp/CLAUDE_DESKTOP.md`](mcp/CLAUDE_DESKTOP.md). For a generic MCP client,
+[`CLAUDE_DESKTOP.md`](CLAUDE_DESKTOP.md). For a generic MCP client,
 copy `mcp/mcp_config.json`, replace `<PLUGIN_ROOT>` with the package's local
 path, and perform `initialize` and `tools/list` before using any tool. These
 are setup tokens, not committed machine paths.
+
+## Claude Desktop
+
+Use [`CLAUDE_DESKTOP.md`](CLAUDE_DESKTOP.md) as the top-level setup entry.
+The complete operational guide is in
+[`mcp/CLAUDE_DESKTOP.md`](mcp/CLAUDE_DESKTOP.md).
 
 ### Option C: claude.ai web plugin upload
 
@@ -304,6 +311,7 @@ Two hosting rules drive the layout:
 - `mcp/`: standalone server, client templates, and the hosted connector
   deployment kit (`mcp/connector/`).
 - `docs/`: the public user manual (`User_Manual.md`).
+- `CLAUDE_DESKTOP.md`: top-level Claude Desktop setup entry.
 - `LICENSE.md`: proprietary plugin license.
 - `PRIVACY.md`: local and hosted privacy notice.
 
