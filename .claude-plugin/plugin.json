@@ -3,7 +3,8 @@
   "description": "Local QECTOR quantum-error-correction plugin for Claude with strict-math skills, focused agents, and an app-free qector-decoder-v3 MCP server.",
   "version": "1.0.2",
   "author": {
-    "name": "Guillaume Lessard"
+    "name": "Guillaume Lessard",
+    "email": "guillaume@qector.com"
   },
   "mcpServers": {
     "qector-library": {

@@ -3,16 +3,18 @@
   "version": "1.0.2",
   "description": "QECTOR quantum-error-correction toolkit.",
   "owner": {
-    "name": "Guillaume Lessard"
+    "name": "Guillaume Lessard",
+    "email": "guillaume@qector.com"
   },
   "plugins": [
     {
       "name": "qector",
       "version": "1.0.2",
-      "source": "GuillaumeLessard/qector-claude-plugin",
+      "source": "./",
       "description": "Local QECTOR quantum-error-correction plugin for Claude with strict-math skills, focused agents, and an app-free qector-decoder-v3 MCP server.",
       "author": {
-        "name": "Guillaume Lessard"
+        "name": "Guillaume Lessard",
+        "email": "guillaume@qector.com"
       }
     }
   ]

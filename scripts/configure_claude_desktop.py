@@ -28,7 +28,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 LIBRARY_SCRIPT = ROOT / "mcp" / "mcp_server_library.py"
 BENCH_SCRIPT = ROOT / "mcp" / "mcp_server_qector_bench.py"
-EXTENSION_DIR_SRC = ROOT / "extension"
+EXTENSION_DIR_SRC = ROOT / ".claude-desktop-extension"
 EXTENSION_ID = "ant.dir.gh.guillaumelessard.qector"
 
 
