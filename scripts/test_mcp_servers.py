@@ -152,45 +152,64 @@ def main():
         {"name": "list_decoders", "arguments": {}},
         {"name": "get_license_info", "arguments": {}},
         {"name": "decode_syndrome", "arguments": {
-            "family": "repetition", "size": 5, "decoder": "blossom",
+            "family": "repetition", "size": 5, "decoder_name": "blossom",
             "syndrome": [1, 0, 0, 1]
         }},
         {"name": "decode_single", "arguments": {
-            "family": "repetition", "size": 3, "decoder": "blossom",
-            "error_rate": 0.1, "seed": 42
+            "family": "rotated_surface", "distance": 3, "decoder_name": "blossom",
+            "error_rate": 0.05, "seed": 42
         }},
         {"name": "threshold_sweep", "arguments": {
-            "family": "repetition", "distances": [3, 5],
+            "family": "rotated_surface", "distances": [3],
             "error_rates": [0.05], "trials": 10, "seed": 42
+        }},
+        {"name": "build_code_from_matrix", "arguments": {
+            "H_matrix": [[1, 1, 0], [0, 1, 1]], "name": "custom_rep3", "distance": 3
         }},
         {"name": "compat_report", "arguments": {}},
     ]
     p, f, s = test_server("MCP Library Server (8 tools)", "mcp/mcp_server_library.py", library_calls)
     total_passed += p; total_failed += f; total_skipped += s
 
-    # ---- Bench server (20 tools) ----
+    # ---- Bench server (28 tools) ----
     bench_calls = [
-        {"name": "list_code_families", "arguments": {}},
-        {"name": "list_decoders", "arguments": {}},
-        {"name": "get_license_info", "arguments": {}},
-        {"name": "decode_syndrome", "arguments": {
-            "family": "repetition", "size": 5, "decoder": "blossom",
-            "syndrome": [1, 0, 0, 1]
+        {"name": "wilson_ci", "arguments": {"k": 10, "n": 1000}},
+        {"name": "wilson_table", "arguments": {"n": 1000, "k_list": [0, 1, 5, 10]}},
+        {"name": "logical_coset_score", "arguments": {
+            "predicted_logicals": [[0, 0, 0], [1, 0, 1]],
+            "sampled_logicals": [[0, 0, 0], [1, 0, 1]],
         }},
-        {"name": "decode_single", "arguments": {
-            "family": "repetition", "size": 3, "decoder": "blossom",
-            "error_rate": 0.1, "seed": 42
+        {"name": "dem_inspect", "arguments": {"dem_text": "error(0.001) D0 D1\ndetector(0, 0) D0\ndetector(1, 0) D1"}},
+        {"name": "dem_collapse_parallel", "arguments": {"dem_text": "error(0.01 0.02) D0 D1\ndetector(0, 0) D0\ndetector(1, 0) D1"}},
+        {"name": "code_family_info", "arguments": {"family": "rotated_surface", "size": 5}},
+        {"name": "code_export_matrices", "arguments": {"family": "rotated_surface", "size": 5}},
+        {"name": "code_logicals_inspect", "arguments": {"family": "rotated_surface", "size": 5}},
+        {"name": "code_distance_check", "arguments": {"family": "rotated_surface", "size": 5}},
+        {"name": "pymatching_compat_check", "arguments": {"family": "rotated_surface", "size": 5}},
+        {"name": "sinter_decoder_list", "arguments": {}},
+        {"name": "qiskit_plugin_check", "arguments": {}},
+        {"name": "hardware_probe", "arguments": {}},
+        {"name": "license_active_check", "arguments": {}},
+        {"name": "env_block", "arguments": {"check_pypi": False}},
+        {"name": "compat_report", "arguments": {"check_pypi": False}},
+        {"name": "workbench_probe", "arguments": {"executable": "", "timeout": 5.0}},
+        {"name": "artifacts_sha256", "arguments": {"paths": ["requirements.txt"]}},
+        {"name": "artifact_metadata_check", "arguments": {"family": "rotated_surface", "size": 5, "decoder_name": "blossom"}},
+        {"name": "decode_faithfulness_check", "arguments": {
+            "H_matrix": [[1, 1, 0], [0, 1, 1]], "syndrome": [1, 0], "correction": [1, 0, 0]
         }},
-        {"name": "compat_report", "arguments": {}},
-        {"name": "code_properties", "arguments": {"family": "repetition", "size": 5}},
-        {"name": "code_logicals_inspect", "arguments": {"family": "repetition", "size": 5}},
-        {"name": "wilson_interval", "arguments": {"k": 5, "n": 100}},
-        {"name": "micro_benchmark", "arguments": {
-            "family": "repetition", "size": 5, "decoder_name": "blossom",
-            "shots": 10, "seed": 42
+        {"name": "hot_path_microbench", "arguments": {"family": "rotated_surface", "size": 3, "shots": 16, "decoder_name": "blossom"}},
+        {"name": "stim_circuit_probe", "arguments": {"circuit_text": "R 0 1\nX_ERROR(0.01) 0\nM 0 1"}},
+        {"name": "sinter_task_template", "arguments": {"family": "rotated_surface", "size": 5, "decoder_name": "blossom"}},
+        {"name": "workload_hash", "arguments": {
+            "H_matrix": [[1, 1, 0], [0, 1, 1]], "syndrome": [1, 0], "correction": [1, 0, 0]
         }},
+        {"name": "theorem_lookup", "arguments": {"number": 1}},
+        {"name": "glossary_lookup", "arguments": {"term": "syndrome faithfulness"}},
+        {"name": "reproduction_command_lookup", "arguments": {"section": "all"}},
+        {"name": "system_setup", "arguments": {"confirm": False}},
     ]
-    p, f, s = test_server("MCP Bench Server (20 tools)", "mcp/mcp_server_qector_bench.py", bench_calls)
+    p, f, s = test_server("MCP Bench Server (28 tools)", "mcp/mcp_server_qector_bench.py", bench_calls)
     total_passed += p; total_failed += f; total_skipped += s
 
     # ---- Summary ----

@@ -1,13 +1,21 @@
-"""Final validation: all 28 skills load, both MCP servers list tools."""
+import os
+os.environ["QECTOR_SILENT"] = "1"
 
 import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SKILLS = ROOT / "skills"
 MCP = ROOT / "mcp"
+
+# Prevent local mcp/ directory from shadowing the installed mcp SDK package
+while str(MCP) in sys.path:
+    sys.path.remove(str(MCP))
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 print("=" * 60)
 print("SKILLS VALIDATION")

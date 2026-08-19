@@ -2,188 +2,160 @@
 name: qector-core
 description: >-
   Core domain knowledge and verified facts for the QECTOR quantum
-  error correction platform. Covers the supported app-free
-  qector-decoder-v3 library MCP server (8 tools), the companion
-  qector-bench MCP server (25 tools, Provisional), the optional
-  QECTOR Workbench MCP server, and the eight strict-math
-  ground-truth rules. Load whenever a request involves quantum
-  error correction, decoders, code families, thresholds,
-  syndromes, benchmarking, or the QECTOR MCP tool surface.
-  Enforces the strict-math ground-truth rules
-  (qector-math-foundations) and prevents API hallucination by
-  grounding every tool name, decoder, and API signature in what
-  was actually verified.
+  error correction platform (v1.0.2). Covers the app-free library
+  MCP server (8 frozen tools), the bench companion MCP server
+  (28 tools including safety-gated system_setup and Appendix D
+  reproduction_command_lookup), 12 reproducible slash commands,
+  5 specialized agents, and complete mathematical grounding
+  against all 16 Theorems and Appendices A-E from Reference
+  Manual v1.0.0 (DOI 10.5281/zenodo.21941046). Enforces strict-math
+  obligations (H c = s mod 2, logical coset scoring, Wilson 95% CI)
+  and zero-egress security.
 ---
 
-# QECTOR Core - Verified Platform Facts
+# QECTOR Core - Verified Platform Facts (v1.0.2)
 
-Ground every answer in the verified facts below. If a request
-references a tool, decoder, or API that is not listed here or in
-`references/qector_verified_api.md`, say "not verified in this
-package" rather than inventing behavior. All mathematical claims
-must satisfy the rules in `qector-math-foundations` (strict
-ground truth).
+Ground every answer in the verified facts below. If a request references a tool,
+decoder, command, or API that is not listed here or in
+`references/qector_verified_api.md`, state that it is not verified rather than
+inventing behavior. All mathematical claims must strictly adhere to
+`qector-math-foundations` and the QECTOR Decoder v3 Reference Manual v1.0.0
+(DOI `10.5281/zenodo.21941046`).
 
-## Library MCP server (the 8-tool frozen surface)
+## 1. Guided First-Time Setup & Audit (Tool #28)
 
-`mcp/mcp_server_library.py` exposes exactly **eight tools**, all
-verified on the shipped `qector-decoder-v3==1.0.0` wheel:
+For first-time environment installation with explicit user safety approbation:
 
-| Tool                       | Purpose                                                  |
-| -------------------------- | -------------------------------------------------------- |
-| `list_code_families`       | List code families and live qector 1.0.0 availability    |
-| `list_decoders`            | List the five stable decoder classes                     |
-| `get_license_info`         | Read the live offline QECTOR license tier and gates      |
-| `decode_syndrome`          | Decode a binary syndrome; fail unless `H c = s (mod 2)`  |
-| `decode_single`            | One seeded code-capacity decode (Theorems 1 + 2 checks)  |
-| `threshold_sweep`          | Code-capacity LER sweep with Wilson 95% + SHA-256 sidecar |
-| `build_code_from_matrix`   | Validate and build a binary parity-check matrix           |
-| `compat_report`            | Live package compatibility and Provisional boundaries     |
+- **CLI Interface**:
+  - `python scripts/qector_system_setup.py --check-only` (read-only diagnostic audit).
+  - `python scripts/qector_system_setup.py --confirm` (installs dependencies via `pip install -r requirements.txt`, creates `artifacts/`, and runs live in-process Theorem 1 verification).
+- **MCP Tool Interface**:
+  - `system_setup(confirm=false)`: Returns diagnostic payload with `status: "dry_run_pending_approval"` without modifying the system.
+  - `system_setup(confirm=true)`: Executes installation, configures paths, and verifies live decoding upon explicit user confirmation.
 
-The library server is **frozen at 8 tools** under the 1.0.0 API
-freeze note; never invent additional library tools.
+## 2. Library MCP Server (The 8-Tool Frozen Surface)
 
-## Bench MCP server (the Provisional companion, 25 tools)
+`mcp/mcp_server_library.py` exposes exactly **8 frozen tools**, verified on the
+shipped `qector-decoder-v3==1.0.0` wheel:
 
-`mcp/mcp_server_qector_bench.py` adds 25 **Provisional** tools that
-the 8-tool library surface does not cover. Register it in
-`qector-bench` (see `.mcp.json`).
+| Tool | Purpose |
+| :--- | :--- |
+| `list_code_families` | List registered quantum code families and availability |
+| `list_decoders` | List the five stable decoder classes and algorithm contracts |
+| `get_license_info` | Read the live offline QECTOR license tier, distance limits, and gates |
+| `decode_syndrome` | Decode a binary syndrome vector; fail unless $H c \equiv s \pmod 2$ |
+| `decode_single` | Single-shot seeded code-capacity simulation (Theorems 1 & 2 verified) |
+| `threshold_sweep` | Code-capacity LER sweep with Wilson 95% CI and external `.sha256` sidecar |
+| `build_code_from_matrix` | Validate and build a quantum code from a binary parity-check matrix |
+| `compat_report` | Live package compatibility and runtime environment report |
 
-| Tool                          | Reference manual chapter |
-| ----------------------------- | ------------------------ |
-| `wilson_ci`                   | 15.2 (Wilson formula)     |
-| `wilson_table`                | 15.2                      |
-| `logical_coset_score`         | 3.2 (Theorem 2)          |
-| `dem_inspect`                 | 14 (DEM pipeline)         |
-| `dem_collapse_parallel`       | 14.1 (collapse rule)      |
-| `code_family_info`            | 4 (Table 4.1)             |
-| `code_export_matrices`        | 16.1 (stable API)         |
-| `code_logicals_inspect`       | 3.2, 16.1                 |
-| `code_distance_check`         | 16.1                      |
-| `pymatching_compat_check`     | 17.1 (PyMatching shim)    |
-| `sinter_decoder_list`         | 17.2 (sinter entry points)|
-| `qiskit_plugin_check`         | 17.3 (Qiskit plugin)      |
-| `hardware_probe`              | 18, 20 (license + hw)     |
-| `license_active_check`        | 18.1 (env + tier)         |
-| `env_block`                   | 22.3 (metadata)           |
-| `workbench_probe`             | 17.5 (Workbench)          |
-| `artifacts_sha256`            | 22.3 (sidecar)            |
-| `artifact_metadata_check`     | 22.3 (metadata block)     |
-| `decode_faithfulness_check`   | 3.1 (Theorem 1)           |
-| `hot_path_microbench`         | 22.1, 22.5 (cold/hot)     |
-| `stim_circuit_probe`          | Stim subset parser, no Stim required |
-| `sinter_task_template`        | 17.2 (sinter task, generates only) |
-| `workload_hash`               | 22.3 (artifact sidecar SHA-256) |
-| `theorem_lookup`              | Appendix (theorems 1-16)  |
-| `glossary_lookup`             | Appendix B (glossary)     |
+The library server is **frozen at 8 tools** under the 1.0.0 API freeze note;
+never invent additional library tools.
 
-The bench server exposes **25 tools**, not 20; the five rows above
-were previously undocumented here. Every bench tool returns
-`reference_manual: 10.5281/zenodo.21941046` in its payload.
+## 3. Bench MCP Server (The Provisional Companion, 29 Tools)
 
-## Optional Workbench MCP (device-local)
+`mcp/mcp_server_qector_bench.py` adds **29 specialized tools** for research,
+inspection, reproducibility, and environment management (registered under `qector-bench`):
 
-The optional QECTOR Workbench desktop app is **absent from the
-shipped `qector-decoder-v3` wheel** (file listing, pip RECORD,
-`--mcp` grep). Launch `QectorWorkbench-Portable.exe --mcp` only
-when the app is installed. Its exact tools, version, license,
-and hardware status are device-local and must be negotiated with
-`initialize` and `tools/list`. `qector-bench.workbench_probe` is
-the live probe wrapper; `scripts/probe_workbench_mcp.py` is the
-command-line equivalent.
+| Tool | Reference Manual Category & Chapter |
+| :--- | :--- |
+| `configure_claude_desktop` | Claude Desktop Windows & cross-platform zero-friction connector |
+| `system_setup` | Guided first-time setup with user approbation safety gate |
+| `reproduction_command_lookup` | Appendix D (D.1–D.6) reproduction command workflows |
+| `theorem_lookup` | Appendix A/C (Theorems 1–16 exact formulations and obligations) |
+| `glossary_lookup` | Appendix B (Glossary of notation and symbols) |
+| `wilson_ci` | Chapter 15.2 (Wilson 95% binomial score confidence interval) |
+| `wilson_table` | Chapter 15.2 (Comparative Wilson interval tables) |
+| `logical_coset_score` | Chapter 3.2 (Theorem 2 logical coset error scoring) |
+| `dem_inspect` | Chapter 14 (Detector Error Model inspection and hyperedges) |
+| `dem_collapse_parallel` | Chapter 14.1 (Parallel fault mechanism collapse rule) |
+| `code_family_info` | Chapter 4 (Table 4.1 code family parameters) |
+| `code_export_matrices` | Chapter 16.1 (Stable parity-check and logical matrix export) |
+| `code_logicals_inspect` | Chapters 3.2, 16.1 (Transversal logical operator inspection) |
+| `code_distance_check` | Chapter 16.1 (Distance and check weight verification) |
+| `pymatching_compat_check` | Chapter 17.1 (PyMatching drop-in shim compatibility) |
+| `sinter_decoder_list` | Chapter 17.2 (Sinter community benchmark entry points) |
+| `qiskit_plugin_check` | Chapter 17.3 (Qiskit plugin interface check) |
+| `hardware_probe` | Chapters 18, 20 (Local CPU/GPU hardware capability probe) |
+| `license_active_check` | Chapter 18.1 (Active license tier and feature gates) |
+| `env_block` | Chapter 22.3 (Reproducible environment metadata block) |
+| `compat_report` | Chapters 16.2, 17.1 (Runtime compatibility report) |
+| `workbench_probe` | Chapter 17.5 (Target-device Workbench probe) |
+| `artifacts_sha256` | Chapter 22.3 (External artifact SHA-256 sidecar calculation) |
+| `artifact_metadata_check` | Chapter 22.3 (Artifact metadata schema verification) |
+| `decode_faithfulness_check` | Chapter 3.1 (Theorem 1 syndrome faithfulness gate) |
+| `hot_path_microbench` | Chapters 22.1, 22.5 (Cold setup vs hot decoding microbenchmark) |
+| `stim_circuit_probe` | Circuit inspection (Stim subset parser without Stim required) |
+| `sinter_task_template` | Chapter 17.2 (Sinter task script template generation) |
+| `workload_hash` | Chapter 22.3 (Workload and syndrome buffer SHA-256 hash) |
 
-## Code families and decoders (verified exact strings)
+Every bench tool returns `reference_manual: 10.5281/zenodo.21941046` in its payload.
 
-### Library code factories
+## 4. Reproducible Slash Commands (`commands/`, 13 Total)
 
-- `codes.repetition_code(d)`
-- `codes.ring_code(n)`
-- `codes.rotated_surface_code(d)` - **graphlike**, use this for
-  a graphlike surface code.
-- `codes.unrotated_surface_code(d)` - **graphlike**, but
-  `k = 0`, `logicals_matrix()` is `None`.
-- `codes.toric_code(L)` - 2 logical qubits.
-- `codes.heavy_hex_code(d)` - graphlike.
-- `codes.color_code(d)` - 2 logicals.
-- `codes.hypergraph_product(A, B)` - qLDPC.
-- `codes.bicycle_code(...)` / `codes.bivariate_bicycle_code(...)`
-  - qLDPC.
-- `codes.from_parity_check_matrix(H, name=..., distance=...)` -
-  custom matrix.
-- `codes.gf2_rank`, `codes.gf2_kernel`, `codes.css_logicals` -
-  utility functions.
+| Command | Workflow |
+| :--- | :--- |
+| `/qec-desktop-connector` | Zero-friction Claude Desktop MCP configuration with backup & path safety |
+| `/qec-setup` | Guided first-time setup & diagnostic audit with user approbation gate |
+| `/qec-facts` | Quick reference: codes, decoders, thresholds, and strict-math rules |
+| `/qec-theorem` | Exact formulations and proof obligations for Theorems 1–16 |
+| `/qec-reproduce` | Reference manual Appendix D (D.1–D.6) reproduction workflows |
+| `/qec-decode` | Single-shot syndrome decoding asserting $H c \equiv s \pmod 2$ |
+| `/qec-threshold-sweep` | Local LER sweeps with Wilson 95% intervals and sidecars |
+| `/qec-wilson` | Analytical Wilson 95% score confidence intervals ($z=1.95996$) |
+| `/qec-dem` | Detector Error Model parsing, parallel collapse, and Stim circuits |
+| `/qec-code-inspect` | Code parameters $[[n,k,d]]$, transversals, and check matrices |
+| `/qec-benchmark` | Decoder latency and throughput microbenchmarks |
+| `/qec-sinter` | Sinter task template generation and configuration |
+| `/qec-validate-mcp` | MCP tool and schema validation across library and bench servers |
 
-### Legacy generators (return `(checks, n_qubits)` tuples)
+## 5. Specialized Agents (`agents/`, 5 Total)
 
-- `generate_repetition_code_checks(d)`
-- `generate_ring_code_checks(n)`
-- `generate_surface_code_checks(d)` - **legacy toric-weight-4,
-  NOT graphlike**; use `codes.rotated_surface_code` for a
-  graphlike surface code.
+- `qec-researcher.md`: Academic research, paper reproduction, threshold sweeps, finite-size scaling.
+- `qec-developer.md`: Code integration, API design, performance tuning, stdio JSON-RPC 2.0 wiring.
+- `qec-validator.md`: Formal verification, mathematical proof checking, zero-egress enforcement.
+- `qec-sysadmin.md`: Fleet health triage, environment management, license audits, deployment hygiene.
+- `qec-hardware-engineer.md`: Physical qubit characterization, Stim/DEM pipelines, cryogenic constraints.
 
-### Library stable decoders (manual 16.1)
+## 6. Code Families and Decoders (`qector-decoder-v3==1.0.0`)
 
-`union_find` -> `UnionFindDecoder`
-`fast_union_find` -> `FastUnionFindDecoder`
-`blossom` -> `BlossomDecoder` (exact MWPM)
-`sparse_blossom` -> `SparseBlossomDecoder`
-`native_auto` -> `NativeAutoDecoder`
+### Library Code Factories
+- `codes.repetition_code(d)`: Repetition code, distance $d$.
+- `codes.ring_code(n)`: Ring code, $n$ checks.
+- `codes.rotated_surface_code(d)`: **Graphlike** rotated surface code ($k=1$).
+- `codes.unrotated_surface_code(d)`: Graphlike unrotated surface code ($k=0$).
+- `codes.toric_code(L)`: Toric code on $L \times L$ torus ($k=2$).
+- `codes.heavy_hex_code(d)`: Graphlike heavy-hex code.
+- `codes.color_code(d)`: Triangular color code ($k=1$).
+- `codes.hypergraph_product(A, B)` / `codes.bicycle_code(...)`: qLDPC codes.
+- `codes.from_parity_check_matrix(H, name=..., distance=...)`: Custom matrix code.
 
-### Provisional decoders (manual 16.2, labelled)
+### Library Stable Decoders (Manual Chapter 16.1)
+- `union_find` -> `UnionFindDecoder`
+- `fast_union_find` -> `FastUnionFindDecoder`
+- `blossom` -> `BlossomDecoder` (exact Minimum-Weight Perfect Matching)
+- `sparse_blossom` -> `SparseBlossomDecoder`
+- `native_auto` -> `NativeAutoDecoder`
 
-`bposd` -> `BPOSDDecoder`
-`cuda_batch` -> `CUDABatchDecoder`
-`opencl_batch` -> `OpenCLBatchDecoder`
-`cuda_bposd` -> `CUDABpOsdDecoder`
-`two_stage` -> `TwoStageDecoder`
-`ambiguity_cluster` -> `AmbiguityClusterDecoder`
-`space_time` -> `SpaceTimeDecoder`
-`streaming` -> `StreamingDecoder`
-`sliding_window` -> `SlidingWindowDecoder`
-`auto` -> `AutoDecoder` (7-tier controller)
-`hybrid_cascade` -> `HybridCascadeDecoder`
-`hybrid` -> `HybridDecoder`
-`lookup_table` -> `LookupTableDecoder`
+### Provisional Decoders (Manual Chapter 16.2)
+`bposd`, `cuda_batch`, `opencl_batch`, `cuda_bposd`, `two_stage`, `ambiguity_cluster`,
+`space_time`, `streaming`, `sliding_window`, `auto`, `hybrid_cascade`, `hybrid`, `lookup_table`.
 
-## Ground rules (M0-M8 from `qector-math-foundations`)
+## 7. Strict Math Ground Rules (M0–M8)
 
-1. **Strict math first**: `H c == s (mod 2)` is checked after
-   every decode (Theorem 1); LER reports need 95% Wilson
-   intervals; never compare `code_capacity` vs `circuit_level`
-   numbers. The graphlike `codes` families
-   (`rotated_surface_code`, `unrotated_surface_code`,
-   `toric_code`, `heavy_hex_code`, `color_code`) are single-
-   sector matching-graph codes with `H H^T != 0` (e.g.
-   `rotated_surface_code(5)` has a 12 x 25 H), so they use the
-   arbitrary-matrix / logical-coset branch of Theorem 2, never
-   the self-orthogonal branch.
-2. **No invented tools / APIs**. The 8 library tools and 25
-   bench tools listed above are callable. Workbench tools are
-   callable only after that device's `tools/list` response has
-   been inspected. Verified-but-non-frozen wheel surfaces exist
-   (`rest_api` HTTP routes, `run_grpc_server`,
-   `start_metrics_server`, `decode_mmap`,
-   `get_decoder` / `get_decoder_pool` / `clear_decoder_cache`,
-   `opencl_is_available`); any code using them is Provisional.
-3. **No speed superlatives** without a dated, reproducible
-   artifact (manual chapter 22.5).
-4. **No CPU / GPU assumptions**: use `cuda_is_available()` for
-   a direct-wheel hardware probe. Workbench hardware tools are
-   optional and device-local; licensing is a separate gate.
-5. **Zero egress**: decode locally; never upload
-   `.stim` / `.npy` / parity matrices to web APIs.
+1. **Theorem 1 (Syndrome Faithfulness)**: Every returned correction $c$ must satisfy $H c \equiv s \pmod 2$.
+2. **Theorem 2 (Logical Coset Scoring)**: Score logical errors on the coset $c \oplus e \in \ker H \setminus \mathrm{im} H^T$ for self-orthogonal checks ($H H^T = 0$). For arbitrary matrices, score using code-provided logical/stabilizer spaces.
+3. **Statistical Integrity**: All LER estimates require Wilson 95% score confidence intervals ($z=1.959963985$).
+4. **Noise Model Separation**: `code_capacity` and `circuit_level` results are never comparable.
+5. **No Speed Superlatives**: Throughput and latency figures are machine-, workload-, and environment-specific.
+6. **Zero Egress**: All decoding and artifact generation remain device-local.
 
-## References
+## 8. References & Cross-Skill Navigation
 
-- `references/qector_verified_api.md` - the long-form
-  verified-API reference (provisional symbols, pymatching shim,
-  sinter entry points, optional direct-wheel APIs).
-- `qector-math-foundations` - M0 through M8 normative rules.
-- `qector-decoders-deep-dive` - per-decoder internals and
-  theorem inheritance.
-- `qector-ler-methodology` - LER / Wilson / artifact metadata.
-- `qector-batch-decoding` - batch / streaming / GPU paths and
-  the bit-identity contract.
-- `qector-licensing` - tier table and env-var resolution order.
-- `qector-orchestration` - the routing policy and the 7-tier
-  fallback chain.
+- `references/qector_verified_api.md`: Comprehensive API reference and verified signatures.
+- `qector-math-foundations`: Normative mathematical rules and 16 Theorems.
+- `qector-decoders-deep-dive`: In-depth per-decoder mechanics and algorithmic invariants.
+- `qector-ler-methodology`: Rigorous LER methodology, Wilson intervals, and artifact hashing.
+- `qector-batch-decoding`: Batch/streaming/GPU decoding and Theorem 16 bit-identity.
+- `qector-licensing`: Offline license tiers, distance limits, and feature gating.
+- `qector-orchestration`: Decoder routing policies and the 7-tier fallback hierarchy.

@@ -16,6 +16,8 @@ if exist "dist\qector-claude-plugin-v1.0.0.zip" del /q "dist\qector-claude-plugi
 if exist "dist\qector-claude-plugin-v1.0.0.zip.sha256" del /q "dist\qector-claude-plugin-v1.0.0.zip.sha256"
 if exist "dist\qector-claude-plugin-v1.0.1.zip" del /q "dist\qector-claude-plugin-v1.0.1.zip"
 if exist "dist\qector-claude-plugin-v1.0.1.zip.sha256" del /q "dist\qector-claude-plugin-v1.0.1.zip.sha256"
+if exist "dist\qector-claude-plugin-v1.0.2.zip" del /q "dist\qector-claude-plugin-v1.0.2.zip"
+if exist "dist\qector-claude-plugin-v1.0.2.zip.sha256" del /q "dist\qector-claude-plugin-v1.0.2.zip.sha256"
 if exist "dist\qector-qector-core-skill.zip" del /q "dist\qector-qector-core-skill.zip"
 if exist "dist\qector-qector-core-skill.zip.sha256" del /q "dist\qector-qector-core-skill.zip.sha256"
 echo   done.

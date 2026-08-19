@@ -9,7 +9,10 @@ not cover.
 
 The server implements the JSON-RPC 2.0 stdio transport with the
 ``mcp.server.Server`` low-level adapter pinned in this project (manual 26.2,
-chapter 24.3 frame cap). It is local only; it makes no network calls.
+chapter 24.3 frame cap). It is local only; it makes no network calls by
+default. The sole exception is an opt-in freshness check
+(``env_block(check_pypi=True)``) that queries PyPI once per process and is
+never triggered automatically.
 
 The bench server exposes the following tool groups, each grounded in the
 v1.0.0 reference manual (DOI 10.5281/zenodo.21941046):
@@ -39,9 +42,15 @@ v1.0.0 reference manual (DOI 10.5281/zenodo.21941046):
   ``sinter_task_template``): pure-Python helpers for reproducibility
   (manual 19, 22) that do not require any optional dependency.
 
-* **Reference manual** (``theorem_lookup``, ``glossary_lookup``):
-  offline lookup of theorem statements and symbol / glossary entries
-  from the v1.0.0 reference manual; no decode, no I/O.
+* **Reference manual & reproduction** (``theorem_lookup``, ``glossary_lookup``,
+  ``reproduction_command_lookup``): offline lookup of theorem statements (1-16),
+  symbol / glossary entries, and Appendix D reproduction workflows from the v1.0.0
+  reference manual; no decode, no network, no I/O.
+
+* **First-Time Setup & Installation** (``system_setup``): guided first-time system
+  setup tool with safety gate; audits python environment, installs dependencies from
+  requirements.txt upon explicit user approbation (confirm=True), prepares artifact
+  directories, and runs live mathematical verification.
 
 * **Reproducibility** (``artifacts_sha256``, ``artifact_metadata_check``,
   ``decode_faithfulness_check``): chapter 22.3 / 22.5 helpers, plus an
@@ -68,7 +77,11 @@ import math
 import os
 import platform
 import statistics
+import subprocess
+import sys
 import time
+import urllib.error
+import urllib.request
 from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -104,6 +117,9 @@ MAX_DEM_BYTES = int(os.environ.get("QECTOR_MCP_BENCH_MAX_DEM_BYTES", "2000000"))
 MAX_WILSON_ROWS = int(os.environ.get("QECTOR_MCP_BENCH_MAX_WILSON_ROWS", "10000"))
 MAX_BENCH_SHOTS = int(os.environ.get("QECTOR_MCP_BENCH_MAX_BENCH_SHOTS", "5000"))
 MAX_DISTANCE = int(os.environ.get("QECTOR_MCP_BENCH_MAX_DISTANCE", "63"))
+PYPI_FRESHNESS_TIMEOUT_S = float(
+    os.environ.get("QECTOR_MCP_BENCH_PYPI_TIMEOUT_S", "3.0")
+)
 MAX_WILSON_K = 10_000_000
 MAX_BATCH = 4096
 MAX_CHECKS = 20000
@@ -389,6 +405,52 @@ def _installed_version(distribution: str) -> str:
         return importlib.metadata.version(distribution)
     except importlib.metadata.PackageNotFoundError:
         return "unknown"
+
+
+_PYPI_FRESHNESS_CACHE: dict[str, Any] | None = None
+
+
+def _check_pypi_freshness() -> dict[str, Any]:
+    """Opt-in, one-time-per-process PyPI freshness check.
+
+    Mirrors the library server's ``_check_pypi_freshness``. Never raises
+    and never runs unless explicitly requested via
+    ``env_block(check_pypi=True)``. Any network failure degrades to a
+    ``"unavailable"`` status rather than propagating, preserving the
+    zero-egress-by-default contract of this server. Cached for the
+    lifetime of the server process.
+    """
+    global _PYPI_FRESHNESS_CACHE
+    if _PYPI_FRESHNESS_CACHE is not None:
+        return _PYPI_FRESHNESS_CACHE
+    result: dict[str, Any]
+    try:
+        request = urllib.request.Request(
+            "https://pypi.org/pypi/qector-decoder-v3/json",
+            headers={"User-Agent": f"{SERVER_NAME}/{SERVER_VERSION}"},
+        )
+        with urllib.request.urlopen(
+            request, timeout=PYPI_FRESHNESS_TIMEOUT_S
+        ) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        latest_version = payload.get("info", {}).get("version")
+        if not isinstance(latest_version, str) or not latest_version:
+            raise ValueError("PyPI response did not contain a version string")
+        result = {
+            "status": "ok",
+            "latest_version": latest_version,
+            "installed_version": QECTOR_VERSION,
+            "up_to_date": latest_version == QECTOR_VERSION,
+            "source": "https://pypi.org/pypi/qector-decoder-v3/json",
+        }
+    except Exception as exc:
+        result = {
+            "status": "unavailable",
+            "reason": f"{exc.__class__.__name__}: {exc}",
+            "installed_version": QECTOR_VERSION,
+        }
+    _PYPI_FRESHNESS_CACHE = result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1029,13 +1091,81 @@ def tool_license_active_check() -> dict[str, Any]:
     }
 
 
-def tool_env_block() -> dict[str, Any]:
-    return {
+def tool_env_block(check_pypi: bool = False) -> dict[str, Any]:
+    out: dict[str, Any] = {
         "environment": _env_block(),
         "qector_decoder_v3_present": qector_decoder_v3 is not None,
         "qector_decoder_v3_version": QECTOR_VERSION,
         "reference_manual": REF_DOI,
     }
+    if check_pypi:
+        out["pypi_freshness"] = _check_pypi_freshness()
+    else:
+        out["pypi_freshness"] = {
+            "status": "not_checked",
+            "reason": "pass check_pypi=true to query PyPI; default path stays fully offline",
+        }
+    return out
+
+
+def tool_compat_report(check_pypi: bool = False) -> dict[str, Any]:
+    """Bench-server compatibility report; companion to the library
+    server's ``compat_report``.
+
+    Reports live package compatibility for this server's own runtime
+    (numpy, mcp SDK, qector-decoder-v3, the pymatching compat shim) plus
+    where this server sits in the Provisional-surface boundary map. Set
+    ``check_pypi=True`` to also query PyPI for a newer qector-decoder-v3
+    release; the default path stays fully offline, matching the library
+    server's contract.
+    """
+    numpy_available = importlib.util.find_spec("numpy") is not None
+    mcp_available = importlib.util.find_spec("mcp") is not None
+    qector_installed = qector_decoder_v3 is not None
+    pymatching_compat_available = False
+    if qector_installed:
+        pymatching_compat_available = (
+            callable(getattr(qector_decoder_v3, "pymatching_compat", None))
+            or importlib.util.find_spec("qector_decoder_v3.pymatching_compat")
+            is not None
+        )
+    report: dict[str, Any] = {
+        "runtime_ok": (
+            qector_installed
+            and QECTOR_VERSION == EXPECTED_QECTOR_VERSION
+            and numpy_available
+            and mcp_available
+        ),
+        "server": {
+            "name": SERVER_NAME,
+            "version": SERVER_VERSION,
+            "kind": "bench (Provisional companion to the 8-tool library server)",
+        },
+        "qector_decoder_v3": {
+            "installed": qector_installed,
+            "version": QECTOR_VERSION,
+            "expected": EXPECTED_QECTOR_VERSION,
+        },
+        "numpy": {"installed": numpy_available, "version": np.__version__},
+        "mcp_sdk": {"installed": mcp_available, "version": _installed_version("mcp")},
+        "pymatching_compat": {"available": pymatching_compat_available},
+        "reference_manual": REF_DOI,
+        "provisional_surfaces": {
+            "library_stdio_mcp": "supported local stdio wrapper (library server, 8 frozen tools)",
+            "bench_stdio_mcp": "this server; all 25 tools are Provisional under the v1.0.0 API freeze note",
+            "upstream_network_surfaces": "REST/gRPC/metrics/SSE require separate deployment review",
+            "batch_gpu": "CUDA hardware and license are separate gates; no GPU claim is made here",
+            "opencl": "OpenCL requires the documented source-build path",
+        },
+    }
+    if check_pypi:
+        report["pypi_freshness"] = _check_pypi_freshness()
+    else:
+        report["pypi_freshness"] = {
+            "status": "not_checked",
+            "reason": "pass check_pypi=true to query PyPI; default path stays fully offline",
+        }
+    return report
 
 
 def _subprocess_workbench_probe(
@@ -2027,6 +2157,310 @@ def tool_glossary_lookup(term: str = "") -> dict[str, Any]:
     }
 
 
+_REPRODUCTION_COMMANDS: dict[str, dict[str, Any]] = {
+    "d1_build_smoke": {
+        "section": "Appendix D.1",
+        "title": "Build and import smoke test",
+        "command": "python -c \"import qector_decoder_v3; print(qector_decoder_v3.__version__)\"",
+        "description": "Validates wheel installation and stable import of qector-decoder-v3==1.0.0 without app dependency.",
+    },
+    "d2_validation_suite": {
+        "section": "Appendix D.2",
+        "title": "Validation suite and reference manual obligations",
+        "command": "python scripts/run_manual_math_validation.py && python -m unittest discover -s tests -v",
+        "description": "Executes the 16 core theorem finite proof obligations and unit validation suite against the live wheel.",
+    },
+    "d3_focused_correctness": {
+        "section": "Appendix D.3",
+        "title": "Focused correctness obligations",
+        "command": "python -m unittest tests.test_reference_manual_math.TheoremObligationTests -v",
+        "description": "Tests specific mathematical assertions: Theorem 1 (syndrome faithfulness), Theorem 2 (coset scoring), Theorems 3-16.",
+    },
+    "d4_ler_parity": {
+        "section": "Appendix D.4",
+        "title": "LER parity workflows with 95% Wilson interval",
+        "command": "python scripts/run_threshold_sweep.py --family rotated_surface --distances 3 5 --error-rates 0.01 0.05 0.1 --trials 100 --seed 42",
+        "description": "Generates a threshold sweep with exact 95% Wilson score intervals (z=1.959963985) and hashed raw artifact sidecars.",
+    },
+    "d5_gpu_bit_identity": {
+        "section": "Appendix D.5",
+        "title": "GPU bit-identity verification",
+        "command": "python -c \"from qector_decoder_v3 import CUDABatchDecoder, codes; print('CUDA available:', CUDABatchDecoder.is_available())\"",
+        "description": "Probes live CUDA batch kernel capability and asserts bit-identical outputs to CPU reference (Theorem 16).",
+    },
+    "d6_artifact_hashing": {
+        "section": "Appendix D.6",
+        "title": "Artifact hashing and integrity sidecar",
+        "command": "python scripts/qector_runtime_check.py",
+        "description": "Generates and checks SHA-256 metadata sidecars matching chapter 22.3 required metadata block.",
+    },
+}
+
+
+def tool_reproduction_command_lookup(section: str = "all") -> dict[str, Any]:
+    """Return the reproduction commands from Reference Manual Appendix D (D.1-D.6).
+
+    Pure-Python; no decode, no network, no I/O.
+    """
+    sec = section.strip().lower() if isinstance(section, str) else "all"
+    if sec == "all" or not sec:
+        return {
+            "section": "all",
+            "commands": _REPRODUCTION_COMMANDS,
+            "reference_manual": REF_DOI,
+            "chapters": "Appendix D (D.1 - D.6)",
+        }
+    matches = {
+        k: v
+        for k, v in _REPRODUCTION_COMMANDS.items()
+        if sec in k.lower() or sec in v["section"].lower() or sec in v["title"].lower()
+    }
+    if not matches:
+        return {
+            "section": section,
+            "found": False,
+            "available_sections": list(_REPRODUCTION_COMMANDS.keys()),
+            "reference_manual": REF_DOI,
+        }
+    return {
+        "section": section,
+        "found": True,
+        "matches": matches,
+        "reference_manual": REF_DOI,
+    }
+
+
+def tool_system_setup(
+    confirm: bool = False,
+    install_requirements: bool = True,
+    target_packages: Sequence[str] | None = None,
+    create_artifact_dir: bool = True,
+    run_validation_test: bool = True,
+) -> dict[str, Any]:
+    """Guided first-time system setup tool for the QECTOR quantum decoder package.
+
+    Audits and installs all required system dependencies (numpy, qector-decoder-v3,
+    mcp SDK, cryptography), creates evidence artifact paths, and validates
+    syndrome faithfulness (Theorem 1).
+
+    SAFETY GATE: When confirm=False (the default), performs a complete read-only
+    diagnostic probe and outputs planned actions. Setting confirm=True requires
+    explicit user approbation before running pip installations or modifying files.
+    """
+    root_dir = Path(__file__).resolve().parent.parent
+    req_file = root_dir / "requirements.txt"
+    default_packages = [
+        "numpy>=1.26,<2.3",
+        "qector-decoder-v3==1.0.0",
+        "mcp==1.26.0",
+        "cryptography>=48.0.1,<50",
+    ]
+    packages_to_install = list(target_packages) if target_packages else default_packages
+
+    # Gather system diagnostics (read-only)
+    py_exe = sys.executable
+    py_ver = platform.python_version()
+    is_venv = sys.prefix != sys.base_prefix
+    has_pip = importlib.util.find_spec("pip") is not None
+    numpy_ver = _installed_version("numpy")
+    qector_ver = _installed_version("qector-decoder-v3")
+    mcp_ver = _installed_version("mcp")
+    crypto_ver = _installed_version("cryptography")
+    artifact_dir = Path(os.environ.get("QECTOR_ARTIFACT_DIR", root_dir / "artifacts"))
+
+    diagnostics = {
+        "python_executable": py_exe,
+        "python_version": py_ver,
+        "virtual_env": is_venv,
+        "pip_available": has_pip,
+        "installed_versions": {
+            "numpy": numpy_ver,
+            "qector_decoder_v3": qector_ver,
+            "mcp": mcp_ver,
+            "cryptography": crypto_ver,
+        },
+        "target_packages": packages_to_install,
+        "requirements_file_present": req_file.is_file(),
+        "artifact_directory": str(artifact_dir),
+        "license_environment": {
+            "QECTOR_LICENSE_KEY": bool(os.environ.get("QECTOR_LICENSE_KEY")),
+            "QECTOR_LICENSE_FILE": os.environ.get("QECTOR_LICENSE_FILE", "unset"),
+            "QECTOR_SILENT": os.environ.get("QECTOR_SILENT", "1"),
+        },
+    }
+
+    actions_planned: list[str] = []
+    if install_requirements:
+        actions_planned.append(
+            f"Install/verify packages: {', '.join(packages_to_install)}"
+        )
+    if create_artifact_dir:
+        actions_planned.append(f"Ensure artifact directory exists: {artifact_dir}")
+    if run_validation_test:
+        actions_planned.append(
+            "Execute in-process decoder syndrome faithfulness self-check (H c = s)"
+        )
+
+    if not confirm:
+        return {
+            "status": "dry_run_pending_approval",
+            "user_approbation_required": True,
+            "user_approbation_granted": False,
+            "confirmation_message": (
+                "SAFETY GATE: Dry-run probe complete. No changes were made to your system. "
+                "To execute the planned installation actions with user approbation, re-run "
+                "system_setup with confirm=True."
+            ),
+            "actions_planned": actions_planned,
+            "diagnostics": diagnostics,
+            "reference_manual": REF_DOI,
+        }
+
+    # User approbation granted (confirm == True)
+    actions_executed: list[dict[str, Any]] = []
+
+    # 1. Install requirements
+    if install_requirements and has_pip:
+        install_cmd = [py_exe, "-m", "pip", "install"]
+        if req_file.is_file() and not target_packages:
+            install_cmd.extend(["-r", str(req_file)])
+        else:
+            install_cmd.extend(packages_to_install)
+        try:
+            p = subprocess.run(
+                install_cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(root_dir),
+            )
+            actions_executed.append(
+                {
+                    "action": "pip_install",
+                    "command": " ".join(install_cmd),
+                    "success": p.returncode == 0,
+                    "stdout_snippet": p.stdout[-300:] if p.stdout else "",
+                    "stderr_snippet": p.stderr[-300:] if p.stderr else "",
+                }
+            )
+        except Exception as exc:
+            actions_executed.append(
+                {
+                    "action": "pip_install",
+                    "success": False,
+                    "error": str(exc),
+                }
+            )
+
+    # 2. Create artifact directory
+    if create_artifact_dir:
+        try:
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            test_file = artifact_dir / ".write_test.tmp"
+            test_file.write_text("ok", encoding="utf-8")
+            test_file.unlink()
+            actions_executed.append(
+                {
+                    "action": "create_artifact_directory",
+                    "path": str(artifact_dir),
+                    "success": True,
+                }
+            )
+        except Exception as exc:
+            actions_executed.append(
+                {
+                    "action": "create_artifact_directory",
+                    "path": str(artifact_dir),
+                    "success": False,
+                    "error": str(exc),
+                }
+            )
+
+    # 3. In-process validation self-test
+    validation_result: dict[str, Any] = {"passed": False}
+    if run_validation_test:
+        try:
+            import qector_decoder_v3 as qd
+            from qector_decoder_v3 import BlossomDecoder, codes
+
+            code = codes.repetition_code(5)
+            matrix = np.asarray(code.parity_check_matrix(), dtype=np.uint8)
+            syndrome = np.array([1, 0, 0, 1], dtype=np.uint8)
+            decoder = BlossomDecoder(code.check_to_qubits, n_qubits=code.n_qubits)
+            correction = np.asarray(decoder.decode(syndrome), dtype=np.uint8)
+            calculated_syndrome = (
+                matrix.astype(np.int64) @ correction.astype(np.int64)
+            ) % 2
+            is_faithful = np.array_equal(
+                calculated_syndrome.astype(np.uint8), syndrome
+            )
+            validation_result = {
+                "passed": is_faithful,
+                "decoder_used": "BlossomDecoder",
+                "family": "repetition",
+                "distance": 5,
+                "theorem_1_syndrome_faithful": is_faithful,
+                "qector_version": getattr(qd, "__version__", "unknown"),
+            }
+            actions_executed.append(
+                {
+                    "action": "in_process_validation_test",
+                    "success": is_faithful,
+                    "details": validation_result,
+                }
+            )
+        except Exception as exc:
+            validation_result = {"passed": False, "error": str(exc)}
+            actions_executed.append(
+                {
+                    "action": "in_process_validation_test",
+                    "success": False,
+                    "error": str(exc),
+                }
+            )
+
+    return {
+        "status": "ready" if validation_result.get("passed", False) else "configured",
+        "user_approbation_required": True,
+        "user_approbation_granted": True,
+        "actions_planned": actions_planned,
+        "actions_executed": actions_executed,
+        "diagnostics": diagnostics,
+        "validation_result": validation_result,
+        "reference_manual": REF_DOI,
+    }
+
+
+def tool_configure_claude_desktop(
+    confirm: bool = False,
+    remove: bool = False,
+    python_path: str | None = None,
+) -> dict[str, Any]:
+    """Automated connector to configure both QECTOR MCP servers in Claude Desktop.
+
+    Reads %APPDATA%\\Claude\\claude_desktop_config.json on Windows, creates a timestamped
+    backup, and safely registers both 'qector-library' (8 tools) and 'qector-bench' (29 tools)
+    with explicit python executable path and forward-slash path normalization.
+
+    SAFETY GATE: When confirm=False (the default), performs a read-only dry run inspection.
+    Set confirm=True to write configuration changes to Claude Desktop.
+    """
+    scripts_dir = Path(__file__).resolve().parent.parent / "scripts"
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    try:
+        from configure_claude_desktop import configure_desktop
+        res = configure_desktop(dry_run=not confirm, remove=remove, custom_python=python_path)
+        res["reference_manual"] = REF_DOI
+        return res
+    except Exception as exc:
+        return {
+            "status": "error",
+            "message": f"Failed to run desktop configuration: {exc}",
+            "reference_manual": REF_DOI,
+        }
+
+
 # ---------------------------------------------------------------------------
 # Tool dispatch
 # ---------------------------------------------------------------------------
@@ -2047,6 +2481,7 @@ TOOL_FUNCTIONS: dict[str, Callable[..., Any]] = {
     "hardware_probe": tool_hardware_probe,
     "license_active_check": tool_license_active_check,
     "env_block": tool_env_block,
+    "compat_report": tool_compat_report,
     "workbench_probe": tool_workbench_probe,
     "artifacts_sha256": tool_artifacts_sha256,
     "artifact_metadata_check": tool_artifact_metadata_check,
@@ -2057,6 +2492,9 @@ TOOL_FUNCTIONS: dict[str, Callable[..., Any]] = {
     "workload_hash": tool_workload_hash,
     "theorem_lookup": tool_theorem_lookup,
     "glossary_lookup": tool_glossary_lookup,
+    "reproduction_command_lookup": tool_reproduction_command_lookup,
+    "system_setup": tool_system_setup,
+    "configure_claude_desktop": tool_configure_claude_desktop,
 }
 
 
@@ -2079,7 +2517,8 @@ TOOL_DEFAULTS: dict[str, dict[str, Any]] = {
     "qiskit_plugin_check": {},
     "hardware_probe": {},
     "license_active_check": {},
-    "env_block": {},
+    "env_block": {"check_pypi": False},
+    "compat_report": {"check_pypi": False},
     "workbench_probe": {
         "executable": "",
         "timeout": 60.0,
@@ -2115,6 +2554,19 @@ TOOL_DEFAULTS: dict[str, dict[str, Any]] = {
     "workload_hash": {"H_matrix": [], "syndrome": [], "correction": []},
     "theorem_lookup": {"number": 1},
     "glossary_lookup": {"term": ""},
+    "reproduction_command_lookup": {"section": "all"},
+    "system_setup": {
+        "confirm": False,
+        "install_requirements": True,
+        "target_packages": None,
+        "create_artifact_dir": True,
+        "run_validation_test": True,
+    },
+    "configure_claude_desktop": {
+        "confirm": False,
+        "remove": False,
+        "python_path": None,
+    },
 }
 
 
@@ -2390,10 +2842,50 @@ def _tool_schema() -> list[Tool]:
         ),
         Tool(
             name="env_block",
-            description="Return the environment block (manual 22.3).",
+            description=(
+                "Return the environment block (manual 22.3). Set "
+                "check_pypi=true to also query PyPI for a newer "
+                "qector-decoder-v3 release (single outbound HTTPS call, "
+                "cached for the process lifetime); default stays fully offline."
+            ),
             inputSchema={
                 "type": "object",
-                "properties": {},
+                "properties": {
+                    "check_pypi": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Opt in to a one-time PyPI freshness check for this "
+                            "server process. Never automatic."
+                        ),
+                    },
+                },
+                "additionalProperties": False,
+            },
+        ),
+        Tool(
+            name="compat_report",
+            description=(
+                "Bench-server compatibility report: numpy / mcp SDK / "
+                "qector-decoder-v3 / pymatching-compat availability, plus "
+                "the Provisional-surface boundary map. Companion to the "
+                "library server's compat_report. Set check_pypi=true to "
+                "also query PyPI for a newer qector-decoder-v3 release "
+                "(single outbound HTTPS call, cached for the process "
+                "lifetime); default stays fully offline."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "check_pypi": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Opt in to a one-time PyPI freshness check for this "
+                            "server process. Never automatic."
+                        ),
+                    },
+                },
                 "additionalProperties": False,
             },
         ),
@@ -2621,6 +3113,106 @@ def _tool_schema() -> list[Tool]:
                     "term": {"type": "string"},
                 },
                 "required": ["term"],
+                "additionalProperties": False,
+            },
+        ),
+        Tool(
+            name="reproduction_command_lookup",
+            description="Return reproduction commands from Reference Manual Appendix D (D.1-D.6). Pure-Python; no decode, no I/O.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "section": {
+                        "type": "string",
+                        "enum": [
+                            "all",
+                            "smoke",
+                            "validation",
+                            "correctness",
+                            "ler",
+                            "gpu",
+                            "hash",
+                            "d1_build_smoke",
+                            "d2_validation_suite",
+                            "d3_focused_correctness",
+                            "d4_ler_parity",
+                            "d5_gpu_bit_identity",
+                            "d6_artifact_hashing",
+                        ],
+                        "default": "all",
+                        "description": "Appendix D section name or 'all'.",
+                    },
+                },
+                "additionalProperties": False,
+            },
+        ),
+        Tool(
+            name="system_setup",
+            description=(
+                "First-time system setup and configuration tool for QECTOR. "
+                "Audits python interpreter, installs requirements, creates artifact "
+                "directories, and runs mathematical validation. Requires explicit user "
+                "approbation (confirm=true) to execute modifications."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "confirm": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Set to true to grant user approbation and execute installations; false runs a read-only dry run probe.",
+                    },
+                    "install_requirements": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Whether to install/verify Python packages via pip.",
+                    },
+                    "target_packages": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional custom packages to install; defaults to pinned production requirements.",
+                    },
+                    "create_artifact_dir": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Whether to create and test write permission on the artifacts directory.",
+                    },
+                    "run_validation_test": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Whether to execute an in-process decode self-test asserting Theorem 1.",
+                    },
+                },
+                "additionalProperties": False,
+            },
+        ),
+        Tool(
+            name="configure_claude_desktop",
+            description=(
+                "Automated connector to configure both QECTOR MCP servers (qector-library and "
+                "qector-bench) inside Claude Desktop. Creates a timestamped backup of "
+                "%APPDATA%\\Claude\\claude_desktop_config.json, normalizes all paths to forward "
+                "slashes, and injects python path and silent flags. Requires confirm=true to write changes."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "confirm": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Set to true to grant user approbation and write configuration changes; false runs a read-only dry run inspection.",
+                    },
+                    "remove": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Set to true to remove QECTOR server entries from Claude Desktop config.",
+                    },
+                    "python_path": {
+                        "type": ["string", "null"],
+                        "default": None,
+                        "description": "Optional explicit Python interpreter executable path to pin.",
+                    },
+                },
                 "additionalProperties": False,
             },
         ),

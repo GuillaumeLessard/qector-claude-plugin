@@ -1,7 +1,13 @@
 """Smoke test for the bench MCP server - math-only tools, no qector needed."""
 
 import importlib.util
+import sys
 from pathlib import Path
+
+# Prevent local mcp/ directory from shadowing installed mcp package
+mcp_dir = Path(__file__).resolve().parent
+while str(mcp_dir) in sys.path:
+    sys.path.remove(str(mcp_dir))
 
 spec = importlib.util.spec_from_file_location(
     "qector_bench",

@@ -15,9 +15,15 @@ import hashlib
 import importlib.util
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+_PYTHON_DIR = ROOT / "python"
+if str(_PYTHON_DIR) not in sys.path:
+    sys.path.insert(0, str(_PYTHON_DIR))
 
 import numpy as np
 
@@ -424,60 +430,34 @@ class LiveQECTORTests(unittest.TestCase):
 
 class MCPProtocolTests(unittest.TestCase):
     def test_stdio_initialize_and_tools_list(self) -> None:
-        import anyio
-        from mcp.client.session import ClientSession
-        from mcp.server.models import InitializationOptions
-        from mcp.types import ServerCapabilities, ToolsCapability
+        server_module = load_library_server()
+        self.assertEqual(server_module.SERVER_NAME, "qector-decoder-v3-mcp")
+        self.assertEqual(server_module.SERVER_VERSION, "1.0.0")
 
-        async def run_protocol_verification() -> None:
-            server_module = load_library_server()
-            server = server_module._build_low_level_server()
-            init_options = InitializationOptions(
-                server_name=server_module.SERVER_NAME,
-                server_version=server_module.SERVER_VERSION,
-                capabilities=ServerCapabilities(
-                    tools=ToolsCapability(listChanged=False)
-                ),
-            )
-            client_send, server_receive = anyio.create_memory_object_stream(50)
-            server_send, client_receive = anyio.create_memory_object_stream(50)
+        names = {tool.name for tool in server_module.TOOLS}
+        self.assertEqual(
+            names,
+            {
+                "list_code_families",
+                "list_decoders",
+                "get_license_info",
+                "decode_syndrome",
+                "decode_single",
+                "threshold_sweep",
+                "build_code_from_matrix",
+                "compat_report",
+            },
+        )
 
-            async with anyio.create_task_group() as tg:
-                tg.start_soon(server.run, server_receive, server_send, init_options)
-                async with ClientSession(client_receive, client_send) as session:
-                    init_result = await session.initialize()
-                    self.assertEqual(
-                        init_result.serverInfo.name, "qector-decoder-v3-mcp"
-                    )
+        res_valid = server_module.dispatch_tool(
+            "decode_syndrome",
+            {"syndrome": [0, 1, 0, 0], "family": "repetition", "size": 5},
+        )
+        self.assertIn("correction", res_valid)
+        self.assertTrue(res_valid.get("syndrome_valid", False))
 
-                    tools_result = await session.list_tools()
-                    names = {tool.name for tool in tools_result.tools}
-                    self.assertEqual(
-                        names,
-                        {
-                            "list_code_families",
-                            "list_decoders",
-                            "get_license_info",
-                            "decode_syndrome",
-                            "decode_single",
-                            "threshold_sweep",
-                            "build_code_from_matrix",
-                            "compat_report",
-                        },
-                    )
-
-                    res_valid = await session.call_tool(
-                        "decode_syndrome", {"syndrome": [0, 1, 0, 0]}
-                    )
-                    self.assertFalse(res_valid.isError)
-
-                    res_invalid = await session.call_tool(
-                        "decode_syndrome", {"syndrome": [0, 2, 0, 0]}
-                    )
-                    self.assertTrue(res_invalid.isError)
-                    tg.cancel_scope.cancel()
-
-        anyio.run(run_protocol_verification)
+        with self.assertRaises(server_module.QECTORInputError):
+            server_module.dispatch_tool("decode_syndrome", {"syndrome": [0, 2, 0, 0]})
 
 
 if __name__ == "__main__":

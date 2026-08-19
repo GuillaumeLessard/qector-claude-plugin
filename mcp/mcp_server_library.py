@@ -26,6 +26,8 @@ import os
 import platform
 import tempfile
 import time
+import urllib.error
+import urllib.request
 from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -73,6 +75,7 @@ MAX_QUBITS = int(os.environ.get("QECTOR_MCP_MAX_QUBITS", "100000"))
 MAX_MATRIX_CELLS = int(os.environ.get("QECTOR_MCP_MAX_MATRIX_CELLS", "1000000"))
 MAX_TRIALS = int(os.environ.get("QECTOR_MCP_MAX_TRIALS", "100000"))
 MAX_SWEEP_POINTS = int(os.environ.get("QECTOR_MCP_MAX_SWEEP_POINTS", "256"))
+PYPI_FRESHNESS_TIMEOUT_S = float(os.environ.get("QECTOR_MCP_PYPI_TIMEOUT_S", "3.0"))
 
 if (
     min(
@@ -969,7 +972,54 @@ def build_code_from_matrix(
     }
 
 
-def compat_report() -> dict[str, Any]:
+_PYPI_FRESHNESS_CACHE: dict[str, Any] | None = None
+
+
+def _check_pypi_freshness() -> dict[str, Any]:
+    """Opt-in, one-time-per-process PyPI freshness check.
+
+    Never raises and never runs unless explicitly requested via
+    ``compat_report(check_pypi=True)``. Any network failure (offline,
+    DNS blocked, rate-limited, timeout) degrades to a ``"unavailable"``
+    status rather than propagating, so the offline-by-default contract
+    of ``compat_report`` is preserved on its default path. The result
+    is cached for the lifetime of the server process so repeated calls
+    within a session do not re-hit the network.
+    """
+    global _PYPI_FRESHNESS_CACHE
+    if _PYPI_FRESHNESS_CACHE is not None:
+        return _PYPI_FRESHNESS_CACHE
+    result: dict[str, Any]
+    try:
+        request = urllib.request.Request(
+            "https://pypi.org/pypi/qector-decoder-v3/json",
+            headers={"User-Agent": f"{SERVER_NAME}/{SERVER_VERSION}"},
+        )
+        with urllib.request.urlopen(
+            request, timeout=PYPI_FRESHNESS_TIMEOUT_S
+        ) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+        latest_version = payload.get("info", {}).get("version")
+        if not isinstance(latest_version, str) or not latest_version:
+            raise ValueError("PyPI response did not contain a version string")
+        result = {
+            "status": "ok",
+            "latest_version": latest_version,
+            "installed_version": QECTOR_VERSION,
+            "up_to_date": latest_version == QECTOR_VERSION,
+            "source": "https://pypi.org/pypi/qector-decoder-v3/json",
+        }
+    except Exception as exc:
+        result = {
+            "status": "unavailable",
+            "reason": f"{exc.__class__.__name__}: {exc}",
+            "installed_version": QECTOR_VERSION,
+        }
+    _PYPI_FRESHNESS_CACHE = result
+    return result
+
+
+def compat_report(check_pypi: bool = False) -> dict[str, Any]:
     try:
         import importlib.util
 
@@ -978,7 +1028,7 @@ def compat_report() -> dict[str, Any]:
     except Exception:
         numpy_available = True
         mcp_available = False
-    return {
+    report: dict[str, Any] = {
         "runtime_ok": QECTOR_VERSION == EXPECTED_QECTOR_VERSION and numpy_available,
         "qector_decoder_v3": {
             "installed": True,
@@ -1000,6 +1050,14 @@ def compat_report() -> dict[str, Any]:
             "opencl": "OpenCL requires the documented source-build path",
         },
     }
+    if check_pypi:
+        report["pypi_freshness"] = _check_pypi_freshness()
+    else:
+        report["pypi_freshness"] = {
+            "status": "not_checked",
+            "reason": "pass check_pypi=true to query PyPI; default path stays fully offline",
+        }
+    return report
 
 
 TOOL_FUNCTIONS: dict[str, Callable[..., Any]] = {
@@ -1040,7 +1098,7 @@ TOOL_DEFAULTS: dict[str, dict[str, Any]] = {
         "artifact_path": None,
     },
     "build_code_from_matrix": {"family": "custom", "distance": 3},
-    "compat_report": {},
+    "compat_report": {"check_pypi": False},
 }
 
 
@@ -1246,10 +1304,24 @@ def _tool_schema() -> list[Tool]:
         ),
         Tool(
             name="compat_report",
-            description="Report live package compatibility and Provisional-surface boundaries.",
+            description=(
+                "Report live package compatibility and Provisional-surface "
+                "boundaries. Set check_pypi=true to query PyPI for a newer "
+                "qector-decoder-v3 release (single outbound HTTPS call, "
+                "cached for the process lifetime); default stays fully offline."
+            ),
             inputSchema={
                 "type": "object",
-                "properties": {},
+                "properties": {
+                    "check_pypi": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Opt in to a one-time PyPI freshness check for this "
+                            "server process. Never automatic."
+                        ),
+                    },
+                },
                 "additionalProperties": False,
             },
         ),

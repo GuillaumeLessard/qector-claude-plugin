@@ -48,19 +48,31 @@ under its current working directory. Prefer an external directory such as
 
 ## MCP Gate
 
+### 1. Library Server Gate (`qector-library` — 8 Tools)
+
 Start `python mcp/mcp_server_library.py` through the MCP client and perform:
 
 1. `initialize` with the client's negotiated protocol version.
-2. `tools/list` and exact-name review before any tool call.
+2. `tools/list` and exact-name review before any tool call (8 tools).
 3. `tools/call` for `list_code_families`, `list_decoders`, and `compat_report`.
 4. One small `decode_syndrome` call and confirmation of `syndrome_valid`.
 5. One invalid-input call and confirmation that the response is an MCP tool
    error, not a successful result.
 
+### 2. Bench Server Gate (`qector-bench` — 28 Tools)
+
+Start `python mcp/mcp_server_qector_bench.py` through the MCP client and perform:
+
+1. `initialize` and `tools/list` verification (28 tools).
+2. Call `system_setup(confirm=false)` to verify non-destructive environment audit.
+3. Call `reproduction_command_lookup(section="all")` to verify Appendix D reproduction maps.
+4. Call `theorem_lookup(number=1)` and `glossary_lookup(term="syndrome faithfulness")`.
+5. Call `wilson_ci(k=10, n=1000)` and verify interval `[0.00544, 0.01831]`.
+
 The optional Workbench must be configured separately and probed with
 `python scripts/probe_workbench_mcp.py --executable <target-workbench-executable>`.
-Its tool names, hardware, license, and
-version must be negotiated on that device; no bundled transcript is evidence.
+Its tool names, hardware, license, and version must be negotiated on that device;
+no bundled transcript is evidence.
 
 ## Claim Boundary
 

@@ -1,9 +1,8 @@
-# QECTOR Library MCP Cheat Sheet
+# QECTOR MCP Cheat Sheet (v1.0.2)
 
-## Default App-Free Surface
+## 1. Default Library Surface (`qector-library` — 8 Frozen Stable Tools)
 
-The bundled `qector-library` server is the supported local MCP surface. It
-does not require QECTOR Workbench and exposes exactly these eight tools:
+The frozen `qector-library` server is the authoritative local MCP surface:
 
 `list_code_families`, `list_decoders`, `get_license_info`, `decode_syndrome`,
 `decode_single`, `threshold_sweep`, `build_code_from_matrix`, `compat_report`.
@@ -16,12 +15,16 @@ does not require QECTOR Workbench and exposes exactly these eight tools:
 | Sysadmin | runtime and feature state | `compat_report`, `get_license_info`, `list_decoders` |
 | Hardware engineer | explicit local checks and matrix validation | `list_code_families`, `build_code_from_matrix`, `decode_syndrome` |
 
-## Optional Workbench
+## 2. Bench & Provisional Surface (`qector-bench` — 28 Tools)
 
-Workbench is separate from this package. Its tool names, count, version,
-hardware, and license state are device-local. Call `initialize` and
-`tools/list` before using any Workbench name; no Workbench name is part of the
-library MCP contract.
+The companion `qector-bench` server adds 28 research and operational tools:
+- **Setup & Repro**: `system_setup` (28th tool with user approbation), `reproduction_command_lookup` (27th tool for Appendix D.1-D.6).
+- **Manual Lookup**: `theorem_lookup` (Theorems 1-16), `glossary_lookup` (Appendix B).
+- **Scoring & Math**: `wilson_ci`, `wilson_table`, `logical_coset_score`.
+- **DEM & Circuit**: `dem_inspect`, `dem_collapse_parallel`, `stim_circuit_probe`, `sinter_task_template`.
+- **Codes & Distance**: `code_family_info`, `code_export_matrices`, `code_logicals_inspect`, `code_distance_check`.
+- **Ecosystem**: `pymatching_compat_check`, `sinter_decoder_list`, `qiskit_plugin_check`.
+- **Diagnostics & Bench**: `hardware_probe`, `license_active_check`, `env_block`, `compat_report`, `workbench_probe`, `artifacts_sha256`, `artifact_metadata_check`, `decode_faithfulness_check`, `hot_path_microbench`, `workload_hash`.
 
 ## Configurations
 

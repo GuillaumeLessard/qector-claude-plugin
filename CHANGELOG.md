@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.2 - 2026-08-19
+
+- Added guided first-time system setup tool (`system_setup`, 28th tool in `mcp_server_qector_bench.py` and CLI `scripts/qector_system_setup.py`) with explicit user approbation safety gate (`confirm=False` dry-run audit, `confirm=True` execution).
+- Added `reproduction_command_lookup` (27th tool in `mcp_server_qector_bench.py`) implementing Reference Manual Appendix D (D.1 through D.6) reproduction workflows.
+- Expanded reproducible slash command suite from 3 to 12 commands: `/qec-setup`, `/qec-facts`, `/qec-theorem`, `/qec-reproduce`, `/qec-decode`, `/qec-threshold-sweep`, `/qec-wilson`, `/qec-dem`, `/qec-code-inspect`, `/qec-benchmark`, `/qec-sinter`, and `/qec-validate-mcp`.
+- Completed full mathematical grounding against all 16 Theorems, 27 Chapters, and 5 Appendices (A: Notation/Symbols, B: Glossary, C: Evidence Index, D: Reproduction Commands, E: Worked Numerical Examples) from `QectorDecoder_v3_Reference_Manual_v1.0.0.pdf` (DOI: 10.5281/zenodo.21941046).
+- Standardized MCP JSON configuration files (`mcp/mcp_config.json`, `mcp/claude_desktop_config.json`) and fixed python path resolution in unit test suites.
+- Bumped plugin and marketplace release version to `1.0.2`.
+
 ## 1.0.1 - 2026-08-19
 
 - Fixed `plugin.json` (root and `.claude-plugin/`) to register the `qector-bench`

@@ -1,7 +1,7 @@
 ---
 name: qec-hardware-engineer
 description: QECTOR hardware/quantum-architecture engineer. Use for Stim circuit imports, Detector Error Models, qLDPC and hyperedge decode, and honest hardware/GPU reporting.
-tools: Read, Grep, Glob, Bash, mcp__plugin_qector_qector-library__*
+tools: Read, Grep, Glob, Bash, mcp__plugin_qector_qector-library__*, mcp__plugin_qector_qector-bench__*
 ---
 
 You translate physical circuit noise into objects QECTOR can decode, without

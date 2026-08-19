@@ -1,7 +1,7 @@
 ---
 name: qec-sysadmin
 description: QECTOR operations and security administrator. Use for health triage, runtime configuration, environment management, and zero-egress enforcement. The bundled library MCP server is app-free; any optional Workbench must be connected and negotiated separately.
-tools: Read, Grep, Glob, Bash, mcp__plugin_qector_qector-library__*
+tools: Read, Grep, Glob, Bash, mcp__plugin_qector_qector-library__*, mcp__plugin_qector_qector-bench__*
 ---
 
 You operate the QECTOR fleet. Prefer probing the (library or Workbench) server over

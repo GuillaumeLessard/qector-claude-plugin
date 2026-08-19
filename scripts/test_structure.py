@@ -139,6 +139,17 @@ if os.path.isfile(mcp_json):
     check("qector-library" in servers, "mcp.json registers qector-library server")
     check("qector-bench" in servers, "mcp.json registers qector-bench server")
 
+# ---- MCP Config Templates Validation ----
+for cfg_rel in ["mcp/claude_desktop_config.json", "mcp/mcp_config.json"]:
+    cfg_path = os.path.join(ROOT, cfg_rel)
+    check(os.path.isfile(cfg_path), f"{cfg_rel} exists")
+    if os.path.isfile(cfg_path):
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            cfg_data = json.load(f)
+        cfg_servers = cfg_data.get("mcpServers", {})
+        check("qector-library" in cfg_servers, f"{cfg_rel} registers qector-library server")
+        check("qector-bench" in cfg_servers, f"{cfg_rel} registers qector-bench server")
+
 # ---- Dist archives ----
 print(f"\n{'='*70}")
 print("  DIST ARCHIVES VALIDATION")
@@ -167,6 +178,15 @@ check(not os.path.isfile(os.path.join(ROOT, "plugin.json.deprecated")),
       "No plugin.json.deprecated in root")
 check(not os.path.isfile(os.path.join(ROOT, "marketplace.json.deprecated")),
       "No marketplace.json.deprecated in root")
+check(not os.path.isdir(os.path.join(ROOT, ".tmp_core")),
+      "No .tmp_core directory in root")
+check(not os.path.isdir(os.path.join(ROOT, "skills-main")),
+      "No skills-main directory in root")
+
+root_txt_files = [f for f in os.listdir(ROOT) if f.endswith(".txt") and os.path.isfile(os.path.join(ROOT, f))]
+allowed_root_txt = {"requirements.txt"}
+stray_txt = set(root_txt_files) - allowed_root_txt
+check(len(stray_txt) == 0, f"No stray .txt files in root (found: {list(stray_txt)})")
 
 # ---- Summary ----
 print(f"\n{'='*70}")

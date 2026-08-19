@@ -60,18 +60,21 @@ EXCLUDE_SUFFIXES = {
 FORBIDDEN_RE = re.compile(r'[<>:"|?*\x00-\x1f]')
 
 
-def _is_stray_artifact(name: str) -> bool:
+def _is_stray_artifact(rel: Path) -> bool:
     """Catch accidental editor/shell artifacts that aren't part of the
     documented public package: default OS-generated filenames (e.g.
-    Windows' "New Text Document.txt") and personal scratch notes left at
-    repo root (e.g. "TODO_CLAUDE.md", "NOTES.md", "scratch.txt").
+    Windows' "New Text Document.txt"), personal scratch notes left at
+    repo root, and any stray .txt files other than requirements.txt.
     """
+    name = rel.name
     lower = name.lower()
     if lower.startswith("new text document") or lower.startswith("new document"):
         return True
-    if lower.startswith(("todo_", "notes_", "scratch")) and lower.endswith(
+    if lower.startswith(("todo_", "notes_", "scratch", "test_", "temp_")) and lower.endswith(
         (".txt", ".md")
     ):
+        return True
+    if len(rel.parts) == 1 and lower.endswith(".txt") and lower != "requirements.txt":
         return True
     return False
 
@@ -90,7 +93,7 @@ def skip(rel: Path) -> bool:
         return True
     if rel.name in EXCLUDE_FILES:
         return True
-    if _is_stray_artifact(rel.name):
+    if _is_stray_artifact(rel):
         return True
     if rel.suffix in EXCLUDE_SUFFIXES:
         return True

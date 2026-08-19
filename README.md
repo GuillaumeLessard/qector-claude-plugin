@@ -29,10 +29,10 @@ claude plugin install qector@qector-tools
 
 - **28 strict-math QEC skills** grounded in the QECTOR reference-manual contract
 - **5 focused agents**: researcher, developer, validator, sysadmin, hardware engineer
-- **3 reproducible commands**: runtime inspection, math obligations, local LER sweeps
-- **2 local stdio MCP servers**: an 8-tool frozen library surface and a 25-tool Provisional bench companion, both with explicit schemas and fail-closed error handling
+- **13 reproducible commands**: setup, desktop connector, facts, math theorems, reproduction, decode, sweeps, benchmarks, Wilson CI, DEM parsing, code inspection, Sinter, and MCP validation
+- **2 local stdio MCP servers**: an 8-tool frozen library surface and a 29-tool Provisional bench companion (including first-time system setup with user approbation, zero-friction Claude Desktop connector, and Appendix D reproduction workflows), both with explicit schemas and fail-closed error handling
 - **Public F2 ground-truth helpers** and device-local validation tests
-- **Claude Code marketplace metadata** in `.claude-plugin/marketplace.json`
+- **Claude Code marketplace metadata** in `.claude-plugin/marketplace.json` (v1.0.2)
 
 ## Skills & Agents Reference
 
@@ -68,7 +68,7 @@ claude plugin install qector@qector-tools
 | `qector-two-stage-css` | Two-stage CSS decoding for depolarising noise |
 | `qector-workbench` | Optional QECTOR Workbench desktop application |
 
-### Agents (`agents/`)
+### Agents (`agents/`, 5 total)
 | Agent | Specialization |
 |-------|----------------|
 | `qec-researcher.md` | Academic research, paper reproduction, threshold sweeps |
@@ -77,12 +77,22 @@ claude plugin install qector@qector-tools
 | `qec-sysadmin.md` | Operations, monitoring, incident response |
 | `qec-hardware-engineer.md` | Physical qubit characterization, cryogenic systems |
 
-### Commands (`commands/`)
+### Commands (`commands/`, 13 total)
 | Command | Description |
 |---------|-------------|
-| `qec-facts.md` | Quick reference: codes, decoders, thresholds |
-| `qec-threshold-sweep.md` | Run local LER sweeps with Wilson intervals |
-| `qec-validate-mcp.md` | Validate MCP server tools and schemas |
+| `/qec-desktop-connector` | Zero-friction Claude Desktop MCP configuration with backup & path safety |
+| `/qec-setup` | Guided first-time setup and diagnostic audit with user approbation gate |
+| `/qec-facts` | Quick reference: codes, decoders, thresholds, and strict-math rules |
+| `/qec-theorem` | Look up exact formulations and proof obligations for Theorems 1-16 |
+| `/qec-reproduce` | Reference manual Appendix D (D.1-D.6) reproduction workflows |
+| `/qec-decode` | Single-shot syndrome decoding asserting $H c \equiv s \pmod 2$ |
+| `/qec-threshold-sweep` | Run local LER sweeps with Wilson 95% confidence intervals |
+| `/qec-wilson` | Compute Wilson 95% score confidence intervals and comparison tables |
+| `/qec-dem` | Inspect Detector Error Models (DEM), Stim circuits, and parallel fault collapse |
+| `/qec-code-inspect` | Verify code parameters $[[n,k,d]]$, transversals, and check matrices |
+| `/qec-benchmark` | Measure decoder latency and throughput microbenchmarks |
+| `/qec-sinter` | Generate Sinter task templates and benchmark configuration |
+| `/qec-validate-mcp` | Validate tool schemas, JSON-RPC transport, and health reports across both servers |
 
 ### Hooks (`hooks/`)
 - `hooks.json` — Event-driven automation for skill/agent lifecycle
@@ -107,7 +117,9 @@ python scripts/qector_runtime_check.py
 
 The runtime check is device-local and produces no bundled evidence.
 
-## Standalone MCP Server
+## Standalone MCP Servers
+
+### 1. Library Server (`mcp/mcp_server_library.py` — 8 Frozen Stable Tools)
 
 Launch the library server directly:
 
@@ -115,20 +127,47 @@ Launch the library server directly:
 python mcp/mcp_server_library.py
 ```
 
-The server exposes exactly these eight tools:
+The frozen stable surface exposes exactly these eight tools:
 
-1. `list_code_families`
-2. `list_decoders`
-3. `get_license_info`
-4. `decode_syndrome`
-5. `decode_single`
-6. `threshold_sweep`
-7. `build_code_from_matrix`
-8. `compat_report`
+1. `list_code_families`: List all registered quantum code families.
+2. `list_decoders`: List available decoder backends and algorithm contracts.
+3. `get_license_info`: Current license tier, maximum distance, and capabilities.
+4. `decode_syndrome`: Decode a specific binary syndrome vector, strictly asserting $H c \equiv s \pmod 2$.
+5. `decode_single`: Single-shot physical error simulation and decoding test.
+6. `threshold_sweep`: Multi-distance, multi-error-rate logical error rate (LER) sweep with Wilson 95% CI.
+7. `build_code_from_matrix`: Construct and validate a custom code from a binary parity check matrix.
+8. `compat_report`: Runtime environment, wheel version, and dependency compatibility audit.
 
-The transport is local stdio only. The server validates binary inputs, enforces
-resource bounds, checks every correction against `H c = s (mod 2)`, and returns
-MCP tool errors without exposing tracebacks.
+### 2. Bench & Provisional Server (`mcp/mcp_server_qector_bench.py` — 28 Tools)
+
+Launch the bench companion server:
+
+```text
+python mcp/mcp_server_qector_bench.py
+```
+
+The bench companion provides 28 specialized research, inspection, reproducibility, and setup tools:
+
+- **Guided First-Time Setup & Installation** (Tool #28: `system_setup`): Audits host environment, pip availability, and dependencies. Prompts for explicit user confirmation before installing packages via `pip install -r requirements.txt`, creating evidence paths, and running in-process Theorem 1 verification.
+- **Reference Manual Reproduction** (Tool #27: `reproduction_command_lookup`): Instant offline lookup of reproduction commands from Appendix D (D.1 through D.6).
+- **Offline Reference Manual Lookup** (`theorem_lookup`, `glossary_lookup`): Exact theorem formulations (Theorems 1-16) and Appendix B glossary definitions.
+- **Strict Methodology** (`wilson_ci`, `wilson_table`, `logical_coset_score`): Exact Wilson 95% score intervals and logical coset scoring (Theorem 2).
+- **DEM & Circuit Pipeline** (`dem_inspect`, `dem_collapse_parallel`, `stim_circuit_probe`, `sinter_task_template`): Stim circuit probing, detector error model parsing, parallel edge collapse, and Sinter integration.
+- **Code Inspection** (`code_family_info`, `code_export_matrices`, `code_logicals_inspect`, `code_distance_check`): Structural matrix export, transversal logical operator inspection, and distance checking.
+- **Ecosystem Shims** (`pymatching_compat_check`, `sinter_decoder_list`, `qiskit_plugin_check`): Drop-in PyMatching and Sinter compatibility verification.
+- **Hardware & Workload Integrity** (`hardware_probe`, `license_active_check`, `env_block`, `compat_report`, `workbench_probe`, `artifacts_sha256`, `artifact_metadata_check`, `decode_faithfulness_check`, `hot_path_microbench`, `workload_hash`).
+
+## Guided First-Time System Setup (28th Tool)
+
+For first-time environment setup, run the safety-gated setup script directly or call `system_setup`:
+
+```bash
+# 1. Read-only diagnostic probe (dry-run, no changes made)
+python scripts/qector_system_setup.py --check-only
+
+# 2. Execute installation with explicit user approbation
+python scripts/qector_system_setup.py --confirm
+```
 
 ## Claude Code
 
@@ -255,9 +294,10 @@ This produces two verified archives under `dist/`:
   custom-skill uploader. It contains one top-level `qector-core/` folder with
   `SKILL.md` at its root. Upload this file directly; do not rename it to a
   multi-skill bundle.
-- `qector-claude-plugin-v1.0.1.zip` — the full plugin ZIP for the Claude Code
-  plugin flow (`claude --plugin-dir`). It preserves the `.claude-plugin/`,
-  `skills/`, `hooks/`, and MCP server layout.
+- `qector-claude-plugin-v1.0.2.zip` — the full plugin ZIP for the Claude Code
+  marketplace / `claude --plugin-dir` packaging flow. Built by
+  `python scripts/pro_pack.py --plugin` (or `--all`). Contains all 28 skills,
+  5 agents, 12 commands, hooks, and MCP servers.
 
 Each archive is accompanied by a `.sha256` sidecar. Regenerate them whenever a
 skill or its references change:
