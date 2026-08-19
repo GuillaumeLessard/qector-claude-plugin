@@ -9,7 +9,7 @@
     {
       "name": "qector",
       "version": "1.0.2",
-      "source": "./",
+      "source": "GuillaumeLessard/qector-claude-plugin",
       "description": "Local QECTOR quantum-error-correction plugin for Claude with strict-math skills, focused agents, and an app-free qector-decoder-v3 MCP server.",
       "author": {
         "name": "Guillaume Lessard"
