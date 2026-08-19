@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.venv/
+artifacts/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.log
+*.key
+skills-main/
+.tmp_core/
+err.txt
+.claude/settings.local.json

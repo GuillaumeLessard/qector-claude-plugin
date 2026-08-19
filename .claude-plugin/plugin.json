@@ -1,0 +1,24 @@
+{
+  "name": "qector",
+  "description": "Local QECTOR quantum-error-correction plugin for Claude with strict-math skills, focused agents, and an app-free qector-decoder-v3 MCP server.",
+  "version": "1.0.1",
+  "author": {
+    "name": "Guillaume Lessard"
+  },
+  "mcpServers": {
+    "qector-library": {
+      "command": "python",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_library.py"],
+      "env": {
+        "QECTOR_SILENT": "1"
+      }
+    },
+    "qector-bench": {
+      "command": "python",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_qector_bench.py"],
+      "env": {
+        "QECTOR_SILENT": "1"
+      }
+    }
+  }
+}

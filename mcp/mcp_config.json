@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "qector-library": {
+      "command": "python",
+      "args": ["<PLUGIN_ROOT>/mcp/mcp_server_library.py"],
+      "env": {
+        "QECTOR_SILENT": "1"
+      }
+    }
+  }
+}

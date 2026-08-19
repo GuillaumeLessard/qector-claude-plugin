@@ -1,0 +1,5 @@
+# Production runtime for the library-first Claude MCP server.
+qector-decoder-v3==1.0.0
+mcp==1.26.0
+# Keep the installed pyOpenSSL ecosystem compatible with the wheel requirement.
+cryptography>=48.0.1,<50
