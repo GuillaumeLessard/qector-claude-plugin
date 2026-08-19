@@ -1,0 +1,14 @@
+# Production runtime for the library-first Claude MCP server.
+# Supports CPython 3.9-3.13. numpy is declared as a version RANGE, not an
+# exact pin, matching qector-decoder-v3==1.0.0's own published constraint
+# (numpy>=1.24.0,<2.3, verified against the installed wheel's metadata).
+# numpy itself has no single release spanning 3.9-3.13 (1.26.x is the last
+# to support 3.9; numpy 2.1+ drops 3.9 and requires 3.10+), so a range is
+# required for pip to resolve a working wheel per interpreter, and the
+# range must stay inside qector-decoder-v3's own bound or pip's resolver
+# will fail rather than silently pick something incompatible.
+numpy>=1.26,<2.3
+qector-decoder-v3==1.0.0
+mcp==1.26.0
+# Keep the installed pyOpenSSL ecosystem compatible with the wheel requirement.
+cryptography>=48.0.1,<50

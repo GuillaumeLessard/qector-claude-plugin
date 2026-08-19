@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "qector-workbench": {
+      "command": "<ABSOLUTE_WORKBENCH_EXE>",
+      "args": ["--mcp"],
+      "env": {
+        "QECTOR_SILENT": "1"
+      }
+    }
+  }
+}

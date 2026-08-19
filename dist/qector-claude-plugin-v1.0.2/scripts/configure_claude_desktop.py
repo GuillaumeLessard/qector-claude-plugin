@@ -219,10 +219,9 @@ def configure_settings_connector_extension(
 
     manifest_data = json.loads(manifest_src.read_text(encoding="utf-8"))
     py_path = str(Path(python_exe).resolve()).replace("\\", "/")
-    
-    # Use self-contained extension path logic
+    lib_path = str(LIBRARY_SCRIPT.resolve()).replace("\\", "/")
     manifest_data["server"]["mcp_config"]["command"] = py_path
-    manifest_data["server"]["mcp_config"]["args"] = ["${__dirname}/mcp/mcp_server_library.py"]
+    manifest_data["server"]["mcp_config"]["args"] = [lib_path]
 
     manifest_bytes = json.dumps(manifest_data, indent=2, sort_keys=True).encode("utf-8")
     manifest_hash = hashlib.sha256(manifest_bytes).hexdigest()
@@ -256,8 +255,6 @@ def configure_settings_connector_extension(
             if ext_target_dir.is_dir():
                 shutil.rmtree(ext_target_dir, ignore_errors=True)
         else:
-            if ext_target_dir.is_dir():
-                shutil.rmtree(ext_target_dir, ignore_errors=True)
             ext_target_dir.mkdir(parents=True, exist_ok=True)
             # Write updated manifest into extension folder
             (ext_target_dir / "manifest.json").write_bytes(manifest_bytes)
@@ -266,11 +263,6 @@ def configure_settings_connector_extension(
                 shutil.copy2(EXTENSION_DIR_SRC / "icon.png", ext_target_dir / "icon.png")
             if (EXTENSION_DIR_SRC / "README.md").is_file():
                 shutil.copy2(EXTENSION_DIR_SRC / "README.md", ext_target_dir / "README.md")
-            # Deep copy mcp/ directory to make the connector fully self-contained!
-            mcp_src = ROOT / "mcp"
-            if mcp_src.is_dir():
-                shutil.copytree(mcp_src, ext_target_dir / "mcp", dirs_exist_ok=True)
-
 
         # Backup & write registry file
         if registry_file.is_file():

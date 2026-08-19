@@ -1,0 +1,96 @@
+{
+  "manifest_version": "0.3",
+  "name": "qector",
+  "display_name": "QECTOR Quantum Error Correction",
+  "version": "1.0.2",
+  "description": "High-performance quantum error correction decoders, syndrome verification, Wilson 95% intervals, and DEM analysis.",
+  "long_description": "QECTOR brings comprehensive Quantum Error Correction (QEC) engineering and research directly into Claude Desktop.\n\n* **Fail-Closed Verification**: Every decoded correction is mathematically verified against the parity-check matrix (Theorem 1: H·c ≡ s mod 2).\n* **Statistical Integrity**: All threshold sweeps include analytical Wilson 95% binomial score confidence intervals and deterministic SHA-256 sidecars.\n* **10 Code Families**: Rotated surface, unrotated surface, toric, color, heavy-hex, repetition, ring, hypergraph product, and bivariate bicycle qLDPC codes.\n* **Fast Multi-Backend Decoders**: Blossom (exact MWPM), Sparse Blossom, Union-Find, Fast Union-Find, BP-OSD, and Auto routing.\n* **Interoperability**: Standalone Stim circuit parsing, Detector Error Model (DEM) parallel fault collapse, and Sinter benchmark harness templates.\n* **Zero-Egress Security**: Runs 100% offline on bare metal with encrypted licensing at rest and zero cloud telemetry.\n\nGrounded in the QECTOR Reference Manual v1.0.0 (DOI: 10.5281/zenodo.21941046).",
+  "author": {
+    "name": "Guillaume Lessard",
+    "url": "https://qector.store"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GuillaumeLessard/qector-claude-plugin"
+  },
+  "homepage": "https://qector.store",
+  "documentation": "https://doi.org/10.5281/zenodo.21941046",
+  "support": "https://qector.store",
+  "privacy_policies": [
+    "https://qector.store/privacy"
+  ],
+  "icon": "icon.png",
+  "license": "Apache-2.0",
+  "server": {
+    "type": "python",
+    "entry_point": "mcp/mcp_server_library.py",
+    "mcp_config": {
+      "command": "python",
+      "args": [
+        "${__dirname}/mcp/mcp_server_library.py"
+      ],
+      "env": {
+        "QECTOR_SILENT": "1",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "list_code_families",
+      "description": "List registered quantum code families and availability (surface, toric, color, qLDPC)."
+    },
+    {
+      "name": "list_decoders",
+      "description": "List the five stable decoder classes and algorithm contracts."
+    },
+    {
+      "name": "get_license_info",
+      "description": "Read the live offline QECTOR license tier, distance limits, and gates."
+    },
+    {
+      "name": "decode_syndrome",
+      "description": "Decode a binary syndrome vector; fail unless H c = s (mod 2)."
+    },
+    {
+      "name": "decode_single",
+      "description": "Single-shot seeded code-capacity simulation (Theorems 1 & 2 verified)."
+    },
+    {
+      "name": "threshold_sweep",
+      "description": "Code-capacity LER sweep with Wilson 95% CI and external .sha256 sidecar."
+    },
+    {
+      "name": "build_code_from_matrix",
+      "description": "Validate and build a quantum code from a binary parity-check matrix."
+    },
+    {
+      "name": "compat_report",
+      "description": "Live package compatibility and runtime environment report."
+    }
+  ],
+  "keywords": [
+    "quantum",
+    "quantum-computing",
+    "quantum-error-correction",
+    "qec",
+    "decoder",
+    "surface-code",
+    "qldpc",
+    "mwpm",
+    "union-find",
+    "stim",
+    "sinter",
+    "physics"
+  ],
+  "compatibility": {
+    "platforms": [
+      "win32",
+      "darwin",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.10"
+    }
+  }
+}
