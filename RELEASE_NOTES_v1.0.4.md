@@ -60,9 +60,9 @@ apply on every call.
 
 | Artifact | SHA-256 |
 |:---------|:--------|
-| `qector-claude-plugin-1.0.4.zip` | `748b06f92189e7163f8a7a6fd85ebf3e294425bc7ddac0577df56dcead703a1a` |
-| `qector-claude-plugin-source-1.0.4.zip` | `43310329dcb249d667b557238544cf77aadbbc786e08f4fd35538813d1f2b9ef` |
-| `qector-claude-desktop-1.0.4.mcpb` | `e9be10eca47e4437153fc6432e4ef892207afa3e439b9299492ee3f537aca51c` |
+| `qector-claude-plugin-1.0.4.zip` | `6e0a36e96a52991d3f2bd9028f286aa29e51a78cd150da1ba46c052002410d12` |
+| `qector-claude-plugin-source-1.0.4.zip` | `7c405144f367a449a446e2597e3fd8e0256f4dddc2b78065db49c498c30263ad` |
+| `qector-claude-desktop-1.0.4.mcpb` | `e1301f88761addaa705408cb055ae8362b07f6d2825483f153104777aeee6a64` |
 
 Per-file `.sha256` sidecars, combined `SHA256SUMS`, SPDX-2.3 SBOM, and
 `provenance.json` (with git commit + per-artifact hash) are also
