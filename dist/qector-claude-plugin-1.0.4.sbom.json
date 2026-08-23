@@ -3,15 +3,15 @@
   "annotations": [
     {
       "annotationType": "OTHER",
-      "comment": "qector-claude-desktop-1.0.4.mcpb sha256=e9be10eca47e4437153fc6432e4ef892207afa3e439b9299492ee3f537aca51c"
+      "comment": "qector-claude-desktop-1.0.4.mcpb sha256=e1301f88761addaa705408cb055ae8362b07f6d2825483f153104777aeee6a64"
     },
     {
       "annotationType": "OTHER",
-      "comment": "qector-claude-plugin-1.0.4.zip sha256=748b06f92189e7163f8a7a6fd85ebf3e294425bc7ddac0577df56dcead703a1a"
+      "comment": "qector-claude-plugin-1.0.4.zip sha256=6e0a36e96a52991d3f2bd9028f286aa29e51a78cd150da1ba46c052002410d12"
     },
     {
       "annotationType": "OTHER",
-      "comment": "qector-claude-plugin-source-1.0.4.zip sha256=43310329dcb249d667b557238544cf77aadbbc786e08f4fd35538813d1f2b9ef"
+      "comment": "qector-claude-plugin-source-1.0.4.zip sha256=7c405144f367a449a446e2597e3fd8e0256f4dddc2b78065db49c498c30263ad"
     }
   ],
   "dataLicense": "CC0-1.0",
