@@ -306,10 +306,10 @@ class LiveQECTORTests(unittest.TestCase):
         self.assertEqual(len(manifest["plugins"]), 1)
         entry = manifest["plugins"][0]
         self.assertEqual(entry["name"], plugin["name"])
-        self.assertEqual(
-            entry["source"],
-            {"source": "github", "repo": "GuillaumeLessard/qector-claude-plugin"},
-        )
+        # Same-repo relative source: the canonical form used by official
+        # marketplaces, resolvable by every sync path that clones the repo
+        # (Claude Code, Claude Desktop, and the claude.ai marketplace sync).
+        self.assertEqual(entry["source"], "./")
         self.assertEqual(entry["version"], plugin["version"])
         self.assertNotIn("..", entry["source"])
 
