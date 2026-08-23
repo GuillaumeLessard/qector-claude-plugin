@@ -16,7 +16,7 @@
     "license": "Proprietary",
     "name": "qector-claude-plugin",
     "repository": "https://github.com/GuillaumeLessard/qector-claude-plugin",
-    "version": "1.0.4"
+    "version": "1.0.5"
   },
   "runtime": {
     "mcp": "1.26.0",
@@ -34,7 +34,7 @@
       "research_server": "qector-research"
     },
     "claude_desktop": {
-      "artifact": "qector-claude-desktop-1.0.4.mcpb",
+      "artifact": "qector-claude-desktop-1.0.5.mcpb",
       "default_profile": "safe",
       "default_servers": [
         "qector-desktop-mcp"

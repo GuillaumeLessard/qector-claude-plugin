@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "qector",
   "display_name": "QECTOR Quantum Error Correction",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Local, fail-closed quantum error correction tools for Claude Desktop.",
   "long_description": "QECTOR provides a local Quantum Error Correction (QEC) tool surface for Claude Desktop. The default safe profile exposes eight stable tools for decoding, code construction, threshold sweeps, license inspection, and runtime compatibility. Every returned correction is verified against the parity-check relation H c = s (mod 2).\n\nThe default path uses local stdio and makes no network request. An explicit PyPI freshness check is available only through opt-in compatibility tool arguments; it sends no QEC workload data. Research and administrative surfaces are separate opt-in MCP servers and are not bundled into this safe Desktop extension.",
   "author": {
@@ -25,7 +25,7 @@
     "type": "python",
     "entry_point": "mcp/mcp_server_desktop.py",
     "mcp_config": {
-      "command": "python",
+      "command": "${__dirname}/bin/qector-python",
       "args": [
         "${__dirname}/mcp/mcp_server_desktop.py",
         "--profile",
@@ -33,7 +33,37 @@
       ],
       "env": {
         "QECTOR_SILENT": "1",
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "QECTOR_PYTHON": "${user_config.python_path}"
+      }
+    }
+  },
+  "user_config": {
+    "python_path": {
+      "type": "file",
+      "title": "Python interpreter (optional)",
+      "description": "Absolute path to a Python 3.9-3.13 interpreter with qector-decoder-v3 installed. Leave unset to auto-resolve via the bundled launcher.",
+      "required": false
+    }
+  },
+  "platform_overrides": {
+    "win32": {
+      "server": {
+        "type": "python",
+        "entry_point": "mcp/mcp_server_desktop.py",
+        "mcp_config": {
+          "command": "${__dirname}\\bin\\qector-python.cmd",
+          "args": [
+            "${__dirname}\\mcp\\mcp_server_desktop.py",
+            "--profile",
+            "safe"
+          ],
+          "env": {
+            "QECTOR_SILENT": "1",
+            "PYTHONUNBUFFERED": "1",
+            "QECTOR_PYTHON": "${user_config.python_path}"
+          }
+        }
       }
     }
   },

@@ -105,6 +105,8 @@ a public claim.
 ```bash
 # D.1 Build and import smoke
 git clone https://github.com/qectorlab/qector-decoder.git
+# All D.x paths below are relative to the UPSTREAM qector-decoder
+# source checkout created in D.1 -- NOT to this plugin repository.
 cd qector-decoder
 python -m venv .venv
 .venv/Scripts/python -m pip install --upgrade pip maturin

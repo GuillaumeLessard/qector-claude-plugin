@@ -301,7 +301,7 @@ class TestSharedContract(unittest.TestCase):
             {"decoder": "blossom", "syndrome_valid": True, "reference_manual": "10.5281/zenodo.21941046"},
             tool_name="decode_syndrome",
             server_name="qector-decoder-v3-mcp",
-            server_version="1.0.4",
+            server_version="1.0.5",
             stability="stable",
         )
         self.assertEqual(envelope["status"], "verified")

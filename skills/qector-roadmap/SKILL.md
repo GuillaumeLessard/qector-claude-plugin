@@ -18,12 +18,12 @@ Source of authority: v1.0.0 reference manual, chapter 27.
 
 A provisional symbol may be promoted to stable only after:
 
-1. **A dated promotion entry** in `docs/API_STABILITY.md` naming
-   the surface and the review.
+1. **A dated promotion entry** in the decoder tree's
+   `docs/API_STABILITY.md` naming the surface and the review.
 2. **The same test bar as stable symbols**: a property test, a
    regression test, and an example.
-3. **A move** between the corresponding sections of
-   `docs/STABLE_API.md`.
+3. **A move** between the corresponding sections of the decoder
+   tree's (decoder tree) `docs/STABLE_API.md`.
 4. **A changelog note**.
 
 As of the v1.0.0 manual, **the promotion log is empty**: no

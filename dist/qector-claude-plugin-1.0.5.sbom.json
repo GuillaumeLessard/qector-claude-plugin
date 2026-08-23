@@ -1,0 +1,41 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "annotations": [
+    {
+      "annotationType": "OTHER",
+      "comment": "qector-claude-desktop-1.0.5.mcpb sha256=edb08d37b241253a3c35b95a6df73e48d622b711b56a1b91602b3f66f5e955ab"
+    },
+    {
+      "annotationType": "OTHER",
+      "comment": "qector-claude-plugin-1.0.5.zip sha256=623be5a3ca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b"
+    },
+    {
+      "annotationType": "OTHER",
+      "comment": "qector-claude-plugin-source-1.0.5.zip sha256=cb0b11a3fc53ce69008529b0946dd3b8267e0ec612b661b645a4c64d49e023a9"
+    }
+  ],
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://github.com/GuillaumeLessard/qector-claude-plugin",
+  "name": "qector-claude-plugin-1.0.5",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-QECTORPlugin",
+      "licenseConcluded": "Proprietary",
+      "name": "qector-claude-plugin",
+      "versionInfo": "1.0.5"
+    },
+    {
+      "SPDXID": "SPDXRef-QECTORDecoder",
+      "licenseConcluded": "NOASSERTION",
+      "name": "qector-decoder-v3",
+      "versionInfo": "1.0.0"
+    },
+    {
+      "SPDXID": "SPDXRef-MCP",
+      "licenseConcluded": "NOASSERTION",
+      "name": "mcp",
+      "versionInfo": "1.26.0"
+    }
+  ],
+  "spdxVersion": "SPDX-2.3"
+}

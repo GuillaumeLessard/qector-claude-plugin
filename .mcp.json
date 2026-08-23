@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "qector-library": {
-      "command": "python",
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/qector-python",
       "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_library.py"],
       "env": {
         "QECTOR_SILENT": "1",

@@ -27,51 +27,40 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _server_version(path: Path) -> str | None:
+def _server_version(path: Path, _depth: int = 0) -> str | None:
     """Return the SERVER_VERSION that a server module reports.
 
-    A module may declare its version literally (e.g. ``SERVER_VERSION =
-    "1.0.3"``) or by inheriting from another module (e.g.
-    ``SERVER_VERSION = library.SERVER_VERSION``). The literal form is the
-    only one we can verify without importing the module, so this helper
-    also accepts the inherited form and resolves it against the local
-    library / research module via importlib.
+    Resolved statically from source: a module either declares a literal
+    string or inherits one (``SERVER_VERSION = library.SERVER_VERSION``).
+    Inheritance is followed by reading the referenced sibling module's own
+    literal -- no modules are imported, so this gate stays runnable on a
+    bare interpreter that does not have the ``mcp`` SDK installed.
     """
     text = path.read_text(encoding="utf-8")
-    match = re.search(
+    literal = re.search(
         r'^SERVER_VERSION\s*=\s*["\']([^"\']+)["\']',
         text,
         flags=re.MULTILINE,
     )
-    if match:
-        return match.group(1)
-    inherit_match = re.search(
+    if literal:
+        return literal.group(1)
+    if _depth >= 3:
+        return None
+    inherited = re.search(
         r'^SERVER_VERSION\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.SERVER_VERSION',
         text,
         flags=re.MULTILINE,
     )
-    if inherit_match:
-        module_name = inherit_match.group(1)
-        try:
-            import importlib.util
-
-            if module_name == "library":
-                target = path.parent / "mcp_server_library.py"
-            elif module_name == "research":
-                target = path.parent / "mcp_server_qector_bench.py"
-            else:
-                return None
-            spec = importlib.util.spec_from_file_location(
-                f"_release_validate_{module_name}", target
-            )
-            if spec is None or spec.loader is None:
-                return None
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            return getattr(module, "SERVER_VERSION", None)
-        except Exception:
-            return None
-    return None
+    if not inherited:
+        return None
+    siblings = {
+        "library": "mcp_server_library.py",
+        "research": "mcp_server_qector_bench.py",
+    }
+    sibling = siblings.get(inherited.group(1))
+    if sibling is None:
+        return None
+    return _server_version(path.parent / sibling, _depth + 1)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -160,7 +160,7 @@ Exhaustion returns `RESOURCE_LIMIT` and the process stays up. See
 ## 🏗️ Architecture
 
 ```
-                  QECTOR Claude Plugin v1.0.4
+                  QECTOR Claude Plugin v1.0.5
    ┌──────────────┐ ┌──────────────┐ ┌────────────────┐
    │ 11 Commands  │ │  5 Agents    │ │   28 Skills    │
    └──────┬───────┘ └──────┬───────┘ └────────┬───────┘
@@ -189,19 +189,19 @@ operation.
 
 ## 📥 Download artifacts
 
-The canonical `1.0.4` release assets live in `dist/`, each with a
+The canonical `1.0.5` release assets live in `dist/`, each with a
 SHA-256 sidecar and a combined `SHA256SUMS` file:
 
 | Artifact | Contents |
 |:---------|:---------|
-| `qector-claude-plugin-1.0.4.zip` | Claude Code plugin: skills, agents, commands, prompts, hooks, MCP servers, docs |
-| `qector-claude-plugin-source-1.0.4.zip` | Public QECTOR source distribution (no test suite, no CI workflows, no internal decks) |
-| `qector-claude-desktop-1.0.4.mcpb` | Claude Desktop safe-extension MCPB (8 stable tools, `icon.png` and `README.md` at bundle root) |
-| `qector-claude-plugin-1.0.4.sbom.json` | SPDX-2.3 SBOM for the three packages above |
+| `qector-claude-plugin-1.0.5.zip` | Claude Code plugin: skills, agents, commands, prompts, hooks, MCP servers, docs |
+| `qector-claude-plugin-source-1.0.5.zip` | Public QECTOR source distribution (no test suite, no CI workflows, no internal decks) |
+| `qector-claude-desktop-1.0.5.mcpb` | Claude Desktop safe-extension MCPB (8 stable tools, `icon.png` and `README.md` at bundle root) |
+| `qector-claude-plugin-1.0.5.sbom.json` | SPDX-2.3 SBOM for the three packages above |
 | `provenance.json` | per-artifact SHA-256 + git commit + runtime pin |
 | `SHA256SUMS` | combined sidecar file |
 
-`qector-claude-desktop-1.0.4.mcpb` is the artifact listed in
+`qector-claude-desktop-1.0.5.mcpb` is the artifact listed in
 `server.json` and is the one Claude Desktop's MCP Registry downloads.
 
 ---
@@ -288,7 +288,7 @@ The underlying `qector-decoder-v3` backend is separately licensed:
 ---
 
 <p align="center">
-  <strong>QECTOR Claude Plugin v1.0.4</strong><br/>
+  <strong>QECTOR Claude Plugin v1.0.5</strong><br/>
   Built on <code>qector-decoder-v3</code> v1.0.0 (Rust/PyO3 core)<br/><br/>
   © 2026 Guillaume Lessard / iD01t Productions
 </p>

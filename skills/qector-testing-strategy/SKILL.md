@@ -70,12 +70,12 @@ This means:
 - The frozen tree records a v0.5 local validation report of
   **832 Python** and **87 Rust** tests.
 - The tree itself marks that table **stale for post-0.5 builds**.
-- `python/tests/` now contains more files than at the time of
-  the report.
+- The decoder tree's `python/tests/` now contains more files than
+  at the time of the report.
 - **No current pass / fail count is claimed** in the v1.0.0
   manual.
-- The reader is directed to `docs/CORRECTNESS_AUDIT.md` and to
-  the live suite.
+- The reader is directed to the decoder tree's
+  `docs/CORRECTNESS_AUDIT.md` and to the live suite.
 
 This is the official policy. Any new test count must be re-
 generated on the live tree; do not quote the v0.5 numbers as

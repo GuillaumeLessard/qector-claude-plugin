@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.0.5 - 2026-08-23
+
+Cross-platform launcher release. Every entry point now resolves a Python 3
+interpreter through a shipped launcher instead of assuming a bare `python`
+exists on PATH, which failed on stock macOS, Debian, and Fedora.
+
+- **`bin/qector-python` (POSIX sh) and `bin/qector-python.cmd` (Windows)**
+  launchers ship in the plugin archive, the source archive, and the Desktop
+  MCPB. Resolution order is `QECTOR_PYTHON` -> `python3` -> `python` (`py -3`
+  first on Windows). Candidates are range-checked against the supported
+  **Python 3.9-3.13** window, so a machine whose default `python` is 3.14 is
+  skipped rather than crashed into at wheel-import time, and exhaustion
+  exits 127 with install guidance. Zip entries under `bin/` are stamped
+  `0755` so the launcher stays executable after extraction.
+- **`userConfig.python_path`** (Claude Code) and **`user_config.python_path`**
+  (Desktop MCPB, with a `win32` `platform_overrides` block that selects the
+  `.cmd` launcher) let users pin an interpreter; the resolved value reaches
+  the launchers through the `QECTOR_PYTHON` environment variable.
+- `plugin.json` and the MCPB manifest now point `command` at the launcher;
+  `hooks/hooks.json` SessionStart and PostToolUse commands quote and route
+  through it as well.
+- **Standalone skill zip staleness guard**: `validate_plugin_bundle.py` now
+  fails if any `*-skill*.zip` in `dist/` declares a plugin version other than
+  the release version. The stale v1.0.2 `qector-qector-core-skill.zip` (which
+  advertised the retired `/qec-decode` and `/qec-desktop-connector` commands)
+  has been removed from `dist/`; regenerate it from the current
+  `skills/qector-core/` if a claude.ai upload is needed again.
+- `release_validate.py` resolves inherited `SERVER_VERSION` values
+  statically (source scan, no module imports), so the release gate runs
+  green on a bare interpreter without the `mcp` SDK installed.
+- Author contact unified on `admin@qector.store` in `plugin.json`.
+- The Desktop MCPB builder drops `platform_overrides` when
+  `--runtime-root` bundles a full interpreter, so the bundled runtime always
+  wins on every platform.
+
 ## 1.0.4 - 2026-08-23
 
 Production-ready release. Completes the remaining 1.0.3 hardening items

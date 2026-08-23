@@ -1,10 +1,10 @@
 {
   "artifacts": {
-    "qector-claude-desktop-1.0.4.mcpb": "e1301f88761addaa705408cb055ae8362b07f6d2825483f153104777aeee6a64",
-    "qector-claude-plugin-1.0.4.zip": "6e0a36e96a52991d3f2bd9028f286aa29e51a78cd150da1ba46c052002410d12",
-    "qector-claude-plugin-source-1.0.4.zip": "7c405144f367a449a446e2597e3fd8e0256f4dddc2b78065db49c498c30263ad"
+    "qector-claude-desktop-1.0.5.mcpb": "edb08d37b241253a3c35b95a6df73e48d622b711b56a1b91602b3f66f5e955ab",
+    "qector-claude-plugin-1.0.5.zip": "623be5a3ca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b",
+    "qector-claude-plugin-source-1.0.5.zip": "cb0b11a3fc53ce69008529b0946dd3b8267e0ec612b661b645a4c64d49e023a9"
   },
-  "git_commit": "77aa5b32038ef099cb8cf06b525e04bbcadd4a77",
+  "git_commit": "unavailable",
   "release": {
     "evidence": {
       "external_proof_suite": {
@@ -23,7 +23,7 @@
       "license": "Proprietary",
       "name": "qector-claude-plugin",
       "repository": "https://github.com/GuillaumeLessard/qector-claude-plugin",
-      "version": "1.0.4"
+      "version": "1.0.5"
     },
     "runtime": {
       "mcp": "1.26.0",
@@ -41,7 +41,7 @@
         "research_server": "qector-research"
       },
       "claude_desktop": {
-        "artifact": "qector-claude-desktop-1.0.4.mcpb",
+        "artifact": "qector-claude-desktop-1.0.5.mcpb",
         "default_profile": "safe",
         "default_servers": [
           "qector-desktop-mcp"

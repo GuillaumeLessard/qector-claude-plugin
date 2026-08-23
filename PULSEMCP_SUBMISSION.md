@@ -1,4 +1,4 @@
-# PulseMCP submission — QECTOR Claude Plugin v1.0.4
+# PulseMCP submission — QECTOR Claude Plugin v1.0.5
 
 > **Status:** Queued. PulseMCP's submit page
 > (`https://www.pulsemcp.com/submit`) is currently showing
@@ -104,7 +104,7 @@ claude plugin install qector@qector-tools
 **Claude Desktop**
 
 The Desktop installer is bundled in the plugin zip and the
-`qector-claude-desktop-1.0.4.mcpb` is the artifact Claude Desktop's
+`qector-claude-desktop-1.0.5.mcpb` is the artifact Claude Desktop's
 MCP Registry downloads automatically:
 
 ```bash
@@ -166,21 +166,21 @@ commercial evaluation, creditable against a license.
 - GitHub: `GuillaumeLessard/qector-claude-plugin`
 - Official MCP Registry: `io.github.GuillaumeLessard/qector-desktop`
 - PolicyLayer catalog: `com.policylayer/qector-claude-plugin`
-- v1.0.4 MCPB SHA-256: `e1301f88761addaa705408cb055ae8362b07f6d2825483f153104777aeee6a64`
-- v1.0.4 release: `https://github.com/GuillaumeLessard/qector-claude-plugin/releases/tag/v1.0.4`
+- v1.0.5 MCPB SHA-256: `edb08d37b241253a3c35b95a6df73e48d622b711b56a1b91602b3f66f5e955ab`
+- v1.0.5 release: `https://github.com/GuillaumeLessard/qector-claude-plugin/releases/tag/v1.0.5`
 
 ## 10. Submission checklist
 
 - [x] Repository is public
 - [x] `server.json` validates against the official MCP Registry schema
-- [x] `mcp-publisher publish` succeeded (`io.github.GuillaumeLessard/qector-desktop`, v1.0.4, `status: active`, `isLatest: true`)
-- [x] Release v1.0.4 page lists all 9 assets with SHA-256 sidecars
-- [x] SBOM (`qector-claude-plugin-1.0.4.sbom.json`, SPDX-2.3) attached
+- [x] `mcp-publisher publish` succeeded (`io.github.GuillaumeLessard/qector-desktop`, v1.0.5, `status: active`, `isLatest: true`)
+- [x] Release v1.0.5 page lists all 9 assets with SHA-256 sidecars
+- [x] SBOM (`qector-claude-plugin-1.0.5.sbom.json`, SPDX-2.3) attached
 - [x] Provenance JSON attached (git commit + per-artifact hash)
 - [x] SECURITY.md has Identification, Trust Boundaries, Tool Risk Classification, Static Scanner Notes, and Dependabot non-exposure sections
 - [x] Per-process call budgets documented
-- [x] Identification block: `name: qector`, `display_name: QECTOR Quantum Error Correction`, `version: 1.0.4`, `license: Proprietary`, `author: Guillaume Lessard`, `repository: github.com/GuillaumeLessard/qector-claude-plugin`, `documentation: 10.5281/zenodo.21941046`
+- [x] Identification block: `name: qector`, `display_name: QECTOR Quantum Error Correction`, `version: 1.0.5`, `license: Proprietary`, `author: Guillaume Lessard`, `repository: github.com/GuillaumeLessard/qector-claude-plugin`, `documentation: 10.5281/zenodo.21941046`
 - [x] No eval/exec/__import__/importlib on caller input
 - [x] No outbound network in default operation
 - [x] No proprietary source files in the public tree (`src/*.rs` is not present)
-- [x] Source distribution (`qector-claude-plugin-source-1.0.4.zip`) excludes `tests/`, `mcp/tests/`, `.github/`, `presentations/`, `conftest.py`, scratch probes
+- [x] Source distribution (`qector-claude-plugin-source-1.0.5.zip`) excludes `tests/`, `mcp/tests/`, `.github/`, `presentations/`, `conftest.py`, scratch probes

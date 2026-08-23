@@ -191,7 +191,7 @@ block plus the SHA-256 sidecar.
    validation report of 832 Python and 87 Rust tests, but the
    tree itself marks that table stale for post-0.5 builds. No
    current pass / fail count is claimed; the reader is pointed
-   at `docs/CORRECTNESS_AUDIT.md` and the live suite.
+   at the decoder tree's `docs/CORRECTNESS_AUDIT.md` and its live suite.
 2. **Performance**. All latency, throughput, memory, and GPU
    figures in the earlier manual and in the benchmark
    artifacts are hardware-dependent and were withdrawn for the

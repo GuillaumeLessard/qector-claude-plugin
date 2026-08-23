@@ -136,8 +136,9 @@ and the same logical coset as `e` (Theorem 2).
 
 **Stale test-count policy.** The shipped 0.5 validation report
 (832 Python tests, 87 Rust tests) is marked stale for post-0.5
-builds; the reader is pointed at `docs/CORRECTNESS_AUDIT.md` and
-the live suite. No current pass / fail count is claimed.
+builds; the reader is pointed at the decoder tree's
+`docs/CORRECTNESS_AUDIT.md` and its live suite. No current pass /
+fail count is claimed.
 
 **Withdrawn benchmark policy.** The competitive and throughput
 tables published for earlier cores were withdrawn in the frozen

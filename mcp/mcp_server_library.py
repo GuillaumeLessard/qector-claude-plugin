@@ -87,7 +87,7 @@ REF_DOI = "10.5281/zenodo.21941046"
 MIN_REVIEWED_QECTOR_VERSION = "1.0.0"
 MAX_REVIEWED_QECTOR_VERSION_EXCLUSIVE = "1.1.0"
 SERVER_NAME = "qector-decoder-v3-mcp"
-SERVER_VERSION = "1.0.4"
+SERVER_VERSION = "1.0.5"
 Z95 = 1.959963985
 
 # These are safety limits for an MCP process. The license tier remains the

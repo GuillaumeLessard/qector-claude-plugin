@@ -27,6 +27,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import zipfile
 
@@ -221,6 +222,38 @@ def main() -> int:
             f"actual {actual[:12]}...)",
         )
 
+    # Standalone skill zips must track the plugin version. A stale upload
+    # here shipped retired commands to claude.ai users in the 1.0.2 era.
+    if expected_version:
+        _section("STANDALONE SKILL ZIP STALENESS")
+        skill_zips = [
+            name
+            for name in dist_files
+            if name.endswith(".zip")
+            and "skill" in name
+            and not name.startswith("qector-claude")
+        ]
+        for skill_zip in skill_zips:
+            archive_path = os.path.join(DIST, skill_zip)
+            with zipfile.ZipFile(archive_path) as archive:
+                skill_names = [
+                    entry for entry in archive.namelist()
+                    if entry.endswith("SKILL.md")
+                ]
+                found_versions = []
+                for skill_name in skill_names:
+                    text = archive.read(skill_name).decode("utf-8", "replace")
+                    match = re.search(r"\bv?(\d+\.\d+\.\d+)\b", text)
+                    if match:
+                        found_versions.append(match.group(1))
+            check(
+                bool(found_versions) and all(
+                    version == expected_version for version in found_versions
+                ),
+                f"{skill_zip} declares plugin version {expected_version} "
+                f"(found {sorted(set(found_versions))})",
+            )
+
     # Desktop MCPB content check.
     _section("CLAUDE DESKTOP MCPB BUNDLE")
     for bundle in desktop_bundles:
@@ -239,6 +272,17 @@ def main() -> int:
             "icon.png" in entries,
             f"{bundle} contains icon.png at bundle root",
         )
+        # Launcher requirements apply to the CURRENT release bundle only;
+        # older MCPBs kept in dist/ are historical artifacts.
+        if (
+            expected_version
+            and bundle == f"qector-claude-desktop-{expected_version}.mcpb"
+        ):
+            for launcher in ("bin/qector-python", "bin/qector-python.cmd"):
+                check(
+                    launcher in entries,
+                    f"{bundle} bundles the {launcher} launcher",
+                )
         check(
             "mcp/mcp_server_library.py" in entries,
             f"{bundle} contains the library MCP server",

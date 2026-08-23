@@ -36,3 +36,15 @@ brand/__pycache__/
 # Real smoke tests live in mcp/tests/ and scripts/; these are scratch.
 scratch_*.py
 scratch_probe_*.py
+
+# Standalone Grok app-builder sandbox product living inside this clone.
+# Separate React web app -- never part of the published plugin/source tree.
+X6jDSzYxjfEbv6x1-grok-workspace/
+
+# Proprietary reference manual ships via Zenodo DOI, never in the public tree.
+QectorDecoder_v3_Reference_Manual_v1.0.0.pdf
+
+# Internal onboarding/sales decks are dev-internal by policy (see CHANGELOG).
+presentations/
+
+

@@ -12,8 +12,11 @@ description: >-
 # QECTOR Release Engineering
 
 Source of authority: v1.0.0 reference manual, chapter 25; the
-release procedure in `docs/RELEASING.md`; the
-`docs/API_STABILITY.md` promotion policy.
+plugin-side release gates in `RELEASE_VALIDATION.md` driven by
+`scripts/build_release.py` and `scripts/release_validate.py`.
+The manual also cites `docs/RELEASING.md` (decoder tree) and
+`docs/API_STABILITY.md` — those live in the upstream decoder
+source tree, not in this plugin repository.
 
 ## Wheels only (manual 25.1)
 
@@ -23,7 +26,9 @@ release procedure in `docs/RELEASING.md`; the
   cannot be rebuilt.
 - `pip install` must resolve to a wheel on every supported
   platform.
-- The release procedure lives in `docs/RELEASING.md`.
+- The plugin-side release procedure lives in `RELEASE_VALIDATION.md`;
+  upstream wheel-release steps remain in the decoder tree's own
+  `docs/RELEASING.md`.
 
 ## The core delivery path (manual 25.2)
 
@@ -64,12 +69,12 @@ not reproduced in the manual.
 
 A provisional symbol may be promoted to stable only after:
 
-1. A dated promotion entry in `docs/API_STABILITY.md` naming the
-   surface and the review.
+1. A dated promotion entry in the decoder tree's
+   `docs/API_STABILITY.md` naming the surface and the review.
 2. The same test bar as stable symbols (a property test, a
    regression test, and an example).
-3. A move between the corresponding sections of
-   `docs/STABLE_API.md`.
+3. A move between the corresponding sections of the decoder
+   tree's (decoder tree) `docs/STABLE_API.md`.
 4. A changelog note.
 
 As of the v1.0.0 manual, the promotion log is empty: no

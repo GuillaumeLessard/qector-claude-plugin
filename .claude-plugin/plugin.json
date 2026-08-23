@@ -1,20 +1,30 @@
 {
   "name": "qector",
   "description": "Local QECTOR quantum-error-correction plugin for Claude Code with strict-math skills, focused agents, and qector-decoder-v3 MCP servers.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "Proprietary",
   "author": {
     "name": "Guillaume Lessard",
-    "email": "guillaume@qector.com"
+    "email": "admin@qector.store"
+  },
+  "userConfig": {
+    "python_path": {
+      "type": "file",
+      "title": "Python interpreter (optional)",
+      "description": "Absolute path to a Python 3.9-3.13 interpreter with qector-decoder-v3 installed. Leave unset to auto-resolve via bin/qector-python.",
+      "required": false
+    }
   },
   "mcpServers": {
     "qector-library": {
-      "command": "python",
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/qector-python",
       "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_library.py"],
       "env": {
         "QECTOR_SILENT": "1",
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "QECTOR_PYTHON": "${user_config.python_path}"
       }
     }
   }
 }
+
