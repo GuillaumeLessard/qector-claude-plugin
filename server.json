@@ -4,7 +4,7 @@
   "name": "io.github.GuillaumeLessard/qector-desktop",
   "packages": [
     {
-      "fileSha256": "edb08d37b241253a3c35b95a6df73e48d622b711b56a1b91602b3f66f5e955ab",
+      "fileSha256": "8609d6008674eabb6f33fc9ee600b8098db51f26d0b5f0390d5b6e45e175031b",
       "identifier": "https://github.com/GuillaumeLessard/qector-claude-plugin/releases/download/v1.0.5/qector-claude-desktop-1.0.5.mcpb",
       "registryType": "mcpb",
       "transport": {
