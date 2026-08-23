@@ -124,13 +124,13 @@ current.
 
 ## How the bench server helps
 
-- `qector-bench.artifact_metadata_check` generates the
+- `qector-research.artifact_metadata_check` generates the
   chapter 22.3 metadata block for a validation artifact.
-- `qector-bench.wilson_ci` and `wilson_table` are the math
+- `qector-research.wilson_ci` and `wilson_table` are the math
   utilities for the LER parity tests.
-- `qector-bench.decode_faithfulness_check` re-verifies
+- `qector-research.decode_faithfulness_check` re-verifies
   `H c = s` (mod 2) externally.
-- `qector-bench.pymatching_compat_check` is the
+- `qector-research.pymatching_compat_check` is the
   cross-decoder-equivalence smoke test for the PyMatching shim.
-- `qector-bench.env_block` returns the chapter 22.3 environment
+- `qector-research.env_block` returns the chapter 22.3 environment
   block for a validation artifact.

@@ -18,6 +18,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+# This module is a standalone CLI diagnostic (see ``main`` below), not a
+# pytest suite. It matches pytest's ``test_*.py`` / ``test_*`` naming by
+# convention (so it reads consistently alongside the other tools/tests),
+# but `test_server` takes required positional arguments and is not meant
+# to be collected or called by pytest. `__test__ = False` tells pytest to
+# skip collecting this module entirely, instead of erroring out on
+# `test_server` for missing fixtures.
+__test__ = False
+
 ROOT = Path(__file__).resolve().parents[2]
 MCP_DIR = ROOT / "mcp"
 
@@ -25,7 +34,9 @@ os.environ.setdefault("QECTOR_SILENT", "1")
 
 SERVERS = {
     "qector-library": MCP_DIR / "mcp_server_library.py",
-    "qector-bench": MCP_DIR / "mcp_server_qector_bench.py",
+    "qector-research": MCP_DIR / "mcp_server_qector_bench.py",
+    "qector-desktop": MCP_DIR / "mcp_server_desktop.py",
+    "qector-admin": MCP_DIR / "mcp_server_admin.py",
 }
 
 EXPECTED_TOOLS = {
@@ -39,7 +50,7 @@ EXPECTED_TOOLS = {
         "build_code_from_matrix",
         "compat_report",
     },
-    "qector-bench": {
+    "qector-research": {
         "wilson_ci",
         "wilson_table",
         "logical_coset_score",
@@ -55,12 +66,28 @@ EXPECTED_TOOLS = {
         "hardware_probe",
         "license_active_check",
         "env_block",
-        "workbench_probe",
+        "compat_report",
         "artifacts_sha256",
         "artifact_metadata_check",
         "decode_faithfulness_check",
         "hot_path_microbench",
+        "stim_circuit_probe",
+        "sinter_task_template",
+        "workload_hash",
+        "theorem_lookup",
+        "glossary_lookup",
+        "reproduction_command_lookup",
+        "get_capability_matrix",
+        "get_evidence_policy",
+        "get_runtime_provenance",
     },
+}
+
+EXPECTED_TOOLS["qector-desktop"] = EXPECTED_TOOLS["qector-library"]
+EXPECTED_TOOLS["qector-admin"] = {
+    "system_setup",
+    "configure_claude_desktop",
+    "workbench_probe",
 }
 
 
@@ -119,6 +146,7 @@ def test_server(server_name: str, server_path: Path) -> dict:
         "tool_count": 0,
         "expected_count": len(EXPECTED_TOOLS.get(server_name, set())),
         "missing_tools": [],
+        "contract_issues": [],
         "sample_call_ok": None,
         "sample_call": None,
     }
@@ -129,7 +157,7 @@ def test_server(server_name: str, server_path: Path) -> dict:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": "2025-03-26",
                 "capabilities": {},
                 "clientInfo": {"name": "qector-stdio-test", "version": "1.0"},
             },
@@ -159,12 +187,21 @@ def test_server(server_name: str, server_path: Path) -> dict:
         result["tool_count"] = len(actual)
         expected = EXPECTED_TOOLS.get(server_name, set())
         result["missing_tools"] = sorted(expected - actual)
+        for tool in tools:
+            name = tool.get("name", "<unnamed>")
+            if "outputSchema" not in tool:
+                result["contract_issues"].append(f"{name}: missing outputSchema")
+            annotations = tool.get("annotations")
+            if not isinstance(annotations, dict):
+                result["contract_issues"].append(f"{name}: missing annotations")
 
         # Sample call
-        if server_name == "qector-library":
+        if server_name in {"qector-library", "qector-desktop"}:
             sample_name, sample_args = "list_decoders", {}
-        else:
+        elif server_name == "qector-research":
             sample_name, sample_args = "wilson_ci", {"k": 10, "n": 1000}
+        else:
+            sample_name, sample_args = "system_setup", {"confirm": False}
         call_msg = {
             "jsonrpc": "2.0",
             "id": 100,
@@ -175,15 +212,32 @@ def test_server(server_name: str, server_path: Path) -> dict:
         line3 = proc.stdout.readline()
         if line3:
             call_resp = json.loads(line3)
-            content = call_resp.get("result", {}).get("content", [])
+            tool_result = call_resp.get("result", {})
+            content = tool_result.get("content", [])
             if call_resp.get("error") is not None:
                 result["sample_call_ok"] = False
                 result["sample_call"] = call_resp["error"]
             elif content and content[0].get("type") == "text":
                 try:
-                    payload = json.loads(content[0]["text"])
-                    if server_name == "qector-bench" and sample_name == "wilson_ci":
-                        lo, hi = payload.get("wilson_95", [None, None])
+                    payload = tool_result.get("structuredContent") or json.loads(
+                        content[0]["text"]
+                    )
+                    required_fields = {
+                        "status",
+                        "claim_class",
+                        "provenance",
+                        "runtime",
+                        "scope",
+                        "verification",
+                        "artifact",
+                        "warnings",
+                        "result",
+                    }
+                    if not required_fields.issubset(payload):
+                        result["sample_call_ok"] = False
+                        result["sample_call"] = "missing result envelope fields"
+                    elif server_name == "qector-research" and sample_name == "wilson_ci":
+                        lo, hi = payload["result"].get("wilson_95", [None, None])
                         result["sample_call_ok"] = (
                             lo is not None
                             and hi is not None
@@ -195,15 +249,20 @@ def test_server(server_name: str, server_path: Path) -> dict:
                             "wilson_95": [lo, hi],
                             "expected": [0.0054407544447740265, 0.018309468872823392],
                         }
+                    elif server_name == "qector-admin":
+                        result["sample_call_ok"] = (
+                            tool_result.get("isError") is True
+                            and payload.get("error", {}).get("code") == "PERMISSION_DENIED"
+                        )
+                        result["sample_call"] = payload.get("error")
                     else:
                         result["sample_call_ok"] = True
                         result["sample_call"] = {
                             "tool": sample_name,
-                            "ok_keys": sorted(payload.keys())[:5]
-                            if isinstance(payload, dict)
-                            else None,
+                            "status": payload["status"],
+                            "verification": payload["verification"]["status"],
                         }
-                except (json.JSONDecodeError, TypeError) as exc:
+                except (json.JSONDecodeError, KeyError, TypeError) as exc:
                     result["sample_call_ok"] = False
                     result["sample_call"] = f"parse error: {exc}"
             else:
@@ -213,12 +272,19 @@ def test_server(server_name: str, server_path: Path) -> dict:
             result["sample_call_ok"] = False
             result["sample_call"] = "no response"
 
-        result["ok"] = not result["missing_tools"] and bool(result["server_name"])
+        result["ok"] = (
+            not result["missing_tools"]
+            and not result["contract_issues"]
+            and bool(result["server_name"])
+            and result["sample_call_ok"] is True
+        )
         if not result["ok"] and not result.get("error"):
             result["error"] = (
                 f"missing tools: {result['missing_tools']}"
                 if result["missing_tools"]
-                else "no server name"
+                else f"tool contract issues: {result['contract_issues']}"
+                if result["contract_issues"]
+                else "no server name or sample response"
             )
     except Exception as exc:
         result["error"] = f"{type(exc).__name__}: {exc}"
@@ -241,6 +307,8 @@ def test_server(server_name: str, server_path: Path) -> dict:
     print(f"  tools: {result['tool_count']} (expected {result['expected_count']})")
     if result["missing_tools"]:
         print(f"  MISSING: {result['missing_tools']}")
+    if result["contract_issues"]:
+        print(f"  CONTRACT: {result['contract_issues']}")
     print(f"  sample call: {result['sample_call']}")
     print(f"  sample call ok: {result['sample_call_ok']}")
     if result.get("error"):

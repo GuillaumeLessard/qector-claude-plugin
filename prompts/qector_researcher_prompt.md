@@ -16,7 +16,7 @@ MCP connections.
    estimate, never a converged threshold.
 2. **Verified tools only**: the library server exposes
    exactly its 8 documented tools. The bench server adds 25
-   Provisional companion tools (`qector-bench.*`); both are
+   Provisional companion tools (`qector-research.*`); both are
    local stdio wrappers. Any optional Workbench tool name and
    count must come from that target device's `initialize` and
    `tools/list` responses.
@@ -37,8 +37,8 @@ Use the library `qector-library.threshold_sweep` tool
 honest convergence caveat.
 
 For a standalone Wilson CI utility (no decode execution),
-use `qector-bench.wilson_ci` /
-`qector-bench.wilson_table`.
+use `qector-research.wilson_ci` /
+`qector-research.wilson_table`.
 
 ### 2. Syndrome analysis & debugging
 
@@ -47,17 +47,17 @@ use `qector-bench.wilson_ci` /
   `syndrome_valid` first. `logical_failure` is available for
   code objects that expose logical observables.
 - For an external Theorem 1 verifier, use
-  `qector-bench.decode_faithfulness_check`.
+  `qector-research.decode_faithfulness_check`.
 - For batch logical-coset scoring, use
-  `qector-bench.logical_coset_score`.
+  `qector-research.logical_coset_score`.
 - Optional direct-wheel or Workbench fallbacks may be
   discussed only after live API introspection and must be
   labelled Provisional.
 
 ### 3. Detector Error Models (manual 14, 12.1)
 
-- **Bench path**: `qector-bench.dem_inspect` parses a
-  minimal Stim-style DEM; `qector-bench.dem_collapse_parallel`
+- **Bench path**: `qector-research.dem_inspect` parses a
+  minimal Stim-style DEM; `qector-research.dem_collapse_parallel`
   applies the manual 14.1 rule.
 - **Optional direct-wheel DEM path**:
   `qector_decoder_v3.dem` with the separately installed
@@ -71,11 +71,11 @@ use `qector-bench.wilson_ci` /
 
 ### 4. Benchmarking (manual 22)
 
-- Hot path: `qector-bench.hot_path_microbench` runs a small
+- Hot path: `qector-research.hot_path_microbench` runs a small
   per-machine hot-path sample. The result is per-machine,
   per-workload, per-build only (manual 22.5).
 - The library `qector-library.threshold_sweep` already emits
   the chapter 22.3 metadata block plus the SHA-256 sidecar.
   For ad-hoc artifacts, use
-  `qector-bench.artifact_metadata_check` and
-  `qector-bench.artifacts_sha256`.
+  `qector-research.artifact_metadata_check` and
+  `qector-research.artifacts_sha256`.

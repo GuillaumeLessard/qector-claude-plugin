@@ -65,7 +65,7 @@ length.
 
 The bundled local stdio wrapper is the **supported service
 surface in this package** (manual 17.4). It is what
-`qector-library` and `qector-bench` (the two MCP servers this
+`qector-library` and `qector-research` (the two MCP servers this
 plugin registers) implement.
 
 Frame cap: `QECTOR_MCP_BENCH_MAX_DEM_BYTES` for the bench server
@@ -139,11 +139,11 @@ benchmarking **require a written commercial license**.
 
 ## How the bench server helps
 
-- `qector-bench.env_block` returns the chapter 22.3 environment
+- `qector-research.env_block` returns the chapter 22.3 environment
   block for a service artifact.
-- `qector-bench.hardware_probe` reports the live hardware state
+- `qector-research.hardware_probe` reports the live hardware state
   and license tier.
-- `qector-bench.license_active_check` reports the offline
+- `qector-research.license_active_check` reports the offline
   license tier and feature gates.
-- `qector-bench.artifact_metadata_check` generates the
+- `qector-research.artifact_metadata_check` generates the
   chapter 22.3 metadata block for a service benchmark.

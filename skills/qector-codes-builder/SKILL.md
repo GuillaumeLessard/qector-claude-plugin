@@ -46,7 +46,7 @@ use the family whose `logicals_matrix()` is not `None`.
 - `repetition(d)` and `ring(n)`: each has one logical; returns
   `n_logicals == 1`.
 
-The library `qector-bench.code_logicals_inspect` returns the same
+The library `qector-research.code_logicals_inspect` returns the same
 information plus the explicit scoring note for `None`-matrix
 families.
 
@@ -99,7 +99,7 @@ list of lists, and a tuple would be a silent shape error.
   participates in at most 2 checks.
 - Library: `code.max_qubit_degree()` returns the largest qubit
   degree.
-- Bench server: `qector-bench.code_family_info` reports both
+- Bench server: `qector-research.code_family_info` reports both
   plus a routing hint (`matching decoders` vs `BP-OSD`).
 - DEM path: `dem.is_graphlike` on the parsed model; non-graphlike
   models must route to BP-OSD.

@@ -22,7 +22,7 @@ The plugin registers two MCP servers in `.mcp.json`:
 
 - `qector-library` - the 8-tool frozen library surface
   (`mcp/mcp_server_library.py`).
-- `qector-bench` - 25 Provisional companion tools
+- `qector-research` - 25 Provisional companion tools
   (`mcp/mcp_server_qector_bench.py`).
 
 Library tools are part of the stable contract (manual 16.1,
@@ -71,11 +71,11 @@ name.
   drop-in for `pymatching.Matching`;
   `qector_sinter_decoders()` exposes sinter entry points
   (manual 17.1, 17.2). Probe the live list with
-  `qector-bench.sinter_decoder_list`.
+  `qector-research.sinter_decoder_list`.
 - On Windows driver issues or missing DLLs, use
   `compat_report` (library), live package introspection, and
   `platform.platform()` before any build troubleshooting. The
-  bench server `qector-bench.hardware_probe` reports the live
+  bench server `qector-research.hardware_probe` reports the live
   CUDA / OpenCL state.
 - **Strict math**: never hardcode check counts; read
   `code.n_checks` at runtime. Every decode you wire must verify
@@ -90,7 +90,7 @@ When dealing with millions of shots:
 - Library: use direct-wheel batch / streaming APIs only after
   introspection confirms the Provisional symbol. The library
   8-tool MCP does **not** expose a batch tool. The bench
-  server's `qector-bench.hot_path_microbench` runs a small
+  server's `qector-research.hot_path_microbench` runs a small
   per-machine hot-path sample (capped at
   `QECTOR_MCP_BENCH_MAX_BENCH_SHOTS`, default 5000); it is
   per-machine only, never a portable claim (manual 22.5).
@@ -112,8 +112,8 @@ When dealing with millions of shots:
 
 ## DEM / circuit integration (manual 14)
 
-- Library bench: `qector-bench.dem_inspect` parses a minimal
-  Stim-style DEM text; `qector-bench.dem_collapse_parallel`
+- Library bench: `qector-research.dem_inspect` parses a minimal
+  Stim-style DEM text; `qector-research.dem_collapse_parallel`
   applies the manual 14.1 collapse rule and reports the
   worked-example sanity check (`p1=0.01, p2=0.02 -> p=0.0296,
   weight=3.489`).
@@ -131,7 +131,7 @@ When dealing with millions of shots:
   inputs with `np.nan_to_num` or explicit dtype casts (backend
   enforces strict floats).
 - Check the environment with the library's `compat_report`
-  tool or `qector-bench.env_block` (manual 22.3 environment
+  tool or `qector-research.env_block` (manual 22.3 environment
   block). Optional Workbench diagnostics require target-device
   `tools/list` negotiation.
 

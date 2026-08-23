@@ -7,7 +7,7 @@ Generate configuration templates and runner scripts for benchmarking QECTOR agai
 Arguments: `$ARGUMENTS` (e.g. `--circuit circuit.stim --decoder qector_blossom --max_shots 100_000`).
 
 1. **Step 1 - Sinter Discovery**:
-   - Call MCP tool `sinter_decoder_list()` on `qector-bench` to inspect available registered Sinter decoder shims:
+   - Call MCP tool `sinter_decoder_list()` on `qector-research` to inspect available registered Sinter decoder shims:
      - `qector_blossom`: Exact MWPM Blossom decoder.
      - `qector_unionfind`: Fast Union-Find decoder with weighted clustering.
      - `qector_bposd`: BP-OSD combination decoder.

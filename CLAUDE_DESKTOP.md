@@ -1,21 +1,51 @@
 # Claude Desktop Setup
 
-This is the top-level Claude Desktop entry guide for the QECTOR plugin.
+QECTOR runs locally over stdio. It is not a hosted OAuth Custom Connector and
+does not directly install into Claude web or mobile.
 
-## Quick setup
+## Recommended Installation
 
-1. Install the pinned runtime with the same Python interpreter Claude Desktop will launch:
+Install with the Python environment that contains `requirements.txt`, then
+preview changes before writing them:
 
-   ```text
-   python -m pip install -r <PLUGIN_ROOT>/requirements.txt
-   ```
+```bash
+python -m pip install -r requirements.txt
+python scripts/configure_claude_desktop.py --check-only
+python scripts/configure_claude_desktop.py --confirm
+```
 
-2. Merge the `qector-library` and `qector-bench` server entries from [`mcp/claude_desktop_config.json`](mcp/claude_desktop_config.json) into your desktop app MCP configuration (`%APPDATA%\Claude\claude_desktop_config.json` on Windows).
-3. Replace `<PLUGIN_ROOT>` with the absolute path to this package (e.g. `C:/Users/Admin/Desktop/QECTOR Maths/Anthropic Skills and agents`).
-4. Replace `python` with the full path to your Python interpreter (e.g. `C:\\Program Files\\Python312\\python.exe`) to avoid Windows PATH ambiguity.
-5. Keep `QECTOR_SILENT=1`, then fully restart Claude Desktop.
-6. Confirm that Claude Desktop connects to both servers:
-   - `qector-library` (8 frozen tools: `list_code_families`, `list_decoders`, `get_license_info`, `decode_syndrome`, `decode_single`, `threshold_sweep`, `build_code_from_matrix`, `compat_report`).
-   - `qector-bench` (28 research tools: `system_setup`, `reproduction_command_lookup`, `theorem_lookup`, `glossary_lookup`, `wilson_ci`, `dem_inspect`, `hardware_probe`, etc.).
+The installer records the exact Python executable in Claude Desktop's Developer
+MCP configuration and installs the 8-tool safe Desktop extension. Restart
+Claude Desktop completely after installation.
 
-The complete setup, verification, and troubleshooting guide is [`mcp/CLAUDE_DESKTOP.md`](mcp/CLAUDE_DESKTOP.md).
+## Optional Profiles
+
+The default is deliberately limited to `qector-library`. Add profiles only
+when their scope is needed:
+
+```bash
+python scripts/configure_claude_desktop.py --confirm --with-research
+python scripts/configure_claude_desktop.py --confirm --with-admin
+```
+
+`qector-research` has 29 provisional read/compute tools. `qector-admin` has
+privileged setup, configuration, and Workbench-probe operations. It needs
+`QECTOR_ADMIN_ENABLED=1` plus `confirm=true` for every call.
+
+## Manual Configuration
+
+Copy `mcp/claude_desktop_config.json`, replace `<PYTHON_EXECUTABLE>` with the
+absolute interpreter path and `<PLUGIN_ROOT>` with this repository directory,
+then merge only the `qector-library` entry into `mcpServers`. On Windows,
+always use the absolute `python.exe` path rather than relying on `PATH`.
+
+## Verification
+
+```bash
+python scripts/qector_runtime_check.py
+python mcp/tests/test_mcp_stdio.py --server qector-library
+```
+
+For mobile or web control of this local workflow, use Claude Code Remote
+Control. A native remote connector requires a separately secured hosted MCP
+deployment.

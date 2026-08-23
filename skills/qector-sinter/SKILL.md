@@ -6,7 +6,7 @@ description: >-
   qector_belief, qector_unionfind, qector_bposd,
   qector_unionfind_unweighted, the role of these in the
   community-standard sinter benchmark harness, and the
-  qector-bench.sinter_decoder_list probe. Load for any question
+  qector-research.sinter_decoder_list probe. Load for any question
   about sinter, the community benchmark, or head-to-head LER
   comparisons.
 ---
@@ -52,7 +52,7 @@ results = sinter.collect(
 
 The output is the standard sinter `Stat` collection, which you
 score with `sinter.fit_binomial` or with the QECTOR
-`qector-bench.wilson_ci` for a 95% Wilson interval.
+`qector-research.wilson_ci` for a 95% Wilson interval.
 
 ## What each entry point does
 
@@ -67,7 +67,7 @@ score with `sinter.fit_binomial` or with the QECTOR
 
 ## How to probe
 
-`qector-bench.sinter_decoder_list` returns:
+`qector-research.sinter_decoder_list` returns:
 
 - `sinter_exposed` (bool)
 - `sinter_decoders` (list of `{"name", "type"}`)
@@ -103,11 +103,11 @@ before publishing a sinter-based result.
 
 ## How the bench server helps
 
-- `qector-bench.sinter_decoder_list` is the live probe.
-- `qector-bench.wilson_ci` and `wilson_table` are the math
+- `qector-research.sinter_decoder_list` is the live probe.
+- `qector-research.wilson_ci` and `wilson_table` are the math
   utilities for the LER output.
-- `qector-bench.logical_coset_score` scores a batch of
+- `qector-research.logical_coset_score` scores a batch of
   `(predicted, sampled)` logical observables on the logical coset
   (Theorem 2).
-- `qector-bench.artifact_metadata_check` generates the
+- `qector-research.artifact_metadata_check` generates the
   chapter 22.3 metadata block for a sinter-based artifact.

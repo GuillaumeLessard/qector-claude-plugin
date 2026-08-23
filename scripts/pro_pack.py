@@ -40,8 +40,19 @@ EXCLUDE_DIRS = {
     "skills-main",
     ".tmp_core",
     "bin",
+    "brand",
+    "tests",
 }
-EXCLUDE_FILES = {".DS_Store", "Thumbs.db", "err.txt", "out.txt", "output.txt"}
+INCLUDED_HIDDEN_PATHS = {
+    ".claude-plugin",
+    ".claude-desktop-extension",
+    ".mcp.json",
+}
+EXCLUDE_FILES = {
+    ".DS_Store", "Thumbs.db", "err.txt", "out.txt", "output.txt",
+    "conftest.py", "ruff.toml",
+    "scratch_probe_library.py", "scratch_probe_servers.py",
+}
 EXCLUDE_SUFFIXES = {
     ".pyc",
     ".pyo",
@@ -87,7 +98,7 @@ def skip(rel: Path) -> bool:
     if any(p in EXCLUDE_DIRS for p in rel.parts):
         return True
     if any(
-        p.startswith(".") and p not in {".claude-plugin", ".mcp.json"}
+        p.startswith(".") and p not in INCLUDED_HIDDEN_PATHS
         for p in rel.parts
     ):
         return True
@@ -130,7 +141,7 @@ def make_skill_zip(skill: str) -> Path:
             d
             for d in dirs
             if d not in EXCLUDE_DIRS
-            and not (d.startswith(".") and d not in {".claude-plugin"})
+            and not (d.startswith(".") and d not in INCLUDED_HIDDEN_PATHS)
         ]
         for f in files:
             fp = Path(root) / f
@@ -155,7 +166,7 @@ def make_plugin_zip() -> Path:
             d
             for d in dirs
             if d not in EXCLUDE_DIRS
-            and not (d.startswith(".") and d not in {".claude-plugin"})
+            and not (d.startswith(".") and d not in INCLUDED_HIDDEN_PATHS)
         ]
         for f in files:
             fp = Path(root) / f

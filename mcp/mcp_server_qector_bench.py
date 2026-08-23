@@ -1,9 +1,9 @@
 """
-QECTOR Decoder v3 - bench/extra MCP server.
+QECTOR Decoder v3 research MCP server.
 
 Companion to ``mcp_server_library.py`` (the 8-tool frozen library surface). Every
 tool here is **Provisional** under the v1.0.0 API freeze note; the library's
-8 tools remain the stable contract and the bench server is an add-on for
+8 tools remain the stable contract and the research server is an add-on for
 research, methodology, and operator workflows that the 8-tool surface does
 not cover.
 
@@ -47,10 +47,8 @@ v1.0.0 reference manual (DOI 10.5281/zenodo.21941046):
   symbol / glossary entries, and Appendix D reproduction workflows from the v1.0.0
   reference manual; no decode, no network, no I/O.
 
-* **First-Time Setup & Installation** (``system_setup``): guided first-time system
-  setup tool with safety gate; audits python environment, installs dependencies from
-  requirements.txt upon explicit user approbation (confirm=True), prepares artifact
-  directories, and runs live mathematical verification.
+Administrative setup, Desktop configuration, and Workbench executable probing
+are deliberately implemented by the separately enabled ``qector-admin`` server.
 
 * **Reproducibility** (``artifacts_sha256``, ``artifact_metadata_check``,
   ``decode_faithfulness_check``): chapter 22.3 / 22.5 helpers, plus an
@@ -86,15 +84,27 @@ from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
+_MCP_DIR = Path(__file__).resolve().parent
+if str(_MCP_DIR) not in sys.path:
+    sys.path.insert(0, str(_MCP_DIR))
+
+from qector_mcp_contract import (  # noqa: E402
+    apply_tool_contract,
+    call_tool_result,
+    consume_call_budget,
+    error_envelope,
+    result_envelope,
+)
+
 os.environ.setdefault("QECTOR_SILENT", "1")
 
 try:
-    import numpy as np
+    import numpy as np  # noqa: E402
 except Exception as exc:  # pragma: no cover
     raise RuntimeError("numpy is required by the QECTOR bench MCP server") from exc
 
 try:
-    import qector_decoder_v3
+    import qector_decoder_v3  # noqa: E402
 except Exception:
     qector_decoder_v3 = None  # type: ignore[assignment]
 
@@ -105,8 +115,9 @@ except Exception:
 
 REF_DOI = "10.5281/zenodo.21941046"
 EXPECTED_QECTOR_VERSION = "1.0.0"
-SERVER_NAME = "qector-decoder-v3-mcp-bench"
-SERVER_VERSION = "1.0.0"
+SERVER_NAME = "qector-research-mcp"
+SERVER_VERSION = "1.0.4"
+WORKBENCH_PROTOCOL_VERSION = "2025-03-26"
 Z95 = 1.959963985
 
 # Safety caps. The library server's caps are authoritative for the frozen
@@ -130,6 +141,28 @@ QECTOR_VERSION = (
     getattr(qector_decoder_v3, "__version__", "unknown")
     if qector_decoder_v3 is not None
     else "missing"
+)
+
+SETUP_PROFILES: dict[str, tuple[str, ...]] = {
+    "production": (
+        "numpy>=1.26,<2.3",
+        "qector-decoder-v3==1.0.0",
+        "mcp==1.26.0",
+        "cryptography>=48.0.1,<50",
+    ),
+    "developer": (
+        "numpy>=1.26,<2.3",
+        "qector-decoder-v3==1.0.0",
+        "mcp==1.26.0",
+        "cryptography>=48.0.1,<50",
+        "pytest",
+        "ruff",
+    ),
+    "optional-stim": ("stim",),
+    "optional-qiskit": ("qiskit",),
+}
+ADMIN_TOOL_NAMES = frozenset(
+    {"system_setup", "configure_claude_desktop", "workbench_probe"}
 )
 
 
@@ -1139,7 +1172,7 @@ def tool_compat_report(check_pypi: bool = False) -> dict[str, Any]:
         "server": {
             "name": SERVER_NAME,
             "version": SERVER_VERSION,
-            "kind": "bench (Provisional companion to the 8-tool library server)",
+            "kind": "research (Provisional companion to the 8-tool library server)",
         },
         "qector_decoder_v3": {
             "installed": qector_installed,
@@ -1152,7 +1185,10 @@ def tool_compat_report(check_pypi: bool = False) -> dict[str, Any]:
         "reference_manual": REF_DOI,
         "provisional_surfaces": {
             "library_stdio_mcp": "supported local stdio wrapper (library server, 8 frozen tools)",
-            "bench_stdio_mcp": "this server; all 25 tools are Provisional under the v1.0.0 API freeze note",
+            "research_stdio_mcp": "this server; 29 provisional research tools",
+            "claude_code_plugin": "supported via .claude-plugin/plugin.json and .mcp.json",
+            "claude_desktop_extension": "supported as a local Desktop extension / MCPB bundle",
+            "claude_web_mobile": "not bundled; requires a hosted remote MCP connector and separate security review",
             "upstream_network_surfaces": "REST/gRPC/metrics/SSE require separate deployment review",
             "batch_gpu": "CUDA hardware and license are separate gates; no GPU claim is made here",
             "opencl": "OpenCL requires the documented source-build path",
@@ -1175,8 +1211,8 @@ def _subprocess_workbench_probe(
 
     Mirrors ``scripts/probe_workbench_mcp.py``. No transcript is bundled;
     the output is the live JSON-RPC response from the target machine.
-    The Workbench is **optional** under the v1.0.0 design - the bench
-    server's 24 other tools cover every Workbench-free need
+    The Workbench is **optional** under the v1.0.0 design. The research
+    server's 29 tools cover every Workbench-free need
     (hardware_probe, license_active_check, code_family_info, etc.).
     """
     import subprocess
@@ -1211,9 +1247,9 @@ def _subprocess_workbench_probe(
         "id": 1,
         "method": "initialize",
         "params": {
-            "protocolVersion": "2024-11-05",
+            "protocolVersion": WORKBENCH_PROTOCOL_VERSION,
             "capabilities": {},
-            "clientInfo": {"name": "qector-bench-probe", "version": "1.0"},
+            "clientInfo": {"name": "qector-workbench-probe", "version": "1.0"},
         },
     }
     notif_msg = {"jsonrpc": "2.0", "method": "notifications/initialized"}
@@ -1230,10 +1266,10 @@ def _subprocess_workbench_probe(
         _send([json.dumps(init_msg), json.dumps(notif_msg)])
         if list_tools:
             _send([json.dumps(list_msg)])
-            expected = 1
+            expected = 2
         else:
             _send([json.dumps(status_msg), json.dumps(list_msg)])
-            expected = 2
+            expected = 3
         for _ in range(expected):
             line = proc.stdout.readline()
             if not line:
@@ -1255,22 +1291,30 @@ def _subprocess_workbench_probe(
                 names = names[: int(limit)]
             return {
                 "executable": executable,
+                "negotiated_protocol_version": responses[0]
+                .get("result", {})
+                .get("protocolVersion"),
                 "tools_total": len(tools),
                 "tool_names": names,
                 "responses": responses,
                 "note": (
-                    "Optional Workbench device-local probe. The bench server's "
-                    "24 other tools cover every Workbench-free need; the "
+                    "Optional Workbench device-local probe. The research server's "
+                    "29 tools cover every Workbench-free need; the "
                     "Workbench is not required for any QECTOR workflow."
                 ),
                 "reference_manual": REF_DOI,
             }
         return {
             "executable": executable,
+            "negotiated_protocol_version": responses[0]
+            .get("result", {})
+            .get("protocolVersion")
+            if responses
+            else None,
             "responses": responses,
             "note": (
-                "Optional Workbench device-local probe. The bench server's "
-                "24 other tools cover every Workbench-free need."
+                "Optional Workbench device-local probe. The research server's "
+                "29 tools cover every Workbench-free need."
             ),
             "reference_manual": REF_DOI,
         }
@@ -1302,9 +1346,27 @@ def tool_workbench_probe(
     """Local stdio probe of an optional QECTOR Workbench executable.
 
     The Workbench is optional under the v1.0.0 design (manual 17.5).
-    The bench server's other 24 tools cover every Workbench-free need.
+    The research server's 29 tools cover every Workbench-free need.
     """
     return _subprocess_workbench_probe(executable, timeout, list_tools, limit)
+
+
+def _artifact_root() -> Path:
+    root_dir = Path(__file__).resolve().parent.parent
+    configured = os.environ.get("QECTOR_ARTIFACT_DIR")
+    return Path(configured).expanduser().resolve() if configured else (root_dir / "artifacts").resolve()
+
+
+def _approved_artifact_path(raw_path: str) -> Path:
+    candidate = Path(raw_path).expanduser().resolve()
+    artifact_root = _artifact_root()
+    try:
+        candidate.relative_to(artifact_root)
+    except ValueError as exc:
+        raise QECTORInputError(
+            "paths must remain inside QECTOR_ARTIFACT_DIR"
+        ) from exc
+    return candidate
 
 
 def tool_artifacts_sha256(paths: Sequence[str]) -> dict[str, Any]:
@@ -1316,7 +1378,7 @@ def tool_artifacts_sha256(paths: Sequence[str]) -> dict[str, Any]:
     for raw in paths:
         if not isinstance(raw, str) or not raw.strip():
             raise QECTORInputError("each path must be a non-empty string")
-        path = Path(raw).expanduser()
+        path = _approved_artifact_path(raw)
         if not path.is_file():
             raise QECTORInputError(f"not a file: {path}")
         digest = hashlib.sha256()
@@ -1333,6 +1395,7 @@ def tool_artifacts_sha256(paths: Sequence[str]) -> dict[str, Any]:
     return {
         "files": out,
         "n_files": len(out),
+        "artifact_root": str(_artifact_root()),
         "reference_manual": REF_DOI,
     }
 
@@ -1480,6 +1543,14 @@ def tool_hot_path_microbench(
             continue
         latencies_us.append((time.perf_counter() - started) * 1e6)
     if not latencies_us:
+        workload_hash_input = (
+            f"{family}|d={int(size)}|decoder={decoder_name}|"
+            f"error_rate=0.05|seed={int(seed)}"
+        )
+        workload_hash = hashlib.sha256(
+            workload_hash_input.encode("utf-8")
+        ).hexdigest()
+        env = _env_block()
         return {
             "family": family,
             "size": int(size),
@@ -1488,6 +1559,34 @@ def tool_hot_path_microbench(
             "shots_completed": 0,
             "syndrome_invalid": syndrome_invalid,
             "warning": "no successful decodes; refusing to publish statistics",
+            "measurement_scope": {
+                "machine": platform.node() or "unknown",
+                "os": env.get("os"),
+                "platform": env.get("platform"),
+                "python": env.get("python"),
+                "cpu": env.get("cpu"),
+                "ram_bytes": env.get("ram_bytes"),
+                "backend": "qector-decoder-v3",
+                "backend_version": QECTOR_VERSION,
+                "decoder_class": DECODER_CLASS_HINTS.get(
+                    decoder_name, decoder_name
+                ),
+                "code_family": family,
+                "code_size": int(size),
+                "noise_model": {
+                    "tag": "code_capacity",
+                    "error_rate": 0.05,
+                    "source": "qector Code.random_error",
+                },
+                "shots_requested": int(shots),
+                "shots_completed": 0,
+                "seed": int(seed),
+                "workload_hash": workload_hash,
+                "scope": "single_machine",
+                "claim_class": "machine_scoped_measurement",
+            },
+            "environment": env,
+            "qector_version": QECTOR_VERSION,
             "reference_manual": REF_DOI,
         }
     sorted_lat = sorted(latencies_us)
@@ -1502,6 +1601,38 @@ def tool_hot_path_microbench(
     mean = statistics.fmean(latencies_us)
     sd = statistics.pstdev(latencies_us) if n > 1 else 0.0
     se = sd / math.sqrt(n) if n > 1 else 0.0
+    workload_hash_input = (
+        f"{family}|d={int(size)}|decoder={decoder_name}|"
+        f"error_rate=0.05|seed={int(seed)}"
+    )
+    workload_hash = hashlib.sha256(
+        workload_hash_input.encode("utf-8")
+    ).hexdigest()
+    env = _env_block()
+    measurement_scope: dict[str, Any] = {
+        "machine": platform.node() or "unknown",
+        "os": env.get("os"),
+        "platform": env.get("platform"),
+        "python": env.get("python"),
+        "cpu": env.get("cpu"),
+        "ram_bytes": env.get("ram_bytes"),
+        "backend": "qector-decoder-v3",
+        "backend_version": QECTOR_VERSION,
+        "decoder_class": DECODER_CLASS_HINTS.get(decoder_name, decoder_name),
+        "code_family": family,
+        "code_size": int(size),
+        "noise_model": {
+            "tag": "code_capacity",
+            "error_rate": 0.05,
+            "source": "qector Code.random_error",
+        },
+        "shots_requested": int(shots),
+        "shots_completed": n,
+        "seed": int(seed),
+        "workload_hash": workload_hash,
+        "scope": "single_machine",
+        "claim_class": "machine_scoped_measurement",
+    }
     return {
         "family": family,
         "size": int(size),
@@ -1525,7 +1656,8 @@ def tool_hot_path_microbench(
             "Per-machine, per-workload, per-build hot-path latency sample. "
             "Not a portable performance claim (manual 22.5)."
         ),
-        "environment": _env_block(),
+        "measurement_scope": measurement_scope,
+        "environment": env,
         "qector_version": QECTOR_VERSION,
         "reference_manual": REF_DOI,
     }
@@ -2232,8 +2364,8 @@ def tool_reproduction_command_lookup(section: str = "all") -> dict[str, Any]:
 
 def tool_system_setup(
     confirm: bool = False,
+    profile: str = "production",
     install_requirements: bool = True,
-    target_packages: Sequence[str] | None = None,
     create_artifact_dir: bool = True,
     run_validation_test: bool = True,
 ) -> dict[str, Any]:
@@ -2246,16 +2378,16 @@ def tool_system_setup(
     SAFETY GATE: When confirm=False (the default), performs a complete read-only
     diagnostic probe and outputs planned actions. Setting confirm=True requires
     explicit user approbation before running pip installations or modifying files.
+    Package selection is limited to fixed profiles; arbitrary package
+    specifications are intentionally not accepted through MCP.
     """
     root_dir = Path(__file__).resolve().parent.parent
     req_file = root_dir / "requirements.txt"
-    default_packages = [
-        "numpy>=1.26,<2.3",
-        "qector-decoder-v3==1.0.0",
-        "mcp==1.26.0",
-        "cryptography>=48.0.1,<50",
-    ]
-    packages_to_install = list(target_packages) if target_packages else default_packages
+    if not isinstance(profile, str) or profile not in SETUP_PROFILES:
+        raise QECTORInputError(
+            f"profile must be one of {sorted(SETUP_PROFILES)}"
+        )
+    packages_to_install = list(SETUP_PROFILES[profile])
 
     # Gather system diagnostics (read-only)
     py_exe = sys.executable
@@ -2279,7 +2411,8 @@ def tool_system_setup(
             "mcp": mcp_ver,
             "cryptography": crypto_ver,
         },
-        "target_packages": packages_to_install,
+        "setup_profile": profile,
+        "approved_packages": packages_to_install,
         "requirements_file_present": req_file.is_file(),
         "artifact_directory": str(artifact_dir),
         "license_environment": {
@@ -2322,7 +2455,7 @@ def tool_system_setup(
     # 1. Install requirements
     if install_requirements and has_pip:
         install_cmd = [py_exe, "-m", "pip", "install"]
-        if req_file.is_file() and not target_packages:
+        if profile == "production" and req_file.is_file():
             install_cmd.extend(["-r", str(req_file)])
         else:
             install_cmd.extend(packages_to_install)
@@ -2439,8 +2572,9 @@ def tool_configure_claude_desktop(
     """Automated connector to configure both QECTOR MCP servers in Claude Desktop.
 
     Reads %APPDATA%\\Claude\\claude_desktop_config.json on Windows, creates a timestamped
-    backup, and safely registers both 'qector-library' (8 tools) and 'qector-bench' (29 tools)
-    with explicit python executable path and forward-slash path normalization.
+    backup, and safely registers 'qector-library' (8 tools) by default. Research
+    and admin servers are opt-in flags on the installer, with an explicit Python
+    executable path and forward-slash path normalization.
 
     SAFETY GATE: When confirm=False (the default), performs a read-only dry run inspection.
     Set confirm=True to write configuration changes to Claude Desktop.
@@ -2459,6 +2593,327 @@ def tool_configure_claude_desktop(
             "message": f"Failed to run desktop configuration: {exc}",
             "reference_manual": REF_DOI,
         }
+
+
+# ---------------------------------------------------------------------------
+# Evidence layer (Provisional)
+# ---------------------------------------------------------------------------
+
+
+def tool_get_capability_matrix() -> dict[str, Any]:
+    """Return the static capability matrix for the QECTOR MCP surfaces.
+
+    A *capability* is a coarse-grained feature an agent can request from a
+    server. It is not a single tool name; the matrix maps the major QECTOR
+    workflows (decode, build code, sweep, license, evidence lookup) onto
+    the servers that actually serve them, including the trust-zone each
+    surface lives in. Agents use this to choose the right surface for a
+    job instead of guessing tool names by topic.
+    """
+    tools_by_server: dict[str, list[str]] = {
+        "qector-library": [
+            "list_code_families",
+            "list_decoders",
+            "get_license_info",
+            "decode_syndrome",
+            "decode_single",
+            "threshold_sweep",
+            "build_code_from_matrix",
+            "compat_report",
+        ],
+    }
+    # Build the bench tools list from the actual TOOL_FUNCTIONS dict at
+    # call time, so adding a new research tool updates the matrix without
+    # touching this function. Drop the admin tools that are filtered out
+    # of the public surface.
+    tools_by_server["qector-research"] = sorted(
+        name
+        for name in TOOL_FUNCTIONS
+        if name not in ADMIN_TOOL_NAMES
+    )
+    capabilities = [
+        {
+            "capability": "decode_verified",
+            "servers": ["qector-library"],
+            "tools": ["decode_syndrome", "decode_single"],
+            "stability": "stable",
+            "verification": "runtime",
+            "notes": "H c = s (mod 2) is verified before the result is returned.",
+        },
+        {
+            "capability": "build_code",
+            "servers": ["qector-library"],
+            "tools": ["build_code_from_matrix"],
+            "stability": "stable",
+            "verification": "runtime",
+            "notes": "Matrix is validated against MAX_CHECKS, MAX_QUBITS, and graphlike eligibility.",
+        },
+        {
+            "capability": "threshold_sweep",
+            "servers": ["qector-library"],
+            "tools": ["threshold_sweep"],
+            "stability": "stable",
+            "verification": "runtime",
+            "notes": "Returns a Wilson 95% interval and a hashed raw artifact.",
+        },
+        {
+            "capability": "license_inspection",
+            "servers": ["qector-library"],
+            "tools": ["get_license_info"],
+            "stability": "stable",
+            "verification": "runtime",
+            "notes": "Reads the live offline license tier, distance limits, and gates.",
+        },
+        {
+            "capability": "code_family_discovery",
+            "servers": ["qector-library"],
+            "tools": ["list_code_families", "list_decoders"],
+            "stability": "stable",
+            "verification": "runtime",
+            "notes": "Reports the families and decoders the live wheel exposes.",
+        },
+        {
+            "capability": "runtime_compatibility",
+            "servers": ["qector-library", "qector-research"],
+            "tools": ["compat_report", "env_block"],
+            "stability": "stable",
+            "verification": "runtime",
+            "notes": "PyPI freshness is opt-in (check_pypi=true); default path stays offline.",
+        },
+        {
+            "capability": "reference_lookup",
+            "servers": ["qector-research"],
+            "tools": ["theorem_lookup", "glossary_lookup", "reproduction_command_lookup"],
+            "stability": "provisional",
+            "verification": "reference_only",
+            "notes": "Pure-Python reference manual lookups; no decoder, no I/O.",
+        },
+        {
+            "capability": "wilson_methodology",
+            "servers": ["qector-research"],
+            "tools": ["wilson_ci", "wilson_table", "logical_coset_score"],
+            "stability": "provisional",
+            "verification": "runtime",
+            "notes": "Math utilities for the library server's threshold_sweep output.",
+        },
+        {
+            "capability": "dem_pipeline",
+            "servers": ["qector-research"],
+            "tools": ["dem_inspect", "dem_collapse_parallel"],
+            "stability": "provisional",
+            "verification": "runtime",
+            "notes": "Minimal Stim-style DEM parsing and collapse-rule application.",
+        },
+        {
+            "capability": "code_introspection",
+            "servers": ["qector-research"],
+            "tools": [
+                "code_family_info",
+                "code_export_matrices",
+                "code_logicals_inspect",
+                "code_distance_check",
+            ],
+            "stability": "provisional",
+            "verification": "runtime",
+            "notes": "Structural inspection of every code family registered in the wheel.",
+        },
+        {
+            "capability": "ecosystem_compatibility",
+            "servers": ["qector-research"],
+            "tools": [
+                "pymatching_compat_check",
+                "sinter_decoder_list",
+                "qiskit_plugin_check",
+            ],
+            "stability": "provisional",
+            "verification": "runtime",
+            "notes": "Drop-in shim smoke tests and entry-point listing.",
+        },
+        {
+            "capability": "hardware_probe",
+            "servers": ["qector-research"],
+            "tools": ["hardware_probe"],
+            "stability": "provisional",
+            "verification": "machine_scoped_measurement",
+            "notes": "Local probe; never a portable performance claim.",
+        },
+        {
+            "capability": "evidence_artifacts",
+            "servers": ["qector-research"],
+            "tools": [
+                "artifacts_sha256",
+                "artifact_metadata_check",
+                "decode_faithfulness_check",
+            ],
+            "stability": "provisional",
+            "verification": "runtime",
+            "notes": "SHA-256 hashing is constrained to QECTOR_ARTIFACT_DIR.",
+        },
+        {
+            "capability": "micro_benchmark",
+            "servers": ["qector-research"],
+            "tools": ["hot_path_microbench", "stim_circuit_probe", "sinter_task_template", "workload_hash"],
+            "stability": "provisional",
+            "verification": "machine_scoped_measurement",
+            "notes": "Per-machine measurements; never portable claims.",
+        },
+        {
+            "capability": "evidence_layer",
+            "servers": ["qector-research"],
+            "tools": [
+                "get_capability_matrix",
+                "get_evidence_policy",
+                "get_runtime_provenance",
+            ],
+            "stability": "provisional",
+            "verification": "metadata",
+            "notes": "Self-describing evidence layer. Read-only; no decoder, no I/O.",
+        },
+    ]
+    return {
+        "matrix_version": "1.0.0",
+        "servers": {
+            "qector-library": {
+                "stability": "stable",
+                "default_enabled": True,
+                "tools": tools_by_server["qector-library"],
+                "n_tools": len(tools_by_server["qector-library"]),
+            },
+            "qector-research": {
+                "stability": "provisional",
+                "default_enabled": False,
+                "tools": tools_by_server["qector-research"],
+                "n_tools": len(tools_by_server["qector-research"]),
+            },
+            "qector-admin": {
+                "stability": "admin",
+                "default_enabled": False,
+                "tools": sorted(ADMIN_TOOL_NAMES),
+                "n_tools": len(ADMIN_TOOL_NAMES),
+                "note": (
+                    "Disabled unless QECTOR_ADMIN_ENABLED=1 is set in the server "
+                    "environment; every call requires confirm=true."
+                ),
+            },
+        },
+        "capabilities": capabilities,
+        "n_capabilities": len(capabilities),
+        "reference_manual": REF_DOI,
+    }
+
+
+def tool_get_evidence_policy() -> dict[str, Any]:
+    """Return the published QECTOR evidence / verification policy.
+
+    The policy is the same one enforced by the QECTORToolResult envelope in
+    ``qector_mcp_contract.py``; this tool is the human-readable, agent-readable
+    declaration of what every result means and the *minimum* checks an agent
+    must perform before claiming a result is verified, measured, or
+    reference-only.
+    """
+    return {
+        "policy_version": "1.0.0",
+        "result_statuses": [
+            {
+                "status": "verified",
+                "claim_class": "runtime_verified",
+                "meaning": (
+                    "The result was produced by running the published decoder "
+                    "locally and the H c = s (mod 2) gate (Theorem 1) passed."
+                ),
+            },
+            {
+                "status": "measured",
+                "claim_class": "machine_scoped_measurement",
+                "meaning": (
+                    "The result is a per-machine, per-workload, per-build "
+                    "measurement. It is NEVER a portable performance claim."
+                ),
+            },
+            {
+                "status": "reference_only",
+                "claim_class": "reference_only",
+                "meaning": (
+                    "The result was looked up from the bundled reference manual; "
+                    "no decoder was executed and no I/O occurred."
+                ),
+            },
+            {
+                "status": "not_checked",
+                "claim_class": "metadata_or_unverified",
+                "meaning": (
+                    "The tool did not perform a mathematical verification. The "
+                    "agent must not infer a verified or measured result from this."
+                ),
+            },
+            {
+                "status": "error",
+                "claim_class": "verification_failed",
+                "meaning": (
+                    "The tool returned a stable error code. The agent must not "
+                    "continue past this point without surfacing the error code."
+                ),
+            },
+        ],
+        "stable_error_codes": [
+            "INVALID_INPUT",
+            "RESOURCE_LIMIT",
+            "LICENSE_DENIED",
+            "BACKEND_UNAVAILABLE",
+            "DEPENDENCY_MISSING",
+            "VERIFICATION_FAILED",
+            "IO_ERROR",
+            "NETWORK_DISABLED",
+            "NETWORK_REQUIRED",
+            "PERMISSION_DENIED",
+            "PROTOCOL_ERROR",
+            "RUNTIME_ERROR",
+        ],
+        "agent_must": [
+            "Prefer live MCP/runtime evidence over reference text.",
+            "Treat 'measured' as a single-machine datapoint, not a portable claim.",
+            "Never collapse 'not_checked' to 'verified'.",
+            "Never collapse 'reference_only' to 'runtime capability'.",
+            "Surface the stable error code and the tool name together.",
+        ],
+        "agent_must_not": [
+            "Infer a runtime capability from a reference-manual statement.",
+            "Publish a benchmark number without a fresh device-local artifact.",
+            "Conceal a skipped test or a not_checked result.",
+            "Use 'verified' without an explicit verification.checks entry.",
+            "Loop threshold_sweep, decode_single, build_code_from_matrix, or admin tools past the per-process call budget.",
+        ],
+        "reference_manual": REF_DOI,
+    }
+
+
+def tool_get_runtime_provenance(check_pypi: bool = False) -> dict[str, Any]:
+    """Return the live runtime provenance block for this server process.
+
+    Always reports the local environment; opt-in PyPI freshness via
+    ``check_pypi=true`` (a single HTTPS request to PyPI, cached for the
+    lifetime of the process). The block is the same shape the bench server
+    uses for hot_path_microbench artifacts, so an agent can compare runs
+    with confidence.
+    """
+    provenance: dict[str, Any] = {
+        "server": SERVER_NAME,
+        "server_version": SERVER_VERSION,
+        "qector_decoder_v3": QECTOR_VERSION,
+        "qector_decoder_v3_present": qector_decoder_v3 is not None,
+        "mcp_protocol": WORKBENCH_PROTOCOL_VERSION,
+        "environment": _env_block(),
+        "stability": "provisional",
+        "reference_manual": REF_DOI,
+    }
+    if check_pypi:
+        provenance["pypi_freshness"] = _check_pypi_freshness()
+    else:
+        provenance["pypi_freshness"] = {
+            "status": "not_checked",
+            "reason": "pass check_pypi=true to query PyPI; default path stays fully offline",
+        }
+    return provenance
 
 
 # ---------------------------------------------------------------------------
@@ -2482,7 +2937,6 @@ TOOL_FUNCTIONS: dict[str, Callable[..., Any]] = {
     "license_active_check": tool_license_active_check,
     "env_block": tool_env_block,
     "compat_report": tool_compat_report,
-    "workbench_probe": tool_workbench_probe,
     "artifacts_sha256": tool_artifacts_sha256,
     "artifact_metadata_check": tool_artifact_metadata_check,
     "decode_faithfulness_check": tool_decode_faithfulness_check,
@@ -2493,8 +2947,9 @@ TOOL_FUNCTIONS: dict[str, Callable[..., Any]] = {
     "theorem_lookup": tool_theorem_lookup,
     "glossary_lookup": tool_glossary_lookup,
     "reproduction_command_lookup": tool_reproduction_command_lookup,
-    "system_setup": tool_system_setup,
-    "configure_claude_desktop": tool_configure_claude_desktop,
+    "get_capability_matrix": tool_get_capability_matrix,
+    "get_evidence_policy": tool_get_evidence_policy,
+    "get_runtime_provenance": tool_get_runtime_provenance,
 }
 
 
@@ -2519,12 +2974,6 @@ TOOL_DEFAULTS: dict[str, dict[str, Any]] = {
     "license_active_check": {},
     "env_block": {"check_pypi": False},
     "compat_report": {"check_pypi": False},
-    "workbench_probe": {
-        "executable": "",
-        "timeout": 60.0,
-        "list_tools": True,
-        "limit": None,
-    },
     "artifacts_sha256": {"paths": []},
     "artifact_metadata_check": {
         "family": "rotated_surface",
@@ -2555,18 +3004,9 @@ TOOL_DEFAULTS: dict[str, dict[str, Any]] = {
     "theorem_lookup": {"number": 1},
     "glossary_lookup": {"term": ""},
     "reproduction_command_lookup": {"section": "all"},
-    "system_setup": {
-        "confirm": False,
-        "install_requirements": True,
-        "target_packages": None,
-        "create_artifact_dir": True,
-        "run_validation_test": True,
-    },
-    "configure_claude_desktop": {
-        "confirm": False,
-        "remove": False,
-        "python_path": None,
-    },
+    "get_capability_matrix": {},
+    "get_evidence_policy": {},
+    "get_runtime_provenance": {"check_pypi": False},
 }
 
 
@@ -2589,6 +3029,7 @@ def dispatch_tool(
         raise QECTORInputError(
             f"Unknown tool {name!r}; choose one of {sorted(TOOL_FUNCTIONS)}"
         )
+    consume_call_budget(name)
     return function(**_merged_arguments(name, arguments))
 
 
@@ -2608,10 +3049,9 @@ def _error_payload(exc: Exception) -> dict[str, Any]:
 
 try:
     from mcp.types import (
-        CallToolResult,
-        ServerCapabilities,
-        TextContent,
-        Tool,
+    CallToolResult,
+    ServerCapabilities,
+    Tool,
         ToolsCapability,
     )
 except Exception as exc:  # pragma: no cover
@@ -2890,26 +3330,6 @@ def _tool_schema() -> list[Tool]:
             },
         ),
         Tool(
-            name="workbench_probe",
-            description=(
-                "Local stdio probe of an optional QECTOR Workbench "
-                "executable. The Workbench is optional under v1.0.0; the "
-                "bench server's other 24 tools cover every Workbench-free "
-                "need. No transcript is bundled."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "executable": {"type": "string"},
-                    "timeout": {"type": "number", "default": 60.0},
-                    "list_tools": {"type": "boolean", "default": True},
-                    "limit": {"type": ["integer", "null"], "default": None},
-                },
-                "required": ["executable"],
-                "additionalProperties": False,
-            },
-        ),
-        Tool(
             name="artifacts_sha256",
             description="Compute SHA-256 of one or more files for the chapter 22.3 metadata sidecar.",
             inputSchema={
@@ -3147,70 +3567,53 @@ def _tool_schema() -> list[Tool]:
             },
         ),
         Tool(
-            name="system_setup",
+            name="get_capability_matrix",
             description=(
-                "First-time system setup and configuration tool for QECTOR. "
-                "Audits python interpreter, installs requirements, creates artifact "
-                "directories, and runs mathematical validation. Requires explicit user "
-                "approbation (confirm=true) to execute modifications."
+                "Return the static capability matrix for the QECTOR MCP surfaces. "
+                "Maps coarse-grained workflows (decode, build code, threshold, "
+                "evidence lookup, ...) onto the servers that actually serve them, "
+                "including the trust zone each surface lives in. Read-only; no "
+                "decoder, no I/O."
             ),
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "confirm": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Set to true to grant user approbation and execute installations; false runs a read-only dry run probe.",
-                    },
-                    "install_requirements": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "Whether to install/verify Python packages via pip.",
-                    },
-                    "target_packages": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Optional custom packages to install; defaults to pinned production requirements.",
-                    },
-                    "create_artifact_dir": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "Whether to create and test write permission on the artifacts directory.",
-                    },
-                    "run_validation_test": {
-                        "type": "boolean",
-                        "default": True,
-                        "description": "Whether to execute an in-process decode self-test asserting Theorem 1.",
-                    },
-                },
+                "properties": {},
                 "additionalProperties": False,
             },
         ),
         Tool(
-            name="configure_claude_desktop",
+            name="get_evidence_policy",
             description=(
-                "Automated connector to configure both QECTOR MCP servers (qector-library and "
-                "qector-bench) inside Claude Desktop. Creates a timestamped backup of "
-                "%APPDATA%\\Claude\\claude_desktop_config.json, normalizes all paths to forward "
-                "slashes, and injects python path and silent flags. Requires confirm=true to write changes."
+                "Return the published QECTOR evidence / verification policy: the "
+                "meaning of every result status, the closed list of stable error "
+                "codes, and the agent must / must-not rules. Read-only; no decoder, "
+                "no I/O."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "additionalProperties": False,
+            },
+        ),
+        Tool(
+            name="get_runtime_provenance",
+            description=(
+                "Return the live runtime provenance block for this server process. "
+                "Includes the local environment, the negotiated MCP protocol, the "
+                "QECTOR decoder version, and an opt-in PyPI freshness field. PyPI "
+                "is contacted only when check_pypi=true; default path stays fully "
+                "offline."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "confirm": {
+                    "check_pypi": {
                         "type": "boolean",
                         "default": False,
-                        "description": "Set to true to grant user approbation and write configuration changes; false runs a read-only dry run inspection.",
-                    },
-                    "remove": {
-                        "type": "boolean",
-                        "default": False,
-                        "description": "Set to true to remove QECTOR server entries from Claude Desktop config.",
-                    },
-                    "python_path": {
-                        "type": ["string", "null"],
-                        "default": None,
-                        "description": "Optional explicit Python interpreter executable path to pin.",
+                        "description": (
+                            "Opt in to a one-time PyPI freshness check for this "
+                            "server process. Never automatic."
+                        ),
                     },
                 },
                 "additionalProperties": False,
@@ -3219,23 +3622,35 @@ def _tool_schema() -> list[Tool]:
     ]
 
 
-TOOLS = _tool_schema()
+TOOLS = apply_tool_contract(
+    [tool for tool in _tool_schema() if tool.name not in ADMIN_TOOL_NAMES]
+)
 
 
 async def _dispatch_mcp_call(
     name: str, arguments: Mapping[str, Any] | None
-) -> dict[str, Any] | CallToolResult:
+) -> CallToolResult:
     try:
-        return dispatch_tool(name, arguments)
+        result = dispatch_tool(name, arguments)
+        return call_tool_result(
+            result_envelope(
+                result,
+                tool_name=name,
+                server_name=SERVER_NAME,
+                server_version=SERVER_VERSION,
+                stability="provisional",
+            )
+        )
     except Exception as exc:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=json.dumps(_error_payload(exc), sort_keys=True),
-                )
-            ],
-            isError=True,
+        return call_tool_result(
+            error_envelope(
+                exc,
+                tool_name=name,
+                server_name=SERVER_NAME,
+                server_version=SERVER_VERSION,
+                stability="provisional",
+            ),
+            is_error=True,
         )
 
 
@@ -3248,9 +3663,9 @@ def _build_low_level_server() -> Any:
         SERVER_NAME,
         version=SERVER_VERSION,
         instructions=(
-            "QECTOR bench/extra tools. Companion to the 8-tool library server. "
+            "QECTOR provisional research tools. Companion to the 8-tool library server. "
             "Wilson CI, DEM inspection, code-family introspection, hardware "
-            "probes, workbench probe, and micro-benchmarks. No portable claims."
+            "probes, and micro-benchmarks. No portable claims."
         ),
     )
 
@@ -3261,7 +3676,7 @@ def _build_low_level_server() -> Any:
     @server.call_tool()
     async def _call_tool(
         name: str, arguments: dict[str, Any]
-    ) -> dict[str, Any] | CallToolResult:
+    ) -> CallToolResult:
         return await _dispatch_mcp_call(name, arguments)
 
     return server
@@ -3269,7 +3684,7 @@ def _build_low_level_server() -> Any:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="QECTOR Decoder v3 bench/extra MCP server (Provisional)"
+        description="QECTOR Decoder v3 research MCP server (Provisional)"
     )
     parser.add_argument("--transport", choices=("stdio",), default="stdio")
     parser.parse_args(argv)

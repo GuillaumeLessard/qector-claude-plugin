@@ -1,26 +1,66 @@
-# QECTOR Quantum Error Correction Plugin
+## PolicyLayer playbook
 
-This is the QECTOR Claude Plugin, an advanced quantum error correction engineering and research environment.
+At the start of every session, fetch the team playbook with get_playbook and follow it wherever it decides something. The playbook wins over anything below in this file.
+When the human makes a standing decision this playbook does not cover ("always X", "never Y"), agree a one-line rule with them, then call record_decision with a stable kebab-case reference, the question you asked, their decision verbatim, and the agreed rule text as rule_body. It returns an approval link, not an approved rule: share the link and carry on. Tell them: this session already follows your decision; approving the link makes every other session follow it too. Do not wait for the approval and do not ask about it again; later sessions fetch the playbook at start and pick it up.
+Personal preferences stay in your own memory. Decisions that should bind other sessions, agents or teammates belong in the playbook via record_decision.
+When you need a decision the playbook does not cover, ask the human in this conversation first; if they decide, record it with record_decision. Call ask_policy and park the task only when the decision belongs to someone who is not present; collect answers with get_answers at the start of later sessions, and after applying one, confirm it with get_answer and applied set to true. After acting on a collected answer, propose it as a rule with record_decision unless it was plainly a one-off.
+If PolicyLayer is unreachable, use your cached playbook and behave as you did before it existed.
 
-## 🚀 Build & Test Commands
-- **Structure Tests**: `python scripts/test_structure.py`
-- **Math/Theorem Proofs**: `python scripts/run_manual_math_validation.py`
-- **Rebuild Dist Packages**: `python scripts/pro_pack.py --all`
-- **Configure Claude Desktop (Windows/Mac/Linux)**: `python scripts/configure_claude_desktop.py --confirm`
+# QECTOR Claude Code Context
 
-## 🧩 Claude Code Architecture
-- **MCP Servers** (`.mcp.json`): Integrates `qector-library` (stable) and `qector-bench` (research) tools.
-- **Skills** (`skills/`): 28 domain-specific instruction sets.
-- **Commands** (`commands/`): 13 automated slash commands (e.g., `/qec-theorem`, `/qec-threshold-sweep`).
-- **Agents** (`agents/`): 5 specialized personas.
-- **Hooks** (`hooks/hooks.json`): Automated session start and tool usage logging.
-- **Plugin Manifests** (`.claude-plugin/`): Formal definitions for Anthropic Marketplace distribution.
+QECTOR is a local quantum-error-correction plugin backed by
+`qector-decoder-v3==1.0.0`. The default Claude Code configuration in
+`.claude-plugin/plugin.json` and `.mcp.json` exposes only `qector-library`.
 
-## 📏 Core Engineering Guidelines
-1. **Mathematical Strictness**: Every single syndrome decoding must verify $H c \equiv s \pmod 2$. Do not accept approximations.
-2. **Zero-Egress Security**: Operations must run 100% locally. Never write code that attempts to offload QEC simulation telemetry to the cloud.
-3. **Fail-Closed Design**: Any mismatched matrix dimensions, unrecognized code families, or invalid distance requests must immediately raise a deterministic error rather than silently corrupting the quantum state.
-4. **Statistical Rigor**: All LER threshold sweeps must include exact Wilson 95% binomial score intervals. Point estimates without bounds are rejected.
+## MCP Profiles
 
-## 🔗 Extension Context
-For a detailed mathematical specification, consult the `QECTOR_Reference_Manual_v1.0.0.pdf` (DOI: 10.5281/zenodo.21941046) and the live offline fact sheet.
+- `qector-library`: 8 stable decoding, code-building, threshold, license, and
+  compatibility tools. Corrections are verified against `H c = s (mod 2)`.
+- `qector-research`: 29 opt-in provisional tools for methodology, inspection,
+  measured benchmarks, evidence policy, and reproduction references.
+- `qector-admin`: 3 opt-in privileged tools. It is disabled until its server
+  environment sets `QECTOR_ADMIN_ENABLED=1`; each call also requires
+  `confirm=true`.
+
+Claude-facing content is in `commands/`, `agents/`, `skills/`, `prompts/`, and
+`hooks/`. The separate Claude Desktop adapter starts in its safe profile.
+
+## Validation
+
+```bash
+python scripts/qector_runtime_check.py
+python -m unittest discover -s tests -v
+python scripts/test_structure.py
+python scripts/release_validate.py
+ruff check .
+```
+
+Keep default operations local. Only explicit compatibility freshness checks may
+contact PyPI; never add telemetry or hardcoded user paths.
+
+## Security
+
+- Default install exposes only `qector-library` (8 stable tools).
+- Research and admin servers are explicit opt-in; see `SECURITY.md` and
+  `governance/security_playbook.md`.
+- Privileged tools require `QECTOR_ADMIN_ENABLED=1`, `confirm=true`, and
+  per-process call budgets documented in `SECURITY.md`.
+- Artifact hashing is limited to `QECTOR_ARTIFACT_DIR`; never upload syndromes,
+  matrices, or circuits externally.
+
+## Evidence Protocol
+
+Before stating runtime capability, license tier, or benchmark numbers:
+
+1. Call `get_evidence_policy` and `get_runtime_provenance` on
+   `qector-research` when that server is enabled; otherwise use live library
+   tool results only.
+2. Respect MCP envelope `status` values from `mcp/qector_mcp_contract.py`:
+   - `verified` — parity or setup checks passed in this process.
+   - `reference_only` — manual or lookup content; not a live measurement.
+   - `measured` — machine-scoped timing or hardware probe; not portable.
+   - `not_checked` / `error` — do not upgrade to a stronger claim.
+3. Never invent tool names, decoder classes, or version strings. Confirm with
+   `tools/list` or `skills/qector-core/references/qector_verified_api.md`.
+4. Route governance questions through `agents/qec-validator.md` before green
+   verdicts on reproducibility or security posture.

@@ -44,7 +44,7 @@ For every published result, the repository policy requires:
 | environment     | OS, CPU, RAM, Python / Rust / package versions, GPU / runtime, git commit        |
 | artifact        | raw JSON / CSV path plus SHA-256 sidecar                                         |
 
-`qector-bench.artifact_metadata_check` generates the full block
+`qector-research.artifact_metadata_check` generates the full block
 (no decoder execution); `qector-library.threshold_sweep` already
 emits the same block plus the SHA-256 sidecar.
 
@@ -163,13 +163,13 @@ same scope rule.
 
 ## How the bench server helps
 
-- `qector-bench.artifact_metadata_check` generates the
+- `qector-research.artifact_metadata_check` generates the
   chapter 22.3 metadata block.
-- `qector-bench.wilson_ci` and `wilson_table` are the math
+- `qector-research.wilson_ci` and `wilson_table` are the math
   utilities for LER reports.
-- `qector-bench.artifacts_sha256` computes the SHA-256 sidecar
+- `qector-research.artifacts_sha256` computes the SHA-256 sidecar
   required by the metadata block.
-- `qector-bench.env_block` returns the chapter 22.3 environment
+- `qector-research.env_block` returns the chapter 22.3 environment
   block.
-- `qector-bench.decode_faithfulness_check` re-verifies
+- `qector-research.decode_faithfulness_check` re-verifies
   `H c = s` (mod 2) for any external decode.

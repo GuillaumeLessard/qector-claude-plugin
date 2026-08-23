@@ -108,13 +108,13 @@ for what is a candidate.
 
 ## How the bench server helps
 
-- `qector-bench.compat_report` (via `qector-library`) returns
+- `qector-research.compat_report` (via `qector-library`) returns
   the live package version and the Provisional-surface
   boundaries.
-- `qector-bench.env_block` returns the chapter 22.3 environment
+- `qector-research.env_block` returns the chapter 22.3 environment
   block for a roadmap artifact.
-- `qector-bench.artifact_metadata_check` generates the
+- `qector-research.artifact_metadata_check` generates the
   chapter 22.3 metadata block.
-- `qector-bench.license_active_check` reports the offline
+- `qector-research.license_active_check` reports the offline
   license tier; the candidate items do not unlock new tier
   features beyond the three documented tiers.

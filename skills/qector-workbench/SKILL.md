@@ -8,7 +8,7 @@ description: >-
   Workbench is absent from the shipped wheel, the headless
   application controller (workbench.py), the benchmark job
   queue, the JSON / CSV / PDF export, the environment snapshot,
-  the git commit, and the qector-bench.workbench_probe tool.
+  the git commit, and the qector-admin.workbench_probe tool.
   Load for any question about the Workbench, the optional app,
   or how to probe a target device.
 ---
@@ -46,20 +46,11 @@ Its exact tools, version, license, and hardware status are
 
 ## How to probe the Workbench
 
-`qector-bench.workbench_probe` runs a local stdio probe of an
-optional Workbench executable:
-
-```python
-result = qector_bench.dispatch_tool(
-    "workbench_probe",
-    {
-        "executable": "C:\\path\\to\\QectorWorkbench-Portable.exe",
-        "timeout": 60.0,
-        "list_tools": True,
-        "limit": None,
-    },
-)
-```
+`qector-admin.workbench_probe` runs a local stdio probe of an
+approved Workbench executable. The admin server must be enabled
+with `QECTOR_ADMIN_ENABLED=1`, the binary must sit inside
+`QECTOR_WORKBENCH_DIR`, and the call must include `confirm=true`
+plus `expected_sha256`.
 
 The tool:
 
@@ -69,7 +60,7 @@ The tool:
 3. Returns the live JSON-RPC responses.
 4. Closes the subprocess and waits for it to exit.
 
-No transcript is bundled by the bench server; the result is
+No transcript is bundled by the admin probe; the result is
 fresh for every call.
 
 ## What the Workbench tools are
@@ -133,12 +124,12 @@ Do not use the Workbench when:
   chapter 22.3 metadata** -> manual 24.1 lists 10 production
   items; every artifact must include the metadata.
 
-## How the bench server helps
+## How the research server helps
 
-- `qector-bench.workbench_probe` is the live probe.
-- `qector-bench.env_block` returns the chapter 22.3 environment
+- `qector-admin.workbench_probe` is the live probe.
+- `qector-research.env_block` returns the chapter 22.3 environment
   block for a Workbench artifact.
-- `qector-bench.hardware_probe` returns the live hardware state
+- `qector-research.hardware_probe` returns the live hardware state
   via the library probe.
-- `qector-bench.license_active_check` reports the offline
+- `qector-research.license_active_check` reports the offline
   license tier.

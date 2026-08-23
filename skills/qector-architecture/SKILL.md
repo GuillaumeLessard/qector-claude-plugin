@@ -101,13 +101,13 @@ proprietary and are not reproduced in the manual.
 
 ## How the bench server helps
 
-- `qector-bench.env_block` returns the environment block
+- `qector-research.env_block` returns the environment block
   (manual 22.3) so an architectural artifact carries the
   required metadata.
-- `qector-bench.hardware_probe` reports the live hardware
+- `qector-research.hardware_probe` reports the live hardware
   state and license tier.
-- `qector-bench.code_export_matrices` exports a code's matrices
+- `qector-research.code_export_matrices` exports a code's matrices
   in JSON form (useful when tracing data through the FFI
   boundary by hand).
-- `qector-bench.decode_faithfulness_check` re-verifies
+- `qector-research.decode_faithfulness_check` re-verifies
   `H c = s` (mod 2) externally.

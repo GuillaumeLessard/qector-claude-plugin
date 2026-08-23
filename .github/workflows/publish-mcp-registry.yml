@@ -1,0 +1,137 @@
+name: Publish to MCP Registry
+
+# Triggers on version tags, e.g. v1.0.4 (must match the version in
+# .claude-desktop-extension/manifest.json and .claude-plugin/plugin.json).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to (re-)publish, e.g. v1.0.4"
+        required: true
+
+permissions:
+  contents: write   # to create the GitHub Release and upload the .mcpb asset
+  id-token: write   # to authenticate with the MCP Registry via GitHub OIDC
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Resolve tag and version
+        id: ver
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Sanity check manifest/plugin versions match the tag
+        run: |
+          python3 - <<'PY'
+          import json, sys, os
+          version = os.environ["VERSION"]
+          for path in (".claude-desktop-extension/manifest.json", ".claude-plugin/plugin.json"):
+              data = json.load(open(path))
+              if data.get("version") != version:
+                  print(f"::error::{path} version {data.get('version')} does not match tag version {version}")
+                  sys.exit(1)
+          print("Version check OK:", version)
+          PY
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime
+        run: python -m pip install -r requirements.txt
+
+      - name: Build canonical release artifacts
+        run: python scripts/build_release.py --all
+
+      - name: Compute SHA-256 of the Desktop MCPB
+        id: hash
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          BUNDLE="dist/qector-claude-desktop-${VERSION}.mcpb"
+          HASH="$(openssl dgst -sha256 "$BUNDLE" | awk '{print $2}')"
+          echo "bundle=$BUNDLE" >> "$GITHUB_OUTPUT"
+          echo "sha256=$HASH" >> "$GITHUB_OUTPUT"
+          echo "SHA-256: $HASH"
+
+      - name: Create GitHub Release and upload artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          VERSION="${{ steps.ver.outputs.version }}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "QECTOR $TAG" --generate-notes
+          fi
+          gh release upload "$TAG" \
+            "dist/qector-claude-desktop-${VERSION}.mcpb" \
+            "dist/qector-claude-plugin-${VERSION}.zip" \
+            "dist/qector-claude-plugin-source-${VERSION}.zip" \
+            dist/SHA256SUMS \
+            --clobber
+
+      - name: Patch server.json with the real version and hash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          path = "server.json"
+          data = json.load(open(path))
+          version = os.environ["VERSION"]
+          sha256 = os.environ["SHA256"]
+          tag = os.environ["TAG"]
+          data["version"] = version
+          pkg = data["packages"][0]
+          pkg["version"] = version
+          pkg["fileSha256"] = sha256
+          pkg["identifier"] = (
+              "https://github.com/GuillaumeLessard/qector-claude-plugin"
+              f"/releases/download/{tag}/qector-claude-desktop-{version}.mcpb"
+          )
+          json.dump(data, open(path, "w"), indent=2)
+          json.dump(data, open("published.server.json", "w"), indent=2)
+          print(json.dumps(data, indent=2))
+          PY
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          SHA256: ${{ steps.hash.outputs.sha256 }}
+          TAG: ${{ steps.ver.outputs.tag }}
+
+      - name: Validate server.json against the official schema
+        run: |
+          pip install --quiet jsonschema requests
+          python3 - <<'PY'
+          import json, requests, jsonschema
+          data = json.load(open("published.server.json"))
+          schema = requests.get(data["$schema"], timeout=30).json()
+          jsonschema.validate(instance=data, schema=schema)
+          print("server.json is schema-valid.")
+          PY
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
+            | tar xz mcp-publisher
+
+      - name: Authenticate via GitHub OIDC and publish
+        run: |
+          # mcp-publisher publish reads ./server.json from the current
+          # directory; server.json was already patched with the real
+          # version, identifier, and hash in the previous step.
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
+
+      - name: Verify publication
+        run: |
+          curl -s "https://registry.modelcontextprotocol.io/v0/servers/io.github.GuillaumeLessard/qector-desktop" | python3 -m json.tool

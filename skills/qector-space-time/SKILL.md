@@ -121,11 +121,11 @@ claimed without a surviving artifact.
 
 ## How the bench server helps
 
-- `qector-bench.env_block` returns the chapter 22.3 environment
+- `qector-research.env_block` returns the chapter 22.3 environment
   block for the space-time artifact.
-- `qector-bench.artifact_metadata_check` generates the metadata
+- `qector-research.artifact_metadata_check` generates the metadata
   block (decoder class, mode, weight scheme) for a space-time run.
-- `qector-bench.decode_faithfulness_check` re-verifies
+- `qector-research.decode_faithfulness_check` re-verifies
   `H c = s` on the spatial projection of the lifted correction.
-- `qector-bench.hot_path_microbench` produces a per-machine
+- `qector-research.hot_path_microbench` produces a per-machine
   latency sample (always per-machine, never portable).

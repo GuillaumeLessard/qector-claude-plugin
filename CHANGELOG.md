@@ -1,5 +1,137 @@
 # Changelog
 
+## 1.0.4 - 2026-08-23
+
+Production-ready release. Completes the remaining 1.0.3 hardening items
+and adds process-local call budgets so an agent cannot loop mutating or
+expensive tools without a ceiling.
+
+- **Per-process call budgets** on `threshold_sweep` (8), `decode_single`
+  (64), `decode_syndrome` (256), `build_code_from_matrix` (32),
+  `hot_path_microbench` (4), `system_setup` (2),
+  `configure_claude_desktop` (2), and `workbench_probe` (2). Exhaustion
+  returns `RESOURCE_LIMIT`. Override with `QECTOR_MCP_MAX_CALLS_<TOOL>`.
+- **Tighter MCP resource defaults**: `QECTOR_MCP_MAX_TRIALS` 10_000,
+  `QECTOR_MCP_MAX_SWEEP_POINTS` 64.
+- **Admin tools removed from the research schema.** Implementations stay
+  importable by `qector-admin`; `tools/list` on `qector-research` is 29
+  provisional tools only.
+- **Canonical release artifacts** from `scripts/build_release.py`:
+  `qector-claude-plugin-source-1.0.4.zip`,
+  `qector-claude-plugin-1.0.4.zip`,
+  `qector-claude-desktop-1.0.4.mcpb`, plus `SHA256SUMS`, SBOM, and
+  provenance. The bundle validator matches those names.
+- **CI** runs source, unit, ruff, and artifact gates. The MCP Registry
+  publish workflow now uploads the canonical Desktop MCPB.
+- **Public claims** aligned: 8 stable / 29 research / 3 admin tools,
+  11 commands, 5 agents, 28 skills. Skills, agents, and the user manual
+  no longer advertise retired `/qec-decode` or `/qec-desktop-connector`,
+  or admin tools on the research server.
+- **Plugin archive includes `scripts/`** so SessionStart and PostToolUse
+  hooks resolve `qector_session_start.py` and `qector_tool_log.py` after
+  marketplace install. Also ships `docs/`, `governance/`, and
+  `CLAUDE_DESKTOP.md`.
+- **Desktop MCPB layout**: `icon.png` and `README.md` sit at the bundle
+  root (matching the manifest). The safe MCPB does not bundle research
+  or admin servers; `--profile research` fails closed if the research
+  module is absent.
+- **Library artifact root** defaults to the plugin `artifacts/` directory,
+  not process cwd. `QECTOR_ARTIFACT_DIR` still overrides.
+- **Installer `python_path`** must be an existing Python 3 interpreter;
+  arbitrary binaries are rejected before they are written into Claude
+  Desktop configuration.
+- **Deterministic release archives**: zip entries use a fixed timestamp so
+  SHA-256 sidecars and `server.json` `fileSha256` stay stable across rebuilds.
+
+## 1.0.3 - 2026-08-22
+
+Production-readiness hardening pass. No new public surface; no behavior
+changes that justify a version bump on their own. All changes ship under
+the existing 1.0.3 release tag.
+
+- **Split `scripts/test_structure.py` into a source validator and a bundle
+  validator.** `scripts/validate_source.py` checks skills, agents, commands,
+  hooks, plugin and Desktop manifests, MCP config templates, and tree
+  cleanliness. It never requires `dist/` to exist, so a fresh source clone
+  validates cleanly. `scripts/validate_plugin_bundle.py` is the companion
+  that checks the contents and SHA-256 sidecars of built artifacts in
+  `dist/`; it reports informational when `dist/` is absent. The original
+  `scripts/test_structure.py` becomes a thin two-phase wrapper so existing
+  CI / docs references keep working.
+- **Version unification.** Every version-bearing file is now `1.0.3`:
+  `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`,
+  `.claude-desktop-extension/manifest.json`, `release-manifest.json`
+  (including the Desktop MCPB artifact name), and `SERVER_VERSION` in
+  `mcp_server_library.py`, `mcp_server_qector_bench.py`,
+  `mcp_server_desktop.py`, and `mcp_server_admin.py`.
+  `scripts/release_validate.py` now cross-checks all four Python servers
+  in addition to the JSON manifests.
+- **Hooks portability.** `hooks/hooks.json` no longer hard-codes
+  `python3`; it uses `python` to match the rest of the plugin and to
+  avoid the native Windows regression the changelog for the previous
+  release called out.
+- **Evidence layer in the provisional surface.** Three new read-only
+  tools live in the research (bench) server, *not* in the 8-tool
+  frozen library surface:
+  - `get_capability_matrix` — maps coarse-grained QECTOR workflows
+    onto the servers that serve them, including the trust zone.
+  - `get_evidence_policy` — declares the meaning of every result
+    status, the closed list of stable error codes, and the agent
+    must / must-not rules.
+  - `get_runtime_provenance` — the live runtime block for the
+    server process, with opt-in PyPI freshness.
+  Library stays at the eight promised tools; the frozen API contract
+  is preserved.
+- **`hot_path_microbench` now emits a structured `measurement_scope`
+  block** (machine / OS / Python / CPU / RAM / backend / decoder_class
+  / code_family / noise_model / seed / workload_hash) on every result,
+  including the early-exit "no successful decodes" branch.
+- **Build-script hygiene.** `scripts/pro_pack.py` and
+  `scripts/build_release.py` now refuse to include the
+  `scratch_probe_*.py` files at repo root, and `.gitignore` covers
+  them so they no longer appear as untracked working-tree noise.
+- **Test coverage.** `tests/test_production_readiness.py` exercises the
+  contract surface (envelope shape, error code taxonomy, MCP tool
+  contract, manifest version consistency, hooks launcher portability,
+  `system_setup` profile allowlist, `tool_artifacts_sha256` path
+  containment, evidence layer shape) without requiring
+  `qector-decoder-v3` to be installed.
+
+## 1.0.3 - 2026-08-21
+
+- **Portability**: `.mcp.json` and `.claude-plugin/plugin.json` now invoke
+  `python3` instead of bare `python`. Stock macOS and modern Linux distros
+  (Ubuntu 20.04+, Debian, Fedora, Arch) ship `python3` but not `python`, so
+  the previous default silently failed to launch `qector-library` /
+  `qector-bench` for every Claude Code user on those systems. Windows users
+  invoking through native Claude Code (outside WSL) without a `python3`
+  alias should either run inside WSL or use the Claude Desktop installer,
+  which pins the exact resolved interpreter path automatically and is
+  unaffected by this change.
+- **Fixed drift risk**: `scripts/configure_claude_desktop.py` was pointing
+  installed configs at a stale `dist/qector-claude-plugin-v1.0.2/` snapshot
+  on at least one machine instead of the live `mcp/` source tree, meaning
+  source edits silently would not take effect until a manual rebuild. The
+  script already resolved paths relative to its own location (dynamic, no
+  hardcoded machine paths) — confirmed correct and re-verified end-to-end.
+- **Docs**: removed a leaked machine-specific example path from the root
+  `CLAUDE_DESKTOP.md`; both `CLAUDE_DESKTOP.md` and the main `README.md` now
+  lead with the automated, cross-platform `configure_claude_desktop.py`
+  installer instead of manual JSON editing, and explicitly warn against
+  adding QECTOR as a remote "Custom Connector" (it is a local, offline MCP
+  server with no sign-in service — that flow always fails with an OAuth
+  registration error).
+- Corrected a stale `mcp==1.2.0` figure in `README.md`'s requirements line;
+  the pinned, tested version is `mcp==1.26.0` (matches `requirements.txt`).
+- `.gitignore`: added the transient `dist/qector-claude-plugin-v*/` extracted
+  build directory and local `brand/exports/` output so packaging runs never
+  leave stray untracked directories to accidentally `git add`.
+- Rebuilt and re-signed release archives (`dist/qector-claude-plugin-v1.0.3.zip`,
+  `dist/qector-qector-core-skill.zip`) with fresh SHA-256 sidecars; removed
+  the superseded `v1.0.2` archives.
+- Bumped `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
+  `.claude-desktop-extension/manifest.json` to `1.0.3`.
+
 ## 1.0.2 - 2026-08-19
 
 - Added guided first-time system setup tool (`system_setup`, 28th tool in `mcp_server_qector_bench.py` and CLI `scripts/qector_system_setup.py`) with explicit user approbation safety gate (`confirm=False` dry-run audit, `confirm=True` execution).

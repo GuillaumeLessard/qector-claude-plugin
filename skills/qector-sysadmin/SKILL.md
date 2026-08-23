@@ -4,9 +4,10 @@ description: >-
   Operations, runtime configuration, security, and
   device-local health of QECTOR deployments. The library
   path uses `compat_report` and `get_license_info`; the
-  companion bench server adds `hardware_probe`,
-  `license_active_check`, `env_block`, `workbench_probe`,
-  and `compat_report` is also available via the library.
+  companion research server adds `hardware_probe`,
+  `license_active_check`, and `env_block`. Workbench probing
+  is an admin tool. `compat_report` is also available via
+  the library.
   Any Workbench health tools must be discovered on the
   target device. Load for uptime, hardware, or security
   questions.
@@ -24,17 +25,17 @@ which are labelled.
 1. **Library (always available)**: `qector-library.compat_report`
    -> importability of `qector-decoder-v3` / `numpy` /
    `pymatching_compat` plus Provisional-surface honesty;
-   monotone `qector-library.get_license_info`. The bench
-   server's `qector-bench.env_block` returns the same
+   monotone `qector-library.get_license_info`. The research
+   server's `qector-research.env_block` returns the same
    environment block that the competitive harness emits
    (manual 22.3).
-2. **Bench (always available)**: `qector-bench.hardware_probe`
+2. **Research (opt-in)**: `qector-research.hardware_probe`
    reports the live CUDA / OpenCL state and the live
-   license tier; `qector-bench.license_active_check` returns
+   license tier; `qector-research.license_active_check` returns
    the offline tier and `max_distance`. Both are required
    reading before any deployment change.
 3. **Workbench-only (app installed)**: inspect
-   `qector-bench.workbench_probe`'s `tools/list` (or the
+   `qector-admin.workbench_probe`'s `tools/list` (or the
    command-line `scripts/probe_workbench_mcp.py`), then
    negotiate the target's health and environment tools.
 
@@ -48,7 +49,7 @@ machine.
   `key_status` / `expiry`. Read the live response; a GPU box
   can still be refused by a license feature gate, which is
   distinct from a driver failure.
-- `qector-bench.license_active_check` returns the same data
+- `qector-research.license_active_check` returns the same data
   plus a `tier_table` with the documented per-tier limits
   (Community d<=7, Pro d<=19, Enterprise d<=63) and the
   environment block.
@@ -64,8 +65,8 @@ machine.
   token. An unreadable configured license file is an error,
   not a silent Community downgrade.
 - Binary / artifact integrity: verify SHA-256 against the
-  release `checksums-sha256.txt` before promotion; the bench
-  server's `qector-bench.artifacts_sha256` is the helper.
+  release `checksums-sha256.txt` before promotion; the research
+  server's `qector-research.artifacts_sha256` is the helper.
 
 ## Data & environment
 
@@ -81,9 +82,9 @@ machine.
 
 ## Security posture
 
-Enforce the **zero-egress rule**: no `.stim` / `.npy` /
-parity matrices to external services; all compute stays
-local via the MCP server. Verify provenance before
+Keep decoding local: no `.stim` / `.npy` / parity matrices
+to external services. The only outbound network path is the
+explicit opt-in PyPI freshness check. Verify provenance before
 installing any package the agent is asked to execute.
 
 ## Production checklist (manual 24.1)
@@ -116,17 +117,17 @@ Before any customer-facing or network-accessible deployment
   and resource quotas must be reviewed before production
   use.
 
-## What the bench server gives the operator
+## What the research server gives the operator
 
-- `qector-bench.hardware_probe` - live CUDA / OpenCL +
+- `qector-research.hardware_probe` - live CUDA / OpenCL +
   license probe (replaces older "check the docs" paths).
-- `qector-bench.license_active_check` - tier table, max
+- `qector-research.license_active_check` - tier table, max
   distance, env block.
-- `qector-bench.env_block` - manual 22.3 environment block.
-- `qector-bench.workbench_probe` - local stdio probe of
-  the optional Workbench executable.
-- `qector-bench.artifacts_sha256` - SHA-256 sidecar helper.
-- `qector-bench.artifact_metadata_check` - the chapter 22.3
+- `qector-research.env_block` - manual 22.3 environment block.
+- `qector-admin.workbench_probe` - local stdio probe of
+  an approved Workbench executable.
+- `qector-research.artifacts_sha256` - SHA-256 sidecar helper.
+- `qector-research.artifact_metadata_check` - the chapter 22.3
   metadata block generator.
-- `qector-bench.compat_report` is exposed by the library
+- `qector-research.compat_report` is exposed by the library
   MCP server (8-tool surface).

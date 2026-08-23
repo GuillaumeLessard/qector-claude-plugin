@@ -137,7 +137,7 @@ your own.
   (`list_code_families`, `list_decoders`, `get_license_info`,
   `decode_syndrome`, `decode_single`, `threshold_sweep`,
   `build_code_from_matrix`, `compat_report`).
-  Companion bench server tools (`qector-bench.*`) are
+  Companion bench server tools (`qector-research.*`) are
   Provisional, never quoted as contract.
 
 ## Rule M4 - LER methodology (chapter 15)
@@ -154,8 +154,8 @@ your own.
 
   The Wilson interval never leaves [0, 1] and keeps coverage at
   small `k` and extreme `p` (Wald does not). The
-  `qector-bench.wilson_ci` tool returns exactly the manual
-  values; `qector-bench.wilson_table` is the batch utility.
+  `qector-research.wilson_ci` tool returns exactly the manual
+  values; `qector-research.wilson_table` is the batch utility.
 - Tag results `code_capacity` or `circuit_level`; **refuse to
   compare across models**. A large-n screening estimate is not
   a converged LER; say "screening estimate" when n does not
@@ -173,7 +173,7 @@ flags); sample count (trials, shots, warmup, seed); metric
 scaling); environment (OS, CPU, RAM, package versions, git
 commit); artifact (raw JSON / CSV path plus SHA-256 sidecar).
 A benchmark without these fields is a smoke test, not public
-evidence. `qector-bench.artifact_metadata_check` generates the
+evidence. `qector-research.artifact_metadata_check` generates the
 block; `qector-library.threshold_sweep` already emits the
 block plus the SHA-256 sidecar.
 
@@ -234,7 +234,7 @@ block plus the SHA-256 sidecar.
 - License tier limits are enforced in the Rust core:
   Community d<=7, Pro d<=19, Enterprise d<=63.
 - The shipped wheel's compatibility report and the
-  `qector-bench.hardware_probe` / `qector-bench.license_active_check`
+  `qector-research.hardware_probe` / `qector-research.license_active_check`
   tools return the live state on the target device; never
   assume a value from another machine.
 

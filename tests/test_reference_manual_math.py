@@ -25,12 +25,10 @@ _PYTHON_DIR = ROOT / "python"
 if str(_PYTHON_DIR) not in sys.path:
     sys.path.insert(0, str(_PYTHON_DIR))
 
-import numpy as np
-
-import qector_decoder_v3 as qector
-from qector_decoder_v3 import BlossomDecoder, codes
-
-from qector_math_ground_truth import (
+import numpy as np  # noqa: E402
+import qector_decoder_v3 as qector  # noqa: E402
+from qector_decoder_v3 import BlossomDecoder, codes  # noqa: E402
+from qector_math_ground_truth import (  # noqa: E402
     all_binary_vectors,
     ambiguity_component_sum,
     bit_identity,
@@ -252,6 +250,14 @@ class TheoremObligationTests(unittest.TestCase):
 
 class LiveQECTORTests(unittest.TestCase):
     def test_mcp_configuration_files_use_only_standard_server_fields(self) -> None:
+        # The repo root ``.mcp.json`` is the live Claude Code config and
+        # uses literal values (``python`` + ``${CLAUDE_PLUGIN_ROOT}``).
+        # The ``mcp/mcp_config.json`` and ``mcp/claude_desktop_config.json``
+        # files are install-time templates with documented placeholders
+        # (``<PYTHON_EXECUTABLE>`` + ``<PLUGIN_ROOT>``) that
+        # ``scripts/configure_claude_desktop.py`` substitutes. Both shapes
+        # are valid; the test now asserts the documented convention for
+        # each file instead of overwriting the templates.
         config_paths = [
             ROOT / ".mcp.json",
             ROOT / "mcp" / "mcp_config.json",
@@ -262,14 +268,23 @@ class LiveQECTORTests(unittest.TestCase):
             self.assertEqual(set(document), {"mcpServers"}, str(path))
             server = document["mcpServers"]["qector-library"]
             self.assertEqual(set(server), {"command", "args", "env"}, str(path))
-            self.assertEqual(server["command"], "python")
-            self.assertEqual(
-                server["args"],
-                ["<PLUGIN_ROOT>/mcp/mcp_server_library.py"]
-                if path.parent.name == "mcp"
-                else ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_library.py"],
-            )
-            self.assertEqual(server["env"]["QECTOR_SILENT"], "1")
+            if path.parent.name == "mcp":
+                # Template: installer rewrites the placeholders.
+                self.assertEqual(server["command"], "<PYTHON_EXECUTABLE>", str(path))
+                self.assertEqual(
+                    server["args"],
+                    ["<PLUGIN_ROOT>/mcp/mcp_server_library.py"],
+                    str(path),
+                )
+            else:
+                # Live Claude Code config: literal values.
+                self.assertEqual(server["command"], "python", str(path))
+                self.assertEqual(
+                    server["args"],
+                    ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_library.py"],
+                    str(path),
+                )
+            self.assertEqual(server["env"]["QECTOR_SILENT"], "1", str(path))
 
     def test_marketplace_manifest_points_to_this_plugin_without_path_traversal(
         self,
@@ -432,7 +447,18 @@ class MCPProtocolTests(unittest.TestCase):
     def test_stdio_initialize_and_tools_list(self) -> None:
         server_module = load_library_server()
         self.assertEqual(server_module.SERVER_NAME, "qector-decoder-v3-mcp")
-        self.assertEqual(server_module.SERVER_VERSION, "1.0.0")
+        # SERVER_VERSION is the *plugin* version, not the *decoder wheel*
+        # version. The decoder wheel version is pinned in requirements.txt
+        # (``qector-decoder-v3==1.0.0``) and verified by the runtime check.
+        # The plugin version is independent of the decoder wheel pin.
+        # Compare against release-manifest.json so the two stay in sync.
+        release_manifest = json.loads(
+            (ROOT / "release-manifest.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            server_module.SERVER_VERSION,
+            release_manifest["release"]["version"],
+        )
 
         names = {tool.name for tool in server_module.TOOLS}
         self.assertEqual(

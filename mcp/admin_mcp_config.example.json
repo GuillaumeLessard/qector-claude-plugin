@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "qector-admin": {
+      "command": "<PYTHON_EXECUTABLE>",
+      "args": ["<PLUGIN_ROOT>/mcp/mcp_server_admin.py"],
+      "env": {
+        "QECTOR_SILENT": "1",
+        "PYTHONUNBUFFERED": "1",
+        "QECTOR_ADMIN_ENABLED": "1",
+        "QECTOR_ARTIFACT_DIR": "<APPROVED_ARTIFACT_DIR>",
+        "QECTOR_WORKBENCH_DIR": "<APPROVED_WORKBENCH_DIR>"
+      }
+    }
+  }
+}

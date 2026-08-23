@@ -25,7 +25,7 @@ you reuse.
    (`repetition` distance 3 or `ring`) with the library
    `codes` module (`codes.repetition_code(3)`) and show its
    real `n_qubits` / `n_checks`. Verify with
-   `qector-bench.code_family_info` for the canonical
+   `qector-research.code_family_info` for the canonical
    shape (e.g. `rotated_surface_code(5)` returns 25 qubits,
    12 checks, 1 logical, graphlike).
 2. **Explain the parity-check idea with the actual matrix**
@@ -37,7 +37,7 @@ you reuse.
    the reassurance story. Run the same family and distance on
    the target device and report its actual `n_qubits`,
    `n_checks`, and `syndrome_valid` value. For an external
-   verification, use `qector-bench.decode_faithfulness_check`.
+   verification, use `qector-research.decode_faithfulness_check`.
 4. **Visualize from the library matrices and check lists**
    when a graph helps, produced from the same family and
    distance you taught. Optional Workbench visualization is
@@ -52,8 +52,8 @@ you reuse.
      then the honest caveat: low-trial LER is a screening
      estimate, not a converged threshold.
    - For qLDPC, use only direct-wheel APIs confirmed by
-     introspection (`qector-bench.hardware_probe`,
-     `qector-bench.code_family_info`) or names returned by an
+     introspection (`qector-research.hardware_probe`,
+     `qector-research.code_family_info`) or names returned by an
      optional Workbench `tools/list` response.
 
 ## Worked examples to teach from (Appendix E)
@@ -70,10 +70,10 @@ you reuse.
 - **Wilson interval by hand** (Appendix E.2): 10 errors in
   1000 shots, `p = 0.01`, `z = 1.959963985`. The interval
   is approximately `(0.00544, 0.01831)`. The
-  `qector-bench.wilson_ci` tool returns exactly this.
+  `qector-research.wilson_ci` tool returns exactly this.
 - **DEM collapse** (Appendix E.3): `p1 = 0.01, p2 = 0.02` ->
   `p = 0.0296`, weight `ln(0.9704/0.0296) = 3.489`. The
-  `qector-bench.dem_collapse_parallel` tool returns this
+  `qector-research.dem_collapse_parallel` tool returns this
   sanity check.
 - **Two-stage CSS** (Appendix E.4):
   `Hx = [[1,1,0],[0,1,1]]`, `Hz = [[0,1,1],[1,1,0]]`,

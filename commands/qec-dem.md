@@ -7,7 +7,7 @@ Inspect Detector Error Models (DEM) and Stim circuits for circuit-level noise an
 Arguments: `$ARGUMENTS` (e.g. `--file circuit.dem`, `--circuit circuit.stim`, or inline DEM text).
 
 1. **Step 1 - Parse & Inspect**:
-   - Call MCP tool `dem_inspect(dem_text=...)` or `stim_circuit_probe(circuit_text=...)` on `qector-bench`.
+   - Call MCP tool `dem_inspect(dem_text=...)` or `stim_circuit_probe(circuit_text=...)` on `qector-research`.
    - Extract:
      - Number of detectors ($D$) and logical observables ($L$).
      - Error mechanisms, hyperedges, and edge probabilities.

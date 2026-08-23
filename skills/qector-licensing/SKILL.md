@@ -82,7 +82,7 @@ PowerShell redirection activates unmodified.
 
 ## How to probe (bench server)
 
-- `qector-bench.license_active_check` returns:
+- `qector-research.license_active_check` returns:
   - `license_active` (bool)
   - `tier` (string: Community / Pro / Enterprise)
   - `max_distance` (int)
@@ -90,11 +90,11 @@ PowerShell redirection activates unmodified.
   - the live `info` dict
   - the environment block (manual 22.3)
 
-- `qector-bench.hardware_probe` returns `cuda_available`,
+- `qector-research.hardware_probe` returns `cuda_available`,
   `opencl_available`, `cuda_batch_decoder` (the hardware probe for
   `CUDABatchDecoder.is_available()`), and the live license info.
 
-- `qector-bench.env_block` returns the environment block only
+- `qector-research.env_block` returns the environment block only
   (manual 22.3).
 
 ## Tier-enforcement pitfalls

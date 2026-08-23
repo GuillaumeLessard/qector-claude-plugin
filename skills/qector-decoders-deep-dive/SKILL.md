@@ -108,7 +108,7 @@ Every decoder shares the same input/output contract (manual 4):
 
 - **Non-graphlike input to a matching decoder** -> the decoder raises
   or returns an unfaithful result. Verify `code.is_matching_graph()` or
-  the library `qector-bench.code_family_info` first.
+  the library `qector-research.code_family_info` first.
 - **Hard-coding a check count** -> always read `code.n_checks` /
   `code.n_qubits` at runtime (manual 16.1 + M3).
 - **Comparing code_capacity to circuit_level LER** -> refused by the

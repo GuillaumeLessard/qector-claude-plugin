@@ -1,0 +1,48 @@
+{
+  "evidence": {
+    "external_proof_suite": {
+      "coverage": "Theorems 1-16, Appendix E arithmetic, and live wheel faithfulness",
+      "sha256": "310442695c5e2af43f721fb74d08d8719494e44f32d816dc850718b22ed6ce5f",
+      "title": "Exclusive qector-decoder-v3 v1.0.0 proof suite"
+    },
+    "reference_manual": {
+      "doi": "10.5281/zenodo.21941046",
+      "sha256": "ebb77e6462b1fd8672e5f5a61cf381e184dab6073f7590b85427a1d0e3382ddc",
+      "title": "QECTOR Decoder v3 - Reference Manual v1.0.0",
+      "version": "1.0.0"
+    }
+  },
+  "release": {
+    "license": "Proprietary",
+    "name": "qector-claude-plugin",
+    "repository": "https://github.com/GuillaumeLessard/qector-claude-plugin",
+    "version": "1.0.4"
+  },
+  "runtime": {
+    "mcp": "1.26.0",
+    "numpy": ">=1.26,<2.3",
+    "python": ">=3.9,<3.14",
+    "qector_decoder_v3": "1.0.0"
+  },
+  "schema_version": 1,
+  "surfaces": {
+    "claude_code": {
+      "admin_server": "qector-admin",
+      "default_servers": [
+        "qector-library"
+      ],
+      "research_server": "qector-research"
+    },
+    "claude_desktop": {
+      "artifact": "qector-claude-desktop-1.0.4.mcpb",
+      "default_profile": "safe",
+      "default_servers": [
+        "qector-desktop-mcp"
+      ]
+    },
+    "claude_web_mobile": {
+      "access": "Claude Code Remote Control or a separately reviewed hosted Remote MCP deployment",
+      "bundled_connector": false
+    }
+  }
+}

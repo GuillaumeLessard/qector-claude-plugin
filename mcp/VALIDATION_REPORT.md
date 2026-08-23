@@ -14,9 +14,10 @@ python -m pip install -r requirements.txt
 ```
 
 The production library path requires `qector-decoder-v3==1.0.0`,
-`mcp==1.26.0`, and a compatible `cryptography` release. The server rejects a
-different QECTOR wheel version at startup rather than silently running against
-an unreviewed API.
+`mcp==1.26.0`, and a compatible `cryptography` release. A wheel outside the
+reviewed `[1.0.0, 1.1.0)` window writes a stderr warning; set
+`QECTOR_MCP_STRICT_VERSION=1` to refuse to start instead. Decode results
+remain fail-closed against `H c = s (mod 2)` regardless.
 
 Run the app-free self-check with:
 
@@ -59,15 +60,24 @@ Start `python mcp/mcp_server_library.py` through the MCP client and perform:
 5. One invalid-input call and confirmation that the response is an MCP tool
    error, not a successful result.
 
-### 2. Bench Server Gate (`qector-bench` — 28 Tools)
+### 2. Bench Server Gate (`qector-research` — 29 Tools)
 
 Start `python mcp/mcp_server_qector_bench.py` through the MCP client and perform:
 
-1. `initialize` and `tools/list` verification (28 tools).
-2. Call `system_setup(confirm=false)` to verify non-destructive environment audit.
+1. `initialize` and `tools/list` verification (29 tools; admin tools
+   `system_setup`, `configure_claude_desktop`, and `workbench_probe` are
+   filtered out of the public surface and require the separate
+   `qector-admin` server, gated by `QECTOR_ADMIN_ENABLED=1` and
+   `confirm=true`).
+2. Call `get_capability_matrix` to verify the server's static capability
+   inventory and the documented trust zones.
 3. Call `reproduction_command_lookup(section="all")` to verify Appendix D reproduction maps.
 4. Call `theorem_lookup(number=1)` and `glossary_lookup(term="syndrome faithfulness")`.
 5. Call `wilson_ci(k=10, n=1000)` and verify interval `[0.00544, 0.01831]`.
+6. Call `hot_path_microbench` and confirm the response includes a
+   `measurement_scope` block (machine / OS / Python / CPU / RAM /
+   backend / decoder_class / code_family / noise_model / seed /
+   workload_hash).
 
 The optional Workbench must be configured separately and probed with
 `python scripts/probe_workbench_mcp.py --executable <target-workbench-executable>`.

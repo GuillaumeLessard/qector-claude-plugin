@@ -2,18 +2,18 @@
 name: qector-core
 description: >-
   Core domain knowledge and verified facts for the QECTOR quantum
-  error correction platform (v1.0.2). Covers the app-free library
-  MCP server (8 frozen tools), the bench companion MCP server
-  (28 tools including safety-gated system_setup and Appendix D
-  reproduction_command_lookup), 12 reproducible slash commands,
-  5 specialized agents, and complete mathematical grounding
+  error correction platform (plugin v1.0.4, decoder wheel 1.0.0).
+  Covers the app-free library MCP server (8 stable tools), the
+  opt-in research server (29 provisional tools including the
+  evidence layer), the privileged admin server (3 tools), 11
+  slash commands, 5 specialized agents, and mathematical grounding
   against all 16 Theorems and Appendices A-E from Reference
   Manual v1.0.0 (DOI 10.5281/zenodo.21941046). Enforces strict-math
   obligations (H c = s mod 2, logical coset scoring, Wilson 95% CI)
-  and zero-egress security.
+  and local-by-default operation with an opt-in PyPI freshness check.
 ---
 
-# QECTOR Core - Verified Platform Facts (v1.0.2)
+# QECTOR Core - Verified Platform Facts (plugin v1.0.4)
 
 Ground every answer in the verified facts below. If a request references a tool,
 decoder, command, or API that is not listed here or in
@@ -22,16 +22,18 @@ inventing behavior. All mathematical claims must strictly adhere to
 `qector-math-foundations` and the QECTOR Decoder v3 Reference Manual v1.0.0
 (DOI `10.5281/zenodo.21941046`).
 
-## 1. Guided First-Time Setup & Audit (Tool #28)
+## 1. Guided First-Time Setup & Audit
 
 For first-time environment installation with explicit user safety approbation:
 
-- **CLI Interface**:
+- **CLI Interface** (preferred):
   - `python scripts/qector_system_setup.py --check-only` (read-only diagnostic audit).
-  - `python scripts/qector_system_setup.py --confirm` (installs dependencies via `pip install -r requirements.txt`, creates `artifacts/`, and runs live in-process Theorem 1 verification).
-- **MCP Tool Interface**:
-  - `system_setup(confirm=false)`: Returns diagnostic payload with `status: "dry_run_pending_approval"` without modifying the system.
-  - `system_setup(confirm=true)`: Executes installation, configures paths, and verifies live decoding upon explicit user confirmation.
+  - `python scripts/qector_system_setup.py --confirm` (installs the fixed production profile, creates `artifacts/`, and runs live in-process Theorem 1 verification).
+- **MCP Tool Interface** (`qector-admin` only):
+  - Disabled unless `QECTOR_ADMIN_ENABLED=1` is set in the server environment.
+  - `system_setup(confirm=false)` is rejected; every admin call requires `confirm=true`.
+  - `system_setup(confirm=true, profile=production|developer|optional-stim|optional-qiskit)` installs a fixed package profile. Arbitrary package specifications are not accepted.
+  - Per-process call budget: 2. See `SECURITY.md`.
 
 ## 2. Library MCP Server (The 8-Tool Frozen Surface)
 
@@ -52,15 +54,16 @@ shipped `qector-decoder-v3==1.0.0` wheel:
 The library server is **frozen at 8 tools** under the 1.0.0 API freeze note;
 never invent additional library tools.
 
-## 3. Bench MCP Server (The Provisional Companion, 29 Tools)
+## 3. Research MCP Server (29 Provisional Tools)
 
-`mcp/mcp_server_qector_bench.py` adds **29 specialized tools** for research,
-inspection, reproducibility, and environment management (registered under `qector-bench`):
+`mcp/mcp_server_qector_bench.py` is registered as `qector-research`. It is
+**not enabled by default**. It adds 29 provisional tools for methodology,
+inspection, reproducibility, and the evidence layer. Administrative tools
+(`system_setup`, `configure_claude_desktop`, `workbench_probe`) live on
+`qector-admin`, not here.
 
 | Tool | Reference Manual Category & Chapter |
 | :--- | :--- |
-| `configure_claude_desktop` | Claude Desktop Windows & cross-platform zero-friction connector |
-| `system_setup` | Guided first-time setup with user approbation safety gate |
 | `reproduction_command_lookup` | Appendix D (D.1–D.6) reproduction command workflows |
 | `theorem_lookup` | Appendix A/C (Theorems 1–16 exact formulations and obligations) |
 | `glossary_lookup` | Appendix B (Glossary of notation and symbols) |
@@ -80,40 +83,44 @@ inspection, reproducibility, and environment management (registered under `qecto
 | `license_active_check` | Chapter 18.1 (Active license tier and feature gates) |
 | `env_block` | Chapter 22.3 (Reproducible environment metadata block) |
 | `compat_report` | Chapters 16.2, 17.1 (Runtime compatibility report) |
-| `workbench_probe` | Chapter 17.5 (Target-device Workbench probe) |
-| `artifacts_sha256` | Chapter 22.3 (External artifact SHA-256 sidecar calculation) |
+| `artifacts_sha256` | Chapter 22.3 (SHA-256 constrained to `QECTOR_ARTIFACT_DIR`) |
 | `artifact_metadata_check` | Chapter 22.3 (Artifact metadata schema verification) |
 | `decode_faithfulness_check` | Chapter 3.1 (Theorem 1 syndrome faithfulness gate) |
-| `hot_path_microbench` | Chapters 22.1, 22.5 (Cold setup vs hot decoding microbenchmark) |
+| `hot_path_microbench` | Chapters 22.1, 22.5 (Machine-scoped microbenchmark) |
 | `stim_circuit_probe` | Circuit inspection (Stim subset parser without Stim required) |
 | `sinter_task_template` | Chapter 17.2 (Sinter task script template generation) |
 | `workload_hash` | Chapter 22.3 (Workload and syndrome buffer SHA-256 hash) |
+| `get_capability_matrix` | Evidence layer: workflow-to-server map |
+| `get_evidence_policy` | Evidence layer: result statuses and error codes |
+| `get_runtime_provenance` | Evidence layer: live runtime block |
 
-Every bench tool returns `reference_manual: 10.5281/zenodo.21941046` in its payload.
+Every research tool returns `reference_manual: 10.5281/zenodo.21941046` in its payload.
 
-## 4. Reproducible Slash Commands (`commands/`, 13 Total)
+## 4. Reproducible Slash Commands (`commands/`, 11 Total)
 
 | Command | Workflow |
 | :--- | :--- |
-| `/qec-desktop-connector` | Zero-friction Claude Desktop MCP configuration with backup & path safety |
 | `/qec-setup` | Guided first-time setup & diagnostic audit with user approbation gate |
 | `/qec-facts` | Quick reference: codes, decoders, thresholds, and strict-math rules |
 | `/qec-theorem` | Exact formulations and proof obligations for Theorems 1–16 |
 | `/qec-reproduce` | Reference manual Appendix D (D.1–D.6) reproduction workflows |
-| `/qec-decode` | Single-shot syndrome decoding asserting $H c \equiv s \pmod 2$ |
 | `/qec-threshold-sweep` | Local LER sweeps with Wilson 95% intervals and sidecars |
 | `/qec-wilson` | Analytical Wilson 95% score confidence intervals ($z=1.95996$) |
 | `/qec-dem` | Detector Error Model parsing, parallel collapse, and Stim circuits |
 | `/qec-code-inspect` | Code parameters $[[n,k,d]]$, transversals, and check matrices |
 | `/qec-benchmark` | Decoder latency and throughput microbenchmarks |
 | `/qec-sinter` | Sinter task template generation and configuration |
-| `/qec-validate-mcp` | MCP tool and schema validation across library and bench servers |
+| `/qec-validate-mcp` | MCP tool and schema validation across library and research servers |
+
+Decode a syndrome with the library tool `decode_syndrome`, not a slash command.
+Configure Claude Desktop with `scripts/configure_claude_desktop.py` or the
+admin tool `configure_claude_desktop` after `QECTOR_ADMIN_ENABLED=1`.
 
 ## 5. Specialized Agents (`agents/`, 5 Total)
 
 - `qec-researcher.md`: Academic research, paper reproduction, threshold sweeps, finite-size scaling.
 - `qec-developer.md`: Code integration, API design, performance tuning, stdio JSON-RPC 2.0 wiring.
-- `qec-validator.md`: Formal verification, mathematical proof checking, zero-egress enforcement.
+- `qec-validator.md`: Formal verification, mathematical proof checking, local-by-default enforcement.
 - `qec-sysadmin.md`: Fleet health triage, environment management, license audits, deployment hygiene.
 - `qec-hardware-engineer.md`: Physical qubit characterization, Stim/DEM pipelines, cryogenic constraints.
 
@@ -148,7 +155,7 @@ Every bench tool returns `reference_manual: 10.5281/zenodo.21941046` in its payl
 3. **Statistical Integrity**: All LER estimates require Wilson 95% score confidence intervals ($z=1.959963985$).
 4. **Noise Model Separation**: `code_capacity` and `circuit_level` results are never comparable.
 5. **No Speed Superlatives**: Throughput and latency figures are machine-, workload-, and environment-specific.
-6. **Zero Egress**: All decoding and artifact generation remain device-local.
+6. **Local by default**: Decoding and artifact generation remain device-local. The only outbound network operation is the explicit opt-in PyPI freshness check (`compat_report(check_pypi=true)` / `env_block(check_pypi=true)`). Do not call it in an air-gapped environment.
 
 ## 8. References & Cross-Skill Navigation
 

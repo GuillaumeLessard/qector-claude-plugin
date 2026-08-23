@@ -1,11 +1,11 @@
-# QECTOR Claude Plugin User Manual (v1.0.2)
+# QECTOR Claude Plugin User Manual (v1.0.4)
 
 This public plugin provides local Claude skills, agents, commands, and app-free
 MCP servers for the QECTOR quantum-error-correction decoding engine. The
 mathematical authority is the QECTOR Decoder v3 reference manual v1.0.0 at DOI
 `10.5281/zenodo.21941046`.
 
-## First-Time Guided System Setup (28th Tool)
+## First-Time Guided System Setup
 
 For a clean, guided first-time environment installation with safety approbation:
 
@@ -17,9 +17,9 @@ python scripts/qector_system_setup.py --check-only
 python scripts/qector_system_setup.py --confirm
 ```
 
-Or invoke the `system_setup` tool over the `qector-bench` MCP server:
-- Call `system_setup(confirm=false)` to inspect python interpreter, package status, and planned actions.
-- Call `system_setup(confirm=true)` once user approbation is granted to execute installation, directory setup, and in-process Theorem 1 verification.
+The MCP `system_setup` tool is on `qector-admin`, not the research server. It
+is disabled unless `QECTOR_ADMIN_ENABLED=1` is set and every call includes
+`confirm=true`. Prefer the CLI above.
 
 ## Standard Installation
 
@@ -51,7 +51,8 @@ python -m pip install "qector-decoder-v3[stim]==1.0.0"
 
 ## MCP Server Architecture
 
-The plugin provides two local stdio MCP servers:
+The plugin provides three local stdio MCP servers. Only the library server is
+enabled by default.
 
 ### 1. Library Server (`mcp/mcp_server_library.py` — 8 Frozen Stable Tools)
 
@@ -65,17 +66,24 @@ The authoritative, frozen library surface exposes:
 - `build_code_from_matrix`: Construct code from a custom binary parity-check matrix.
 - `compat_report`: Live package and runtime compatibility report.
 
-### 2. Bench Companion Server (`mcp/mcp_server_qector_bench.py` — 28 Tools)
+### 2. Research Server (`mcp/mcp_server_qector_bench.py` — 29 Provisional Tools)
 
-Provides 28 specialized research, reproducibility, and setup tools:
-- **Guided Setup** (`system_setup`): Safety-gated setup tool with user approbation.
+Opt-in research, reproducibility, and evidence tools:
+- **Evidence layer** (`get_capability_matrix`, `get_evidence_policy`, `get_runtime_provenance`).
 - **Reproduction Lookup** (`reproduction_command_lookup`): Exact Appendix D (D.1-D.6) reproduction commands.
 - **Reference Manual Lookup** (`theorem_lookup`, `glossary_lookup`): Theorems 1-16 and Appendix B glossary.
 - **Statistical Scoring** (`wilson_ci`, `wilson_table`, `logical_coset_score`): Exact Wilson score intervals and logical coset scoring (Theorem 2).
 - **DEM & Circuit Pipeline** (`dem_inspect`, `dem_collapse_parallel`, `stim_circuit_probe`, `sinter_task_template`).
 - **Code Structure** (`code_family_info`, `code_export_matrices`, `code_logicals_inspect`, `code_distance_check`).
 - **Ecosystem Integration** (`pymatching_compat_check`, `sinter_decoder_list`, `qiskit_plugin_check`).
-- **Workload & Runtime Integrity** (`hardware_probe`, `license_active_check`, `env_block`, `compat_report`, `workbench_probe`, `artifacts_sha256`, `artifact_metadata_check`, `decode_faithfulness_check`, `hot_path_microbench`, `workload_hash`).
+- **Workload & Runtime Integrity** (`hardware_probe`, `license_active_check`, `env_block`, `compat_report`, `artifacts_sha256`, `artifact_metadata_check`, `decode_faithfulness_check`, `hot_path_microbench`, `workload_hash`).
+
+### 3. Admin Server (`mcp/mcp_server_admin.py` — 3 Privileged Tools)
+
+Disabled unless `QECTOR_ADMIN_ENABLED=1`. Every call requires `confirm=true`.
+Tools: `system_setup` (fixed package profiles only), `configure_claude_desktop`,
+and `workbench_probe` (approved path + SHA-256). Per-process call budgets apply;
+see `SECURITY.md`.
 
 For Claude Code, use the root `.mcp.json` and validate/launch with
 `claude plugin validate "<PLUGIN_ROOT>" --strict` and
@@ -98,10 +106,12 @@ For the public GitHub source, use
 
 ### Prebuilt archives
 
-A single-skill ZIP for the claude.ai custom-skill uploader and a full plugin
-ZIP for `claude --plugin-dir` are generated from `scripts/pro_pack.py` and shipped
-under `dist/` with `.sha256` sidecars. See "Packaging and Distribution" in the
-repository `README.md` for details.
+Canonical release archives are generated from `scripts/build_release.py`:
+`dist/qector-claude-plugin-1.0.4.zip` (Claude Code),
+`dist/qector-claude-plugin-source-1.0.4.zip` (source), and
+`dist/qector-claude-desktop-1.0.4.mcpb` (Claude Desktop), each with a
+`.sha256` sidecar. An optional single-skill ZIP for the claude.ai custom-skill
+uploader is still produced by `scripts/pro_pack.py --skill qector-core`.
 
 ## Strict Mathematics
 
@@ -137,12 +147,11 @@ a screening estimate, not a converged threshold.
 
 - `skills/` (28 skills): domain skills for math foundations, decoders, DEM pipeline, batching, architectures, licensing, and verification.
 - `agents/` (5 agents): focused QEC subagents (`qec-researcher`, `qec-developer`, `qec-validator`, `qec-sysadmin`, `qec-hardware-engineer`).
-- `commands/` (12 slash commands):
+- `commands/` (11 slash commands):
   - `/qec-setup`: Guided first-time setup and audit with user approbation safety gate.
   - `/qec-facts`: Verified platform facts, code families, and decoders.
   - `/qec-theorem`: Reference Manual Theorems 1-16 lookup.
   - `/qec-reproduce`: Appendix D (D.1-D.6) reproduction workflows.
-  - `/qec-decode`: Single-shot syndrome decode asserting $H c \equiv s \pmod 2$.
   - `/qec-threshold-sweep`: Seeded LER sweeps with Wilson 95% CIs.
   - `/qec-wilson`: Wilson 95% score interval and comparison tables.
   - `/qec-dem`: Detector Error Model parsing, parallel collapse, and Stim circuits.
@@ -151,9 +160,9 @@ a screening estimate, not a converged threshold.
   - `/qec-sinter`: Sinter task template generation and configuration.
   - `/qec-validate-mcp`: MCP tool and schema validation.
 - `prompts/` and `mega_prompts/`: reusable Claude instructions.
-- `mcp/`: library server (8 tools), bench companion (28 tools), configuration examples, and validation protocol.
+- `mcp/`: library (8 stable), research (29 provisional), admin (3 privileged), configuration examples, and validation protocol.
 - `python/qector_math_ground_truth.py` and `tests/`: public executable math obligations.
-- `governance/`: zero-egress and provenance rules.
+- `governance/`: local-by-default and provenance rules.
 
 No private transcripts, machine snapshots, internal authoring files, business
 proposals, or proprietary reference documents are included.

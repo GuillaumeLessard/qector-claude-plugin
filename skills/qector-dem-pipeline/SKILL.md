@@ -20,8 +20,8 @@ and weights, and returns a faithful decoder.
 
 ## The two surfaces
 
-1. **Library bench server (Provisional)** — `qector-bench.dem_inspect`
-   and `qector-bench.dem_collapse_parallel`. A minimal Stim-style
+1. **Library bench server (Provisional)** — `qector-research.dem_inspect`
+   and `qector-research.dem_collapse_parallel`. A minimal Stim-style
    parser that is enough for the small fixtures the reference manual
    uses; it does not require Stim or the optional direct-wheel `dem`
    module.

@@ -103,12 +103,12 @@ threshold comparison without a dated, reproducible artifact.
 
 ## How the bench server helps
 
-- `qector-bench.code_export_matrices` exports
+- `qector-research.code_export_matrices` exports
   `parity_check_matrix` and `logicals_matrix` in JSON form, useful
   when feeding a two-stage pipeline by hand.
-- `qector-bench.decode_faithfulness_check` re-verifies
+- `qector-research.decode_faithfulness_check` re-verifies
   `H c = s` for the joint correction externally.
-- `qector-bench.logical_coset_score` scores the joint correction
+- `qector-research.logical_coset_score` scores the joint correction
   against the joint logical observables.
-- `qector-bench.artifact_metadata_check` generates the chapter
+- `qector-research.artifact_metadata_check` generates the chapter
   22.3 metadata block for a two-stage artifact.

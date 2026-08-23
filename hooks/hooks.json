@@ -12,7 +12,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "^mcp__plugin_qector_qector-(library|bench)__.*$",
+        "matcher": "^mcp__plugin_qector_qector-(library|research|admin)__.*$",
         "hooks": [
           {
             "type": "command",

@@ -140,10 +140,10 @@ verification uses `Get-FileHash -Algorithm SHA256`.
 
 ## How the bench server helps
 
-- `qector-bench.artifact_metadata_check` generates the
+- `qector-research.artifact_metadata_check` generates the
   chapter 22.3 metadata block.
-- `qector-bench.artifacts_sha256` computes the SHA-256 sidecar.
-- `qector-bench.env_block` returns the chapter 22.3 environment
+- `qector-research.artifacts_sha256` computes the SHA-256 sidecar.
+- `qector-research.env_block` returns the chapter 22.3 environment
   block.
-- `qector-bench.compat_report` (via `qector-library`) returns
+- `qector-research.compat_report` (via `qector-library`) returns
   the package version.

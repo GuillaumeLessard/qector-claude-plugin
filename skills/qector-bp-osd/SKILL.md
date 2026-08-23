@@ -144,9 +144,9 @@ dynamic range. `qector_decoder_v3.bp_osd` exposes the
 
 ## How the bench server helps
 
-- `qector-bench.code_family_info` reports whether a code is
+- `qector-research.code_family_info` reports whether a code is
   graphlike and the routing hint.
-- `qector-bench.decode_faithfulness_check` re-verifies
+- `qector-research.decode_faithfulness_check` re-verifies
   `H c = s` externally for any decoder output.
-- `qector-bench.pymatching_compat_check` is a related smoke test
+- `qector-research.pymatching_compat_check` is a related smoke test
   (graphlike codes only).

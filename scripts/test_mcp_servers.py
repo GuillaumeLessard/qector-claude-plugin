@@ -5,34 +5,90 @@ with minimal valid arguments to confirm they respond without errors.
 """
 
 import json
+import os
 import subprocess
 import sys
-import os
-import traceback
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Standalone CLI diagnostic (see the __main__ guard below), not a pytest
+# suite. __test__ = False stops pytest from auto-collecting test_server as
+# a test case, since it takes required positional args (label, server_path,
+# tool_calls) that are not pytest fixtures. Mirrors the same fix already
+# applied in mcp/tests/test_mcp_stdio.py.
+__test__ = False
+
+
+_SERVER_STARTUP_TIMEOUT_S = 60
+_SERVER_PER_CALL_TIMEOUT_S = 15
+
+
+def _readline_with_timeout(proc: subprocess.Popen, timeout_s: float):
+    """Read one line from proc.stdout, returning None on timeout or exit."""
+    import queue
+    import threading
+
+    q: queue.Queue = queue.Queue(maxsize=1)
+
+    def _reader():
+        try:
+            q.put(proc.stdout.readline())
+        except Exception:
+            q.put(None)
+
+    t = threading.Thread(target=_reader, daemon=True)
+    t.start()
+    try:
+        line = q.get(timeout=timeout_s)
+    except queue.Empty:
+        return None
+    if not line:
+        return None
+    return line
+
+
 def _call_server(server_path: str, messages: list[dict]) -> list[dict]:
-    """Send JSON-RPC messages to an MCP server over stdio and collect responses."""
-    payload = "\n".join(json.dumps(m) for m in messages) + "\n"
+    """Send JSON-RPC messages to an MCP server over a persistent stdio pipe.
+
+    Cold start (heavy scientific-stack imports) has been measured taking
+    over 30s before the server's stdio loop starts responding. A one-shot
+    subprocess.run(input=...) also closes stdin the instant the payload is
+    written, which is the wrong transport model for a persistent stdio
+    server. This keeps a Popen pipe open for the life of the exchange
+    (same pattern as mcp/tests/test_mcp_stdio.py) and gives the first
+    response real cold-start headroom.
+    """
     env = {**os.environ, "QECTOR_SILENT": "1", "PYTHONIOENCODING": "utf-8"}
-    p = subprocess.run(
+    proc = subprocess.Popen(
         [sys.executable, server_path],
-        input=payload,
-        capture_output=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        timeout=30,
         env=env,
         cwd=ROOT,
     )
-    responses = []
-    for line in p.stdout.strip().split("\n"):
-        line = line.strip()
-        if line:
-            try:
-                responses.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
+    responses: list[dict] = []
+    try:
+        for i, msg in enumerate(messages):
+            proc.stdin.write(json.dumps(msg) + "\n")
+            proc.stdin.flush()
+            timeout = _SERVER_STARTUP_TIMEOUT_S if i == 0 else _SERVER_PER_CALL_TIMEOUT_S
+            line = _readline_with_timeout(proc, timeout)
+            if line is None:
+                break
+            line = line.strip()
+            if line:
+                try:
+                    responses.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+    finally:
+        try:
+            proc.kill()
+            proc.wait(timeout=5)
+        except Exception:
+            pass
     return responses
 
 
@@ -164,15 +220,17 @@ def main():
             "error_rates": [0.05], "trials": 10, "seed": 42
         }},
         {"name": "build_code_from_matrix", "arguments": {
-            "H_matrix": [[1, 1, 0], [0, 1, 1]], "name": "custom_rep3", "distance": 3
+            "H_matrix": [[1, 1, 0], [0, 1, 1]], "family": "custom_rep3", "distance": 3
         }},
         {"name": "compat_report", "arguments": {}},
     ]
     p, f, s = test_server("MCP Library Server (8 tools)", "mcp/mcp_server_library.py", library_calls)
-    total_passed += p; total_failed += f; total_skipped += s
+    total_passed += p
+    total_failed += f
+    total_skipped += s
 
-    # ---- Bench server (28 tools) ----
-    bench_calls = [
+    # ---- Research server (29 tools) ----
+    research_calls = [
         {"name": "wilson_ci", "arguments": {"k": 10, "n": 1000}},
         {"name": "wilson_table", "arguments": {"n": 1000, "k_list": [0, 1, 5, 10]}},
         {"name": "logical_coset_score", "arguments": {
@@ -192,8 +250,6 @@ def main():
         {"name": "license_active_check", "arguments": {}},
         {"name": "env_block", "arguments": {"check_pypi": False}},
         {"name": "compat_report", "arguments": {"check_pypi": False}},
-        {"name": "workbench_probe", "arguments": {"executable": "", "timeout": 5.0}},
-        {"name": "artifacts_sha256", "arguments": {"paths": ["requirements.txt"]}},
         {"name": "artifact_metadata_check", "arguments": {"family": "rotated_surface", "size": 5, "decoder_name": "blossom"}},
         {"name": "decode_faithfulness_check", "arguments": {
             "H_matrix": [[1, 1, 0], [0, 1, 1]], "syndrome": [1, 0], "correction": [1, 0, 0]
@@ -207,14 +263,18 @@ def main():
         {"name": "theorem_lookup", "arguments": {"number": 1}},
         {"name": "glossary_lookup", "arguments": {"term": "syndrome faithfulness"}},
         {"name": "reproduction_command_lookup", "arguments": {"section": "all"}},
-        {"name": "system_setup", "arguments": {"confirm": False}},
+        {"name": "get_capability_matrix", "arguments": {}},
+        {"name": "get_evidence_policy", "arguments": {}},
+        {"name": "get_runtime_provenance", "arguments": {"check_pypi": False}},
     ]
-    p, f, s = test_server("MCP Bench Server (28 tools)", "mcp/mcp_server_qector_bench.py", bench_calls)
-    total_passed += p; total_failed += f; total_skipped += s
+    p, f, s = test_server("MCP Research Server (29 tools)", "mcp/mcp_server_qector_bench.py", research_calls)
+    total_passed += p
+    total_failed += f
+    total_skipped += s
 
     # ---- Summary ----
     print(f"\n{'='*70}")
-    print(f"  FINAL SUMMARY")
+    print("  FINAL SUMMARY")
     print(f"{'='*70}")
     print(f"  Passed:  {total_passed}")
     print(f"  Failed:  {total_failed}")

@@ -34,8 +34,8 @@ For `k` logical errors in `n` trials:
 with `p = k/n` and `z = 1.959963985`.
 
 Worked example (manual 15.2, appendix E.2): `k=10, n=1000` -> CI is
-approximately `(0.00544, 0.01831)`. The `qector-bench.wilson_ci` tool
-returns exactly this; `qector-bench.wilson_table` returns a batch of
+approximately `(0.00544, 0.01831)`. The `qector-research.wilson_ci` tool
+returns exactly this; `qector-research.wilson_table` returns a batch of
 intervals for a series of `k` values at fixed `n`.
 
 ## Required-artifact metadata (manual 22.3, table 22.1)
@@ -53,7 +53,7 @@ Every evidence artifact must include:
 | environment     | OS, CPU, RAM, Python / Rust / package versions, GPU / runtime, git commit        |
 | artifact        | raw JSON / CSV path plus SHA-256 sidecar                                         |
 
-The `qector-bench.artifact_metadata_check` tool generates the full
+The `qector-research.artifact_metadata_check` tool generates the full
 required-metadata block for a candidate artifact (no decoder
 execution). The library `qector-library.threshold_sweep` already
 emits the same block plus the chapter 22.3 SHA-256 sidecar.
@@ -116,15 +116,15 @@ emits the same block plus the chapter 22.3 SHA-256 sidecar.
 
 ## How the bench server helps
 
-- `qector-bench.wilson_ci` and `wilson_table` cover the math
+- `qector-research.wilson_ci` and `wilson_table` cover the math
   utility without running a decode.
-- `qector-bench.logical_coset_score` scores a batch of
+- `qector-research.logical_coset_score` scores a batch of
   `(predicted, sampled)` logical observables on the logical coset
   (Theorem 2) and reports a Wilson 95% interval.
-- `qector-bench.artifact_metadata_check` generates the chapter
+- `qector-research.artifact_metadata_check` generates the chapter
   22.3 metadata block for a candidate artifact.
-- `qector-bench.decode_faithfulness_check` re-verifies the
+- `qector-research.decode_faithfulness_check` re-verifies the
   `H c = s` (mod 2) gate externally (useful when ingesting
   corrections from a third-party decoder or older wheel build).
-- `qector-bench.hot_path_microbench` runs a per-machine hot-path
+- `qector-research.hot_path_microbench` runs a per-machine hot-path
   latency sample. The result is **never a portable claim**.

@@ -1,6 +1,7 @@
 {
   "name": "qector-tools",
-  "version": "1.0.2",
+  "version": "1.0.4",
+  "license": "Proprietary",
   "description": "QECTOR quantum-error-correction toolkit.",
   "owner": {
     "name": "Guillaume Lessard",
@@ -9,9 +10,10 @@
   "plugins": [
     {
       "name": "qector",
-      "version": "1.0.2",
+      "version": "1.0.4",
+      "license": "Proprietary",
       "source": "./",
-      "description": "Local QECTOR quantum-error-correction plugin for Claude with strict-math skills, focused agents, and an app-free qector-decoder-v3 MCP server.",
+      "description": "Local QECTOR quantum-error-correction plugin for Claude Code with strict-math skills, focused agents, and qector-decoder-v3 MCP servers.",
       "author": {
         "name": "Guillaume Lessard",
         "email": "guillaume@qector.com"

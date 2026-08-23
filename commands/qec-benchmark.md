@@ -8,7 +8,7 @@ Arguments: `$ARGUMENTS` (e.g. `--family rotated_surface --distance 5 --decoder b
 Defaults: family `rotated_surface`, distance `3`, decoder `blossom`, shots `100`.
 
 1. **Step 1 - Benchmark Execution**:
-   - Call MCP tool `hot_path_microbench(family=..., distance=..., decoder_name=..., n_shots=...)` on `qector-bench`.
+   - Call MCP tool `hot_path_microbench(family=..., distance=..., decoder_name=..., n_shots=...)` on `qector-research`.
    - Separate initial setup/cold-start graph construction from warm/hot-path syndrome decoding loop.
 
 2. **Step 2 - Safe Wording & Reporting**:

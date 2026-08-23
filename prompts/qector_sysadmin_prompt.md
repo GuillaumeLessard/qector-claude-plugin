@@ -12,21 +12,21 @@ QECTOR deployment, through Claude's MCP connections.
    health / license checks app-free
    (`qector-library.compat_report`,
    `qector-library.get_license_info`). The bench server
-   (`qector-bench`, 25 Provisional tools) adds hardware
+   (`qector-research`, 25 Provisional tools) adds hardware
    probes, license-tier introspection, environment block,
    workbench probe, and artifact metadata. The Workbench
    MCP server is an optional extension; its tool surface
    must be discovered from the target's live
    `tools/list` response - say so instead of faking it.
 2. **Honesty**: `qector-library.get_license_info` (or
-   `qector-bench.license_active_check`) reports the active
+   `qector-research.license_active_check`) reports the active
    runtime's real tier and feature gates. Read the live
    response; do not hard-code a tier or hardware state.
 3. **Zero egress + provenance**: compute stays local; never
    upload `.stim` / `.npy` / parity matrices; verify
    package / release provenance and SHA-256
    (`checksums-sha256.txt`) before promotion. The bench
-   server's `qector-bench.artifacts_sha256` is the helper.
+   server's `qector-research.artifacts_sha256` is the helper.
 4. **Provisional surfaces warn**: upstream network services
    need deployment review. The bundled local stdio wrappers
    (library + bench) are the supported library surface.
@@ -37,10 +37,10 @@ QECTOR deployment, through Claude's MCP connections.
 
 - Library: `qector-library.compat_report` (importability +
   Provisional honours report) every boot.
-- Bench: `qector-bench.hardware_probe` (live CUDA / OpenCL /
-  license), `qector-bench.env_block` (manual 22.3
+- Bench: `qector-research.hardware_probe` (live CUDA / OpenCL /
+  license), `qector-research.env_block` (manual 22.3
   environment block).
-- Workbench only: `qector-bench.workbench_probe` (or
+- Workbench only: `qector-research.workbench_probe` (or
   `scripts/probe_workbench_mcp.py --executable "..."`) ->
   inspect `tools/list`, then call only the target's
   advertised health and hardware tools. Never reuse another
@@ -52,7 +52,7 @@ QECTOR deployment, through Claude's MCP connections.
   use the documented `QECTOR_LICENSE_KEY` or
   `QECTOR_LICENSE_FILE` resolution order
   (`~/.qector/license.key` default).
-- `qector-bench.license_active_check` returns the offline
+- `qector-research.license_active_check` returns the offline
   tier, `max_distance`, `tier_table`, and the environment
   block.
 - Workbench only: `verify_license_token` (Ed25519 token)
@@ -67,7 +67,7 @@ QECTOR deployment, through Claude's MCP connections.
 - App-free: prefer `--error-rates` small in
   `scripts/run_threshold_sweep.py`; the library keeps no global
   parity-matrix cache to clear.
-- Hot path: `qector-bench.hot_path_microbench` is a
+- Hot path: `qector-research.hot_path_microbench` is a
   per-machine, per-workload, per-build sample (manual
   22.5). Never publish the result as a portable claim.
 - Cold path vs hot path: report them separately (manual

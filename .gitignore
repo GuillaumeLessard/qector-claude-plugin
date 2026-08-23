@@ -11,3 +11,28 @@ skills-main/
 .tmp_core/
 err.txt
 .claude/settings.local.json
+.claude/settings.json
+.claude/
+.agents/
+skills-lock.json
+policies/
+todo.md
+run*.txt
+scripts/Connectors
+
+# Local build/scratch output — never part of the published source tree.
+# dist/*.zip and dist/*.sha256 ARE tracked (prebuilt release artifacts);
+# only the transient extracted-copy directories are ignored here.
+dist/qector-claude-plugin-v*/
+dist/qector-claude-plugin-*/
+dist/qector-qector-core-skill.zip
+dist/qector-qector-core-skill.zip.sha256
+brand/exports/
+brand/__pycache__/
+*.bak
+*.bak.*
+
+# One-off diagnostic probes left at repo root by interactive sessions.
+# Real smoke tests live in mcp/tests/ and scripts/; these are scratch.
+scratch_*.py
+scratch_probe_*.py

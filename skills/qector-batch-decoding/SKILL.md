@@ -28,7 +28,7 @@ Source of authority: v1.0.0 reference manual, chapters 13, 17, 20, 26.
 
 The library MCP server does **not** expose any batch tool (manual
 8.0: the 8-tool library surface is frozen). The bench server adds
-`qector-bench.hot_path_microbench` for per-shot latency distribution
+`qector-research.hot_path_microbench` for per-shot latency distribution
 sampling, but it caps at `QECTOR_MCP_BENCH_MAX_BENCH_SHOTS` (default
 5000) and the result is per-machine, per-workload, per-build only
 (manual 22.5).
@@ -46,7 +46,7 @@ regression tests on tested configurations. The batch-size threshold
 below which the GPU path delegates to the CPU is an implementation
 detail, **not a throughput claim**.
 
-`qector-bench.pymatching_compat_check` is a related smoke test: it
+`qector-research.pymatching_compat_check` is a related smoke test: it
 verifies that a QECTOR decode and a `pymatching.Matching` decode on
 the same syndrome produce syndrome-valid corrections (Theorem 1) on
 the same parity-check matrix. Bitwise equality is reported when
@@ -112,11 +112,11 @@ This is the **engineering contract**; it is not a measured figure.
 
 ## How the bench server helps
 
-- `qector-bench.hot_path_microbench` runs a per-machine hot-path
+- `qector-research.hot_path_microbench` runs a per-machine hot-path
   latency sample, capped at `QECTOR_MCP_BENCH_MAX_BENCH_SHOTS`
   (default 5000). The result is a per-shot distribution; never a
   portable claim.
-- `qector-bench.env_block` returns the environment block (manual
+- `qector-research.env_block` returns the environment block (manual
   22.3) so a hot-path run carries the required metadata.
 
 ## Common pitfalls

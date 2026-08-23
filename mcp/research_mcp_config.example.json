@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "qector-research": {
+      "command": "<PYTHON_EXECUTABLE>",
+      "args": ["<PLUGIN_ROOT>/mcp/mcp_server_qector_bench.py"],
+      "env": {
+        "QECTOR_SILENT": "1",
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

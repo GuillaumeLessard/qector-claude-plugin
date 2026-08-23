@@ -24,6 +24,7 @@ import json
 import math
 import os
 import platform
+import sys
 import tempfile
 import time
 import urllib.error
@@ -32,18 +33,30 @@ from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
+_MCP_DIR = Path(__file__).resolve().parent
+if str(_MCP_DIR) not in sys.path:
+    sys.path.insert(0, str(_MCP_DIR))
+
+from qector_mcp_contract import (  # noqa: E402
+    apply_tool_contract,
+    call_tool_result,
+    consume_call_budget,
+    error_envelope,
+    result_envelope,
+)
+
 # qector prints a startup banner unless this flag is set. Any stdout
 # before an MCP frame corrupts the stdio protocol, so the server owns this flag.
 os.environ["QECTOR_SILENT"] = "1"
 
 try:
-    import numpy as np
+    import numpy as np  # noqa: E402
 except Exception as exc:  # pragma: no cover - exercised by deployment smoke tests
     raise RuntimeError("numpy is required by the QECTOR library MCP server") from exc
 
 try:
-    import qector_decoder_v3
-    from qector_decoder_v3 import (
+    import qector_decoder_v3  # noqa: E402
+    from qector_decoder_v3 import (  # noqa: E402
         BlossomDecoder,
         FastUnionFindDecoder,
         NativeAutoDecoder,
@@ -56,14 +69,25 @@ try:
     )
 except Exception as exc:  # pragma: no cover - exercised by deployment smoke tests
     raise RuntimeError(
-        "qector-decoder-v3==1.0.0 is required; install requirements.txt first"
+        "qector-decoder-v3 is required and could not be imported; "
+        "install requirements.txt first"
     ) from exc
 
 
 REF_DOI = "10.5281/zenodo.21941046"
-EXPECTED_QECTOR_VERSION = "1.0.0"
+# Reviewed API window for this server: the floor is the version this file's
+# behavior was validated against; the ceiling is the first minor version NOT
+# yet reviewed (a minor bump may add or change surface area; per this
+# project's own semantic-versioning convention a patch bump like 1.0.0 ->
+# 1.0.3 does not). A version outside this window degrades to a loud startup
+# warning (see _check_qector_version_window below) rather than the previous
+# hard RuntimeError, which made every patch release of qector-decoder-v3 a
+# breaking change for this connector even when nothing in the 8-tool surface
+# this server calls had changed.
+MIN_REVIEWED_QECTOR_VERSION = "1.0.0"
+MAX_REVIEWED_QECTOR_VERSION_EXCLUSIVE = "1.1.0"
 SERVER_NAME = "qector-decoder-v3-mcp"
-SERVER_VERSION = "1.0.0"
+SERVER_VERSION = "1.0.4"
 Z95 = 1.959963985
 
 # These are safety limits for an MCP process. The license tier remains the
@@ -73,8 +97,8 @@ MAX_DISTANCE = int(os.environ.get("QECTOR_MCP_MAX_DISTANCE", "63"))
 MAX_CHECKS = int(os.environ.get("QECTOR_MCP_MAX_CHECKS", "10000"))
 MAX_QUBITS = int(os.environ.get("QECTOR_MCP_MAX_QUBITS", "100000"))
 MAX_MATRIX_CELLS = int(os.environ.get("QECTOR_MCP_MAX_MATRIX_CELLS", "1000000"))
-MAX_TRIALS = int(os.environ.get("QECTOR_MCP_MAX_TRIALS", "100000"))
-MAX_SWEEP_POINTS = int(os.environ.get("QECTOR_MCP_MAX_SWEEP_POINTS", "256"))
+MAX_TRIALS = int(os.environ.get("QECTOR_MCP_MAX_TRIALS", "10000"))
+MAX_SWEEP_POINTS = int(os.environ.get("QECTOR_MCP_MAX_SWEEP_POINTS", "64"))
 PYPI_FRESHNESS_TIMEOUT_S = float(os.environ.get("QECTOR_MCP_PYPI_TIMEOUT_S", "3.0"))
 
 if (
@@ -98,12 +122,90 @@ def _installed_version(distribution: str) -> str:
         return "unknown"
 
 
-QECTOR_VERSION = getattr(qector_decoder_v3, "__version__", "unknown")
-if QECTOR_VERSION != EXPECTED_QECTOR_VERSION:
-    raise RuntimeError(
-        "Unsupported qector-decoder-v3 version: "
-        f"{QECTOR_VERSION!r}; expected {EXPECTED_QECTOR_VERSION!r}"
+def _parse_version_tuple(version: str) -> tuple[int, ...] | None:
+    """Parse a dotted numeric version prefix ('1.0.3', '1.0.3rc1' -> (1,0,3)).
+
+    Returns None for anything that doesn't start with at least one dotted
+    integer component (e.g. 'unknown'), so callers can treat an unparsable
+    version as "can't verify" rather than crashing on it.
+    """
+    parts: list[int] = []
+    for chunk in version.split("."):
+        digits = ""
+        for ch in chunk:
+            if ch.isdigit():
+                digits += ch
+            else:
+                break
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts) if parts else None
+
+
+def _check_qector_version_window(
+    installed: str, floor: str, ceiling_exclusive: str
+) -> tuple[bool, str]:
+    """Check *installed* against [floor, ceiling_exclusive).
+
+    Returns (in_window, detail). ``in_window`` is True both when the version
+    is inside the reviewed range and when any of the three versions fails to
+    parse (an unparsable version is a "cannot verify", not a "cannot use" --
+    the previous behavior of hard-crashing on any mismatch, parsable or not,
+    is exactly the defect this replaces). ``detail`` is a human-readable
+    string suitable for a startup warning or a compat_report field.
+    """
+    installed_t = _parse_version_tuple(installed)
+    floor_t = _parse_version_tuple(floor)
+    ceiling_t = _parse_version_tuple(ceiling_exclusive)
+    if installed_t is None or floor_t is None or ceiling_t is None:
+        return True, f"could not parse version(s) for comparison: installed={installed!r}"
+    if floor_t <= installed_t < ceiling_t:
+        return True, f"{installed} is within the reviewed [{floor}, {ceiling_exclusive}) window"
+    return False, (
+        f"{installed} is outside the reviewed [{floor}, {ceiling_exclusive}) window "
+        f"for this MCP server (server v{SERVER_VERSION})"
     )
+
+
+QECTOR_VERSION = getattr(qector_decoder_v3, "__version__", "unknown")
+_QECTOR_VERSION_IN_WINDOW, _QECTOR_VERSION_DETAIL = _check_qector_version_window(
+    QECTOR_VERSION, MIN_REVIEWED_QECTOR_VERSION, MAX_REVIEWED_QECTOR_VERSION_EXCLUSIVE
+)
+if not _QECTOR_VERSION_IN_WINDOW:
+    # Degrade to a stderr warning rather than the previous hard RuntimeError.
+    # The 8 tools this server exposes are a stable, narrow surface (decode,
+    # list families/decoders, license info, threshold sweep, build-from-
+    # matrix, compat report); a qector-decoder-v3 patch release the server
+    # hasn't explicitly re-reviewed yet is far more likely to be unaffected
+    # on this surface than to silently corrupt a decode -- and every tool
+    # result is still fail-closed verified against H c = s (mod 2) (Theorem
+    # 1) regardless of which reviewed wheel produced it, so a version outside
+    # the window cannot itself produce an unverified result. Set
+    # QECTOR_MCP_STRICT_VERSION=1 to restore the previous hard-fail behavior
+    # for deployments that want it.
+    if os.environ.get("QECTOR_MCP_STRICT_VERSION", "").strip() in {"1", "true", "yes", "on"}:
+        raise RuntimeError(f"Unsupported qector-decoder-v3 version: {_QECTOR_VERSION_DETAIL}")
+    # Deliberately NOT gated on QECTOR_SILENT: that flag suppresses the
+    # qector_decoder_v3 licensing banner (set unconditionally by the Claude
+    # Desktop manifest env for every launch), which would make a genuine
+    # compatibility warning invisible in exactly the deployment where seeing
+    # it matters most. QECTOR_MCP_QUIET is this server's own, narrower flag
+    # for operators who have explicitly reviewed and accepted the version
+    # skew and want the one-line notice gone.
+    if os.environ.get("QECTOR_MCP_QUIET", "").strip() not in {"1", "true", "yes", "on"}:
+        try:
+            import sys as _sys_for_warning
+
+            _sys_for_warning.stderr.write(
+                f"[qector-decoder-v3-mcp] warning: {_QECTOR_VERSION_DETAIL}. "
+                "Tool results remain fail-closed verified; set "
+                "QECTOR_MCP_STRICT_VERSION=1 to refuse to start instead, or "
+                "QECTOR_MCP_QUIET=1 to silence this notice.\n"
+            )
+            _sys_for_warning.stderr.flush()
+        except (OSError, ValueError, UnicodeEncodeError):
+            pass
 
 
 class QECTORInputError(ValueError):
@@ -510,8 +612,42 @@ def list_decoders() -> dict[str, Any]:
 
 def get_license_info() -> dict[str, Any]:
     info = qector_decoder_v3.get_license_info()
+    # The wheel returns the license as a small dict of private fields; this
+    # MCP tool normalizes that into the documented public schema so agents
+    # do not have to guess at field names. Every field below has a fixed
+    # type; missing keys become ``None`` rather than being silently dropped.
+    key_status = str(info.get("key_status", "unknown"))
+    is_expired = bool(info.get("is_expired", False))
+    if is_expired:
+        commercial_status = "expired"
+    elif key_status in {"no_key", "community"}:
+        commercial_status = "community"
+    elif key_status in {"evaluation", "trial"}:
+        commercial_status = "evaluation"
+    elif key_status in {"paid", "active", "valid"}:
+        commercial_status = "commercial"
+    else:
+        commercial_status = "unknown"
     return {
-        "license": info,
+        "license": {
+            "tier": str(info.get("tier", "unknown")),
+            "distance_limit": int(info["max_distance"]) if "max_distance" in info else None,
+            "gpu_allowed": bool(info.get("gpu_enabled", False)),
+            "gnn_allowed": bool(info.get("gnn_enabled", False)),
+            "commercial_status": commercial_status,
+            "enforcement_mode": (
+                "enforced" if bool(info.get("enforce_mode", False)) else "permissive"
+            ),
+            "license_evidence": {
+                "key_status": key_status,
+                "is_expired": is_expired,
+                "subject": info.get("sub"),
+                "customer_id": info.get("customer_id"),
+                "issued_at": info.get("iat"),
+                "expires_at": info.get("exp"),
+            },
+            "raw": dict(info),
+        },
         "qector_version": QECTOR_VERSION,
         "reference_manual": REF_DOI,
     }
@@ -691,7 +827,9 @@ def _validate_sweep_inputs(
 
 def _artifact_root() -> Path:
     configured = os.environ.get("QECTOR_ARTIFACT_DIR")
-    return Path(configured).expanduser() if configured else Path.cwd() / "artifacts"
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return (Path(__file__).resolve().parent.parent / "artifacts").resolve()
 
 
 def _artifact_path(requested: str | None) -> Path:
@@ -1029,11 +1167,16 @@ def compat_report(check_pypi: bool = False) -> dict[str, Any]:
         numpy_available = True
         mcp_available = False
     report: dict[str, Any] = {
-        "runtime_ok": QECTOR_VERSION == EXPECTED_QECTOR_VERSION and numpy_available,
+        "runtime_ok": _QECTOR_VERSION_IN_WINDOW and numpy_available,
         "qector_decoder_v3": {
             "installed": True,
             "version": QECTOR_VERSION,
-            "expected": EXPECTED_QECTOR_VERSION,
+            "reviewed_window": [
+                MIN_REVIEWED_QECTOR_VERSION,
+                MAX_REVIEWED_QECTOR_VERSION_EXCLUSIVE,
+            ],
+            "in_reviewed_window": _QECTOR_VERSION_IN_WINDOW,
+            "version_detail": _QECTOR_VERSION_DETAIL,
         },
         "numpy": {"installed": numpy_available, "version": np.__version__},
         "mcp_sdk": {"installed": mcp_available, "version": _installed_version("mcp")},
@@ -1122,6 +1265,7 @@ def dispatch_tool(
         raise QECTORInputError(
             f"Unknown tool {name!r}; choose one of {list(TOOL_NAMES)}"
         )
+    consume_call_budget(name)
     return function(**_merged_arguments(name, arguments))
 
 
@@ -1137,10 +1281,9 @@ def _error_payload(exc: Exception) -> dict[str, Any]:
 
 try:
     from mcp.types import (
-        CallToolResult,
-        ServerCapabilities,
-        TextContent,
-        Tool,
+    CallToolResult,
+    ServerCapabilities,
+    Tool,
         ToolsCapability,
     )
 except Exception as exc:  # pragma: no cover - deployment error path
@@ -1328,22 +1471,33 @@ def _tool_schema() -> list[Tool]:
     ]
 
 
-TOOLS = _tool_schema()
+TOOLS = apply_tool_contract(_tool_schema())
 
 
 async def _dispatch_mcp_call(
     name: str, arguments: Mapping[str, Any] | None
-) -> dict[str, Any] | CallToolResult:
+) -> CallToolResult:
     try:
-        return dispatch_tool(name, arguments)
+        result = dispatch_tool(name, arguments)
+        return call_tool_result(
+            result_envelope(
+                result,
+                tool_name=name,
+                server_name=SERVER_NAME,
+                server_version=SERVER_VERSION,
+                stability="stable",
+            )
+        )
     except Exception as exc:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text", text=json.dumps(_error_payload(exc), sort_keys=True)
-                )
-            ],
-            isError=True,
+        return call_tool_result(
+            error_envelope(
+                exc,
+                tool_name=name,
+                server_name=SERVER_NAME,
+                server_version=SERVER_VERSION,
+                stability="stable",
+            ),
+            is_error=True,
         )
 
 
@@ -1374,7 +1528,7 @@ def _build_low_level_server() -> Any:
     @server.call_tool()
     async def _call_tool(
         name: str, arguments: dict[str, Any]
-    ) -> dict[str, Any] | CallToolResult:
+    ) -> CallToolResult:
         return await _dispatch_mcp_call(name, arguments)
 
     return server

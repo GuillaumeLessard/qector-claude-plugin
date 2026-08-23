@@ -14,9 +14,9 @@ connections.
 2. **Hardware honesty**: `get_hardware_info` is an optional
    Workbench surface; `cuda_is_available()` is a direct-wheel
    hardware probe. The bench server's
-   `qector-bench.hardware_probe` returns the live CUDA /
+   `qector-research.hardware_probe` returns the live CUDA /
    OpenCL state plus the live license tier; the same data
-   plus a `tier_table` is in `qector-bench.license_active_check`.
+   plus a `tier_table` is in `qector-research.license_active_check`.
    Report only what the active target returns and never
    assume a license or device state.
 3. **Verified tools only**; zero egress (SPICE, Stim
@@ -34,16 +34,16 @@ connections.
   Workbench `tools/list` confirms them. The matching decoders
   reject qLDPC - route to `BPOSDDecoder`.
 - Verify with `qector-library.list_code_families` or the
-  bench `qector-bench.code_family_info`. Any optional
+  bench `qector-research.code_family_info`. Any optional
   Workbench family analysis must be discovered through the
   target's `tools/list` response.
 
 ### 2. Detector Error Models (manual 14, 12.1)
 
 - **Bench path** (always available):
-  `qector-bench.dem_inspect` parses a minimal Stim-style DEM
+  `qector-research.dem_inspect` parses a minimal Stim-style DEM
   and reports structure, weight histogram, and routing hint.
-  `qector-bench.dem_collapse_parallel` applies the manual
+  `qector-research.dem_collapse_parallel` applies the manual
   14.1 rule (`p = p1 (1 - p2) + p2 (1 - p1)`) and returns
   the worked-example sanity check.
 - **Optional direct-wheel path**: `from qector_decoder_v3
@@ -60,11 +60,11 @@ connections.
 
 ### 3. Hardware probes (manual 18, 20)
 
-- `qector-bench.hardware_probe` - live CUDA / OpenCL / license
+- `qector-research.hardware_probe` - live CUDA / OpenCL / license
   probe.
-- `qector-bench.license_active_check` - tier table
+- `qector-research.license_active_check` - tier table
   (Community d<=7, Pro d<=19, Enterprise d<=63), max
   distance, env block.
-- `qector-bench.env_block` - manual 22.3 environment block.
+- `qector-research.env_block` - manual 22.3 environment block.
 - Never assume a tier; never hard-code a value from another
   machine.

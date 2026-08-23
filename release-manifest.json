@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "release": {
+    "name": "qector-claude-plugin",
+    "version": "1.0.4",
+    "license": "Proprietary",
+    "repository": "https://github.com/GuillaumeLessard/qector-claude-plugin"
+  },
+  "runtime": {
+    "python": ">=3.9,<3.14",
+    "qector_decoder_v3": "1.0.0",
+    "mcp": "1.26.0",
+    "numpy": ">=1.26,<2.3"
+  },
+  "surfaces": {
+    "claude_code": {
+      "default_servers": ["qector-library"],
+      "research_server": "qector-research",
+      "admin_server": "qector-admin"
+    },
+    "claude_desktop": {
+      "default_profile": "safe",
+      "default_servers": ["qector-desktop-mcp"],
+      "artifact": "qector-claude-desktop-1.0.4.mcpb"
+    },
+    "claude_web_mobile": {
+      "bundled_connector": false,
+      "access": "Claude Code Remote Control or a separately reviewed hosted Remote MCP deployment"
+    }
+  },
+  "evidence": {
+    "reference_manual": {
+      "doi": "10.5281/zenodo.21941046",
+      "title": "QECTOR Decoder v3 - Reference Manual v1.0.0",
+      "version": "1.0.0",
+      "sha256": "ebb77e6462b1fd8672e5f5a61cf381e184dab6073f7590b85427a1d0e3382ddc"
+    },
+    "external_proof_suite": {
+      "title": "Exclusive qector-decoder-v3 v1.0.0 proof suite",
+      "sha256": "310442695c5e2af43f721fb74d08d8719494e44f32d816dc850718b22ed6ce5f",
+      "coverage": "Theorems 1-16, Appendix E arithmetic, and live wheel faithfulness"
+    }
+  }
+}

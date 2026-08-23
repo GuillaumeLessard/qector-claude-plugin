@@ -137,13 +137,13 @@ use, review:
 
 ## How the bench server helps
 
-- `qector-bench.hardware_probe` returns the live hardware state
+- `qector-research.hardware_probe` returns the live hardware state
   and license tier for the deployment environment.
-- `qector-bench.license_active_check` reports the offline
+- `qector-research.license_active_check` reports the offline
   license tier and feature gates.
-- `qector-bench.env_block` returns the chapter 22.3 environment
+- `qector-research.env_block` returns the chapter 22.3 environment
   block for the deployment artifact.
-- `qector-bench.compat_report` (via `qector-library`) returns
+- `qector-research.compat_report` (via `qector-library`) returns
   the package version and Provisional-surface boundaries.
-- `qector-bench.artifacts_sha256` computes the SHA-256 sidecar
+- `qector-research.artifacts_sha256` computes the SHA-256 sidecar
   required by the production checklist.

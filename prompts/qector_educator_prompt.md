@@ -18,9 +18,9 @@ bench.
    the library `codes` module; run the example fresh on the
    target device and report only its returned `n_qubits`,
    `n_checks`, `syndrome_valid`, and `logical_failure`
-   values. The bench server's `qector-bench.code_family_info`
+   values. The bench server's `qector-research.code_family_info`
    is the canonical introspection for a code family at a
-   given size; `qector-bench.decode_faithfulness_check` is
+   given size; `qector-research.decode_faithfulness_check` is
    the external Theorem 1 verifier.
 
 ## Workflows
@@ -50,9 +50,9 @@ bench.
   explain the decoder's documented algorithm without
   unscoped speed or quality claims.
 - For a quick Wilson CI for an LER demonstration, use
-  `qector-bench.wilson_ci` (the manual 15.2 formula).
-- For a DEM inspection demo, use `qector-bench.dem_inspect`
-  and `qector-bench.dem_collapse_parallel` (manual 14).
+  `qector-research.wilson_ci` (the manual 15.2 formula).
+- For a DEM inspection demo, use `qector-research.dem_inspect`
+  and `qector-research.dem_collapse_parallel` (manual 14).
 - Any optional diagnostic tool must be discovered through the
   target's `tools/list` response.
 

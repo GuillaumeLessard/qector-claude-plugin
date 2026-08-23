@@ -21,6 +21,7 @@ import sys
 
 ENV = os.environ.copy()
 ENV["QECTOR_SILENT"] = "1"
+WORKBENCH_PROTOCOL_VERSION = "2025-03-26"
 
 
 def send(proc, lines):
@@ -57,7 +58,7 @@ def main():
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": WORKBENCH_PROTOCOL_VERSION,
                 "capabilities": {},
                 "clientInfo": {"name": "qector-probe", "version": "1.0"},
             },

@@ -32,15 +32,15 @@ app-free path.
 
 The companion **bench server** adds:
 
-- `qector-bench.code_family_info` (introspect a code)
-- `qector-bench.code_export_matrices` (export H, logicals, c2q)
-- `qector-bench.code_logicals_inspect` (logical coset status)
-- `qector-bench.dem_inspect` (parse a minimal Stim-style DEM)
-- `qector-bench.dem_collapse_parallel` (apply manual 14.1 rule)
-- `qector-bench.hardware_probe` (CUDA / OpenCL / license)
-- `qector-bench.license_active_check` (tier + max_distance)
-- `qector-bench.env_block` (manual 22.3 environment block)
-- `qector-bench.artifact_metadata_check` (chapter 22.3 block)
+- `qector-research.code_family_info` (introspect a code)
+- `qector-research.code_export_matrices` (export H, logicals, c2q)
+- `qector-research.code_logicals_inspect` (logical coset status)
+- `qector-research.dem_inspect` (parse a minimal Stim-style DEM)
+- `qector-research.dem_collapse_parallel` (apply manual 14.1 rule)
+- `qector-research.hardware_probe` (CUDA / OpenCL / license)
+- `qector-research.license_active_check` (tier + max_distance)
+- `qector-research.env_block` (manual 22.3 environment block)
+- `qector-research.artifact_metadata_check` (chapter 22.3 block)
 
 ## Optional DEM Workflow (manual 14, 16.4)
 
@@ -101,10 +101,10 @@ structure; do not route by an invented tool name.
 - `cuda_is_available()` and any direct-wheel GPU
   availability method report hardware, not license
   entitlement.
-- The bench server `qector-bench.hardware_probe` reports
+- The bench server `qector-research.hardware_probe` reports
   the live CUDA / OpenCL state plus the live license
   tier; do not hard-code a value from another machine.
-- `qector-bench.license_active_check` returns the offline
+- `qector-research.license_active_check` returns the offline
   tier (`Community` / `Pro` / `Enterprise`) and the
   `max_distance` cap. The Community cap is `d <= 7`, the
   Pro cap is `d <= 19`, the Enterprise cap is `d <= 63`.

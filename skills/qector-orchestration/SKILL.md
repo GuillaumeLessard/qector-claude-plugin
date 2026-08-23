@@ -120,11 +120,11 @@ binding was added in 1.0.0 to fix a missing re-export).
 
 ## How the bench server helps
 
-- `qector-bench.code_family_info` reports `max_qubit_degree`,
+- `qector-research.code_family_info` reports `max_qubit_degree`,
   `is_matching_graph`, and a routing hint.
-- `qector-bench.hardware_probe` returns the live license tier,
+- `qector-research.hardware_probe` returns the live license tier,
   CUDA / OpenCL availability, and environment block.
-- `qector-bench.license_active_check` reports the offline license
+- `qector-research.license_active_check` reports the offline license
   tier and feature gates (manual 18.1).
-- `qector-bench.decode_faithfulness_check` re-verifies
+- `qector-research.decode_faithfulness_check` re-verifies
   `H c = s` for any decoder output.

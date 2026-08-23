@@ -8,7 +8,7 @@ description: >-
   add_boundary_edge, decode, decode_batch,
   decode_to_edges_array), the fact that it is backed by the exact
   Blossom decoder, the one-line import swap, and the smoke test
-  pattern via `qector-bench.pymatching_compat_check`. Load for any
+  pattern via `qector-research.pymatching_compat_check`. Load for any
   question about PyMatching compatibility, Stim / PyMatching
   pipelines, or a one-line decoder swap.
 ---
@@ -56,7 +56,7 @@ change.
 
 ## Smoke test pattern
 
-`qector-bench.pymatching_compat_check` is a built-in smoke test.
+`qector-research.pymatching_compat_check` is a built-in smoke test.
 For a chosen family and size it:
 
 1. Generates a random `error` with `Code.random_error(0.05)`.
@@ -108,12 +108,12 @@ Use the library `qector_decoder_v3` decoders directly when:
 
 ## How the bench server helps
 
-- `qector-bench.pymatching_compat_check` is the smoke test.
-- `qector-bench.code_family_info` reports whether a code is
+- `qector-research.pymatching_compat_check` is the smoke test.
+- `qector-research.code_family_info` reports whether a code is
   graphlike (matching decoders eligible).
-- `qector-bench.decode_faithfulness_check` re-verifies
+- `qector-research.decode_faithfulness_check` re-verifies
   `H c = s` for any decode output.
-- `qector-bench.artifact_metadata_check` generates the
+- `qector-research.artifact_metadata_check` generates the
   chapter 22.3 metadata block for a PyMatching-comparison
   artifact.
 
