@@ -8,6 +8,7 @@ is the single source of truth for "where is QECTOR listed?".
 
 | Directory | Identifier | URL | Method | Status | First published |
 |:----------|:-----------|:----|:-------|:-------|:----------------|
+| Claude Code marketplace (QECTOR's own marketplace) | `qector@qector-tools` (the plugin handle on the QECTOR marketplace) | `https://github.com/GuillaumeLessard/qector-claude-plugin` (`.claude-plugin/marketplace.json` and `.claude-plugin/plugin.json`) | Self-hosted. Users add the marketplace with `claude plugin marketplace add GuillaumeLessard/qector-claude-plugin` and install with `claude plugin install qector@qector-tools`. | **Live today**. Works without any third-party catalog. | 2026-08-23 |
 | Official MCP Registry | `io.github.GuillaumeLessard/qector-desktop` | https://registry.modelcontextprotocol.io/v0/servers?search=GuillaumeLessard | `mcp-publisher publish` via CI workflow `.github/workflows/publish-mcp-registry.yml` on tag push | active, `isLatest: true`, `status: "active"` | 2026-08-23 (v1.0.4) |
 | GitHub Release | v1.0.4 | https://github.com/GuillaumeLessard/qector-claude-plugin/releases/tag/v1.0.4 | `gh release create` (CI auto-creates on tag push; manually uploaded extra assets) | 9 assets, all SHA-256s match `dist/` | 2026-08-23 |
 | PolicyLayer (free `/v0` tier) | `com.policylayer/qector-claude-plugin` | https://policylayer.com/tools/qector-claude-plugin | Picked up automatically by PolicyLayer's periodic re-scan of the public GitHub repo | Tracked; will refresh on next re-scan cycle (currently shows v1.0.2 snapshot) | 2026-08-20 (catalog entry) |
@@ -25,6 +26,8 @@ is the single source of truth for "where is QECTOR listed?".
 | Directory | Why queued | Submission pack | When to submit |
 |:----------|:-----------|:----------------|:---------------|
 | PulseMCP | PulseMCP is currently closed for submissions per their `/submit` page: *"submissions and changes are temporarily paused. Until mid-August, we are not accepting new MCP server or client submissions."* | [`PULSEMCP_SUBMISSION.md`](PULSEMCP_SUBMISSION.md) | Re-submit as soon as PulseMCP reopens. The submission pack is ready to paste. |
+| `anthropics/claude-plugins-community` (Claude Code marketplace) | Self-serve form lives at `clau.de/plugin-directory-submission` (in-app on `claude.ai`) — needs the user to fill in the form; cannot be auto-submitted from the CLI. | [`ANTHROPIC_MARKETPLACE_SUBMISSION.md`](ANTHROPIC_MARKETPLACE_SUBMISSION.md) | Open `claude.ai`, go to the form, paste the payload from the submission file. The marketplace syncs nightly; expect the entry to appear within 24 h after Anthropic's automated validation. |
+| `anthropics/claude-plugins-official` (Anthropic-curated) | No self-serve form. Inclusion is at Anthropic's discretion per their docs. | The same payload, plus the request email template in [`ANTHROPIC_MARKETPLACE_SUBMISSION.md`](ANTHROPIC_MARKETPLACE_SUBMISSION.md) §2 | Email the Anthropic plugin team. Expect weeks-to-months turnaround. |
 
 ## Optional future directories (no action taken)
 
