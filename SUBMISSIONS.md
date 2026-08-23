@@ -60,7 +60,7 @@ Expected (truncated):
         "registryType": "mcpb",
         "identifier": "https://github.com/GuillaumeLessard/qector-claude-plugin/releases/download/v1.0.5/qector-claude-desktop-1.0.5.mcpb",
         "version": "1.0.5",
-        "fileSha256": "edb08d37b241253a3c35b95a6df73e48d622b711b56a1b91602b3f66f5e955ab",
+        "fileSha256": "dc529600bae2f4ab1f13921737f20ded89fb41e5ce99dcabce5c2bc8ae0ed4c6",
         "transport": { "type": "stdio" }
       }]
     },

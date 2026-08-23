@@ -34,7 +34,6 @@ IGNORED_PARTS = {
 IGNORED_SUFFIXES = {".pyc", ".pyo", ".log", ".tmp", ".bak"}
 PLUGIN_ROOTS = {
     ".claude-plugin",
-    "bin",
     "commands",
     "agents",
     "skills",
@@ -62,7 +61,6 @@ PLUGIN_ROOTS = {
 SOURCE_ROOTS = {
     ".claude-plugin",
     ".claude-desktop-extension",
-    "bin",
     "mcp",
     "python",
     "scripts",
@@ -137,8 +135,8 @@ DESKTOP_FILES = {
     ".claude-desktop-extension/manifest.json",
     ".claude-desktop-extension/icon.png",
     ".claude-desktop-extension/README.md",
-    "bin/qector-python",
-    "bin/qector-python.cmd",
+    "scripts/qector-python",
+    "scripts/qector-python.cmd",
     "mcp/mcp_server_desktop.py",
     "mcp/mcp_server_library.py",
     "mcp/qector_mcp_contract.py",
@@ -227,7 +225,8 @@ def _zip_info(name: str) -> zipfile.ZipInfo:
     info.create_system = 3
     # Deterministic permissions: launchers must survive extraction as 0755 so
     # Claude Code / Claude Desktop can exec them directly after install.
-    if name.startswith("bin/"):
+    # Launchers live in scripts/ (hosted plugins may not ship bin/ executables).
+    if name in ("scripts/qector-python", "scripts/qector-python.cmd"):
         info.external_attr = 0o755 << 16
     else:
         info.external_attr = 0o644 << 16

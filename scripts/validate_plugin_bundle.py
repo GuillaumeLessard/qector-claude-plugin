@@ -170,6 +170,12 @@ def main() -> int:
                     not any(entry.endswith(forbidden) for entry in entries),
                     f"plugin archive does not contain {forbidden}",
                 )
+            # claude.ai-hosted plugins may not ship bin/ executables (they land
+            # on PATH without appearing on the admin approval surface).
+            check(
+                not any(entry.startswith("bin/") for entry in entries),
+                f"{expected_plugin} ships no bin/ executables (claude.ai policy)",
+            )
 
     # Source archive must be free of dev-internal material.
     _section("SOURCE ARCHIVE CLEANLINESS")
@@ -182,6 +188,7 @@ def main() -> int:
             "mcp/tests/",
             ".github/",
             "presentations/",
+            "bin/",
         ):
             check(
                 not any(entry.startswith(forbidden_prefix) for entry in entries),
@@ -278,11 +285,17 @@ def main() -> int:
             expected_version
             and bundle == f"qector-claude-desktop-{expected_version}.mcpb"
         ):
-            for launcher in ("bin/qector-python", "bin/qector-python.cmd"):
+            for launcher in ("scripts/qector-python", "scripts/qector-python.cmd"):
                 check(
                     launcher in entries,
                     f"{bundle} bundles the {launcher} launcher",
                 )
+            # claude.ai-hosted plugins may not ship bin/ executables; guard the
+            # current release bundle so the directory can never creep back in.
+            check(
+                not any(e.startswith("bin/") for e in entries),
+                f"{bundle} ships no bin/ executables (claude.ai approval policy)",
+            )
         check(
             "mcp/mcp_server_library.py" in entries,
             f"{bundle} contains the library MCP server",

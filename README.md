@@ -24,7 +24,7 @@ own resolver quirks. Version 1.0.5 retires that assumption entirely.
 
 * **A universal launcher ships inside every artifact.** The plugin
   archive, the source distribution, and the Desktop bundle all carry
-  `bin/qector-python` (POSIX sh) and `bin/qector-python.cmd` (Windows).
+  `scripts/qector-python` (POSIX sh) and `scripts/qector-python.cmd` (Windows).
 * **Resolution is governed, not guessed.** An administrator pinned
   interpreter wins first, then `python3`, then `python`, with the Windows
   py launcher tried ahead of them all.
@@ -110,9 +110,9 @@ identical, so the hashes below are stable forever.
 
 | Artifact | SHA-256 |
 |:---------|:--------|
-| `dist/qector-claude-plugin-1.0.5.zip` | `623be5a3ca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b` |
-| `dist/qector-claude-plugin-source-1.0.5.zip` | `cb0b11a3fc53ce69008529b0946dd3b8267e0ec612b661b645a4c64d49e023a9` |
-| `dist/qector-claude-desktop-1.0.5.mcpb` | `edb08d37b241253a3c35b95a6df73e48d622b711b56a1b91602b3f66f5e955ab` |
+| `dist/qector-claude-plugin-1.0.5.zip` | `e7bf953eca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b` |
+| `dist/qector-claude-plugin-source-1.0.5.zip` | `29db3522fc53ce69008529b0946dd3b8267e0ec612b661b645a4c64d49e023a9` |
+| `dist/qector-claude-desktop-1.0.5.mcpb` | `dc529600bae2f4ab1f13921737f20ded89fb41e5ce99dcabce5c2bc8ae0ed4c6` |
 
 Per artifact sidecars, a combined `SHA256SUMS`, an SPDX 2.3 SBOM, and
 provenance records binding each file to its release commit and runtime

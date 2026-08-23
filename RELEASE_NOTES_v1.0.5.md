@@ -14,10 +14,10 @@ from 1.0.4)
 
 | Entry point | Before | Now |
 |:------------|:-------|:----|
-| Claude Code plugin (`plugin.json`, `.mcp.json`) | bare `python` | `${CLAUDE_PLUGIN_ROOT}/bin/qector-python` |
+| Claude Code plugin (`plugin.json`, `.mcp.json`) | bare `python` | `${CLAUDE_PLUGIN_ROOT}/scripts/qector-python` |
 | SessionStart / PostToolUse hooks | bare `python` | quoted launcher path |
-| Desktop MCPB (macOS/Linux) | bare `python` | `${__dirname}/bin/qector-python` |
-| Desktop MCPB (Windows) | bare `python` | `${__dirname}\bin\qector-python.cmd` via `platform_overrides` |
+| Desktop MCPB (macOS/Linux) | bare `python` | `${__dirname}/scripts/qector-python` |
+| Desktop MCPB (Windows) | bare `python` | `${__dirname}\scripts\qector-python.cmd` via `platform_overrides` |
 
 Resolution order: `QECTOR_PYTHON` -> `python3` -> `python` (`py -3` first on
 Windows). Non-Python-3 candidates are skipped; exhaustion exits 127 with
@@ -39,9 +39,9 @@ install guidance. Users can pin an interpreter through
 
 | Artifact | SHA-256 |
 |:---------|:--------|
-| `qector-claude-plugin-1.0.5.zip` | `623be5a3ca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b` |
-| `qector-claude-plugin-source-1.0.5.zip` | `cb0b11a3fc53ce69008529b0946dd3b8267e0ec612b661b645a4c64d49e023a9` |
-| `qector-claude-desktop-1.0.5.mcpb` | `edb08d37b241253a3c35b95a6df73e48d622b711b56a1b91602b3f66f5e955ab` |
+| `qector-claude-plugin-1.0.5.zip` | `e7bf953eca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b` |
+| `qector-claude-plugin-source-1.0.5.zip` | `29db3522fc53ce69008529b0946dd3b8267e0ec612b661b645a4c64d49e023a9` |
+| `qector-claude-desktop-1.0.5.mcpb` | `dc529600bae2f4ab1f13921737f20ded89fb41e5ce99dcabce5c2bc8ae0ed4c6` |
 
 Per-file `.sha256` sidecars, combined `SHA256SUMS`, SPDX-2.3 SBOM, and
 `provenance.json` are regenerated alongside; `server.json` is patched to the

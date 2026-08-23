@@ -6,7 +6,7 @@ Cross-platform launcher release. Every entry point now resolves a Python 3
 interpreter through a shipped launcher instead of assuming a bare `python`
 exists on PATH, which failed on stock macOS, Debian, and Fedora.
 
-- **`bin/qector-python` (POSIX sh) and `bin/qector-python.cmd` (Windows)**
+- **`scripts/qector-python` (POSIX sh) and `scripts/qector-python.cmd` (Windows)**
   launchers ship in the plugin archive, the source archive, and the Desktop
   MCPB. Resolution order is `QECTOR_PYTHON` -> `python3` -> `python` (`py -3`
   first on Windows). Candidates are range-checked against the supported

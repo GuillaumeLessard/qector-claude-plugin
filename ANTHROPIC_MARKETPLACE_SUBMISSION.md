@@ -122,9 +122,9 @@ Install
   via python scripts/configure_claude_desktop.py --confirm.
 
 Canonical artifacts (v1.0.5)
-- qector-claude-plugin-1.0.5.zip          623be5a3... (Claude Code plugin)
-- qector-claude-plugin-source-1.0.5.zip   cb0b11a3... (public source)
-- qector-claude-desktop-1.0.5.mcpb        edb08d37... (Desktop safe MCPB)
+- qector-claude-plugin-1.0.5.zip          e7bf953e... (Claude Code plugin)
+- qector-claude-plugin-source-1.0.5.zip   29db3522... (public source)
+- qector-claude-desktop-1.0.5.mcpb        dc529600... (Desktop safe MCPB)
 - qector-claude-plugin-1.0.5.sbom.json    (SPDX-2.3 SBOM)
 - SHA256SUMS, provenance.json, per-file .sha256 sidecars
 ```

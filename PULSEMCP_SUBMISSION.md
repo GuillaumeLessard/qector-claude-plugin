@@ -166,7 +166,7 @@ commercial evaluation, creditable against a license.
 - GitHub: `GuillaumeLessard/qector-claude-plugin`
 - Official MCP Registry: `io.github.GuillaumeLessard/qector-desktop`
 - PolicyLayer catalog: `com.policylayer/qector-claude-plugin`
-- v1.0.5 MCPB SHA-256: `edb08d37b241253a3c35b95a6df73e48d622b711b56a1b91602b3f66f5e955ab`
+- v1.0.5 MCPB SHA-256: `dc529600bae2f4ab1f13921737f20ded89fb41e5ce99dcabce5c2bc8ae0ed4c6`
 - v1.0.5 release: `https://github.com/GuillaumeLessard/qector-claude-plugin/releases/tag/v1.0.5`
 
 ## 10. Submission checklist
