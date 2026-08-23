@@ -83,7 +83,9 @@ def main(argv: list[str] | None = None) -> int:
     for label, path in json_paths.items():
         document = _load_json(path)
         checks.append((document.get("version") == version, f"{label} version is {version}"))
-        if "license" in document or label != "server.json":
+        # Marketplace manifests drop nonstandard fields for strict validators;
+        # their license statement lives in plugin.json instead.
+        if "license" in document:
             checks.append(
                 (document.get("license") == license_name, f"{label} license is {license_name}")
             )
