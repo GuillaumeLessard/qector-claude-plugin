@@ -154,7 +154,7 @@ in-app form serializes to this and the read-only mirror at
 ```
 
 > The `source.sha` is the current `main` HEAD as of 2026-08-23.
-> Re-pin to the `v1.0.5` release commit (`PENDING_V105_TAG_COMMIT`)
+> Re-pin to the `v1.0.5` release commit (`34eabe720571b3f9daf6bb06ad149c0153687d84`)
 > if you want a fixed-version pin. The community marketplace syncs
 > nightly and re-pins to the latest `main` HEAD by default.
 

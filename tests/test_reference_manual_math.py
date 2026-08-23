@@ -277,8 +277,15 @@ class LiveQECTORTests(unittest.TestCase):
                     str(path),
                 )
             else:
-                # Live Claude Code config: literal values.
-                self.assertEqual(server["command"], "python", str(path))
+                # Live Claude Code config: literal values. Since v1.0.5 the
+                # command routes through the shipped cross-platform launcher
+                # (POSIX sh shim; Windows uses the .cmd via MCPB overrides).
+                self.assertTrue(
+                    server["command"].endswith(
+                        ("qector-python", "qector-python.cmd")
+                    ),
+                    str(path),
+                )
                 self.assertEqual(
                     server["args"],
                     ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_library.py"],
