@@ -306,7 +306,10 @@ class LiveQECTORTests(unittest.TestCase):
         self.assertEqual(len(manifest["plugins"]), 1)
         entry = manifest["plugins"][0]
         self.assertEqual(entry["name"], plugin["name"])
-        self.assertEqual(entry["source"], "./")
+        self.assertEqual(
+            entry["source"],
+            {"source": "github", "repo": "GuillaumeLessard/qector-claude-plugin"},
+        )
         self.assertEqual(entry["version"], plugin["version"])
         self.assertNotIn("..", entry["source"])
 

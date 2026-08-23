@@ -334,7 +334,10 @@ class TestManifestConsistency(unittest.TestCase):
         marketplace = self._load(".claude-plugin/marketplace.json")
         desktop = self._load(".claude-desktop-extension/manifest.json")
         self.assertEqual(plugin["license"], "Proprietary")
-        self.assertEqual(marketplace["license"], "Proprietary")
+        # Marketplace manifest carries no nonstandard fields on purpose;
+        # strict Desktop sync validators reject license there. The license
+        # is declared exactly once in plugin.json (and in the Desktop bundle).
+        self.assertNotIn("license", marketplace.get("plugins", [{}])[0])
         self.assertEqual(desktop["license"], "Proprietary")
 
     def test_desktop_extension_is_eight_tools_safe(self) -> None:

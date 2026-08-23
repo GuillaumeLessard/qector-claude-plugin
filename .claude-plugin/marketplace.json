@@ -10,7 +10,10 @@
     {
       "name": "qector",
       "version": "1.0.5",
-      "source": "./",
+      "source": {
+        "source": "github",
+        "repo": "GuillaumeLessard/qector-claude-plugin"
+      },
       "description": "Local QECTOR quantum-error-correction plugin for Claude Code with strict-math skills, focused agents, and qector-decoder-v3 MCP servers.",
       "author": {
         "name": "Guillaume Lessard",
