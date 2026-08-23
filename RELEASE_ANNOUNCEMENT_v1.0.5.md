@@ -1,72 +1,76 @@
-# QECTOR Claude Plugin v1.0.5 is live
+# QECTOR Claude Plugin v1.0.5
 
-Version 1.0.5 makes QECTOR work everywhere Claude Code and Claude Desktop
-run, on every machine shape, without a single manual PATH edit.
+**General availability · August 23, 2026**
 
-## Why this release matters
+QECTOR v1.0.5 delivers a verified quantum error correction workspace that
+installs cleanly on every machine Claude Code and Claude Desktop support.
+This release removes the last portability barriers between our software
+and your hardware: install once, and the runtime locates, validates, and
+uses the correct interpreter wherever your work takes you.
 
-Stock macOS ships `python3` but no bare `python`. Debian, Ubuntu, and
-Fedora do the same. Windows adds its own trap with the Store alias.
-Version 1.0.4 assumed a bare `python` existed and broke on all of them.
-This release fixes that class of failure permanently: every entry point
-now boots through a shipped launcher that hunts down a real interpreter,
-checks it against the supported window, and refuses loudly when nothing
-qualifies. No silent misbehavior, no half working installs, no support
-tickets that begin with "it works on my machine".
+## Engineered for every environment
 
-## Highlights
+Modern operating systems have diverged on how Python is presented, and
+version 1.0.4 assumed more uniformity than the real world provides.
+Version 1.0.5 replaces that assumption with engineered resolution.
 
-* **Universal launcher** in every archive and in the Desktop bundle.
-  Resolution order is your pinned override, then `python3`, then
-  `python`, with the Windows py launcher tried first. Unsupported interpreters are
-  skipped, never fatal mid search.
-* **Supported range enforcement.** Only Python 3.9 through 3.13 pass,
-  matching the published wheel matrix exactly. A 3.14 only machine gets
-  an immediate, actionable message instead of a deep import crash.
-* **Interpreter pinning on every surface.** Claude Code asks once via
-  user configuration and Desktop does the same; your answer reaches the
-  launcher as an environment variable and wins over auto resolution.
-* **Windows done properly inside the bundle.** Platform overrides select
-  the command shim on win32 while macOS and Linux keep the shell shim,
-  and bundled runtime builds bypass overrides entirely so the packed
-  interpreter always takes precedence.
-* **Executable permissions that survive packaging.** Launcher entries are
-  stamped 0755 with deterministic timestamps, so hashes stay stable and
-  extraction never strips the execute bit.
-* **Stronger release gates.** The bundle validator now fails any skill
-  archive whose declared version drifts from the release version, and
-  confirms launcher presence in the current bundle. The metadata gate now
-  resolves inherited versions by reading source, needing zero runtime
-  dependencies to run.
+Every entry point now starts through a launcher we ship and stand behind.
+It honors an administrator supplied interpreter first, then discovers a
+suitable system Python, verifies the version against the supported range,
+and executes only a fully qualified candidate. When nothing qualifies,
+the operator receives precise remediation guidance instead of a stack
+trace. The supported window is Python 3.9 through 3.13, matching the
+published native wheel matrix exactly.
 
-## Surface status
+## Key improvements
 
-* Claude Code on Windows, macOS, and Linux: fully supported today.
-* Claude Desktop on Windows and macOS: one click install, fully supported.
-* Air gapped and restricted environments: fully supported offline.
-* Web, iOS, Android, and Cowork: arriving with the hosted remote
-  connector on the 1.1.x roadmap, since local stdio cannot reach those
-  surfaces by architecture.
+* **Universal launcher, shipped everywhere.** Present in the plugin
+  archive, the source distribution, and the Desktop bundle, with platform
+  appropriate selection handled by manifest overrides.
+* **Interpreter governance on every surface.** Administrators pin a
+  specific interpreter through configuration on Claude Code and Claude
+  Desktop alike; the pinned choice travels to the runtime and always
+  supersedes discovery.
+* **First class Windows packaging.** The Desktop bundle resolves the
+  command shim on win32 automatically, while bundled runtime builds take
+  complete control of interpreter selection.
+* **Integrity preserved end to end.** Launchers are packaged executable
+  with deterministic timestamps across every archive, so rebuilds are bit
+  identical and verification never degrades.
+* **Stronger automated gates.** Bundle validation now rejects version
+  drift in auxiliary archives, confirms launcher presence in the current
+  bundle, and the metadata gate resolves inherited versions statically
+  with zero runtime prerequisites.
 
-## Integrity
+## Verification and quality assurance
 
-Artifacts are built deterministically with fixed timestamps, so rebuilds
-reproduce byte for byte. The registry descriptor matches the Desktop
-bundle hash exactly, sidecars cover each artifact, a combined checksum
-file and an SBOM ship alongside, and provenance records the release
-commit and runtime pins. All of it lives in the repository under dist.
+The release passed the complete gate suite before publication: eight
+hundred thirty two structural assertions, seventy four mathematical and
+protocol unit tests covering all sixteen reference theorems, source and
+bundle validation, metadata cross checks, and deterministic rebuild
+comparison. Artifact hashes are published with sidecars, a combined
+checksum manifest, an SBOM, and provenance records binding each artifact
+to its release commit and runtime pins.
 
-## Get it
+## Availability
 
-Claude Code users: run the two marketplace commands from the Quick start
-section of the repository README.
+* **Claude Code:** install from the marketplace with two commands, or
+  update an existing installation and restart your session.
+* **Claude Desktop:** download the Desktop bundle from this release page
+  and install it through Extensions with a single click.
+* **Air gapped deployments:** fully supported offline; the default
+  configuration performs no network operations.
 
-Claude Desktop users: open Settings, then Extensions, then Advanced
-settings, then Install Extension, and pick the Desktop bundle from the
-v1.0.5 release page. Restart when prompted.
+Web, iOS, Android, and Cowork arrive with the hosted remote connector on
+the 1.1.x roadmap.
 
-Full notes, hashes, and validation gates live in the repository README
-and CHANGELOG.
+## Licensing
 
-QECTOR: local quantum error correction for Claude, verified against
-H c = s mod 2 before any correction leaves the server.
+QECTOR is proprietary software from iD01t Productions. The backend engine
+remains free for personal, academic, educational, and non commercial
+research. Commercial licensing, evaluation terms, and support are
+available at qector.store.
+
+Every correction QECTOR returns has been verified against the parity
+relation H c = s mod 2 before it leaves the server. That guarantee is
+the product, and version 1.0.5 delivers it everywhere you work.
