@@ -19,7 +19,8 @@ is the single source of truth for "where is QECTOR listed?".
 
 | Directory | PR/issue | URL | Method | Status |
 |:----------|:---------|:----|:-------|:-------|
-| awesome-mcp-servers (punkpeye) | PR #12705 | https://github.com/punkpeye/awesome-mcp-servers/pull/12705 | Forked `qectorlab/awesome-mcp-servers`, added one entry to the 🔬 Research section, opened a PR against `punkpeye/awesome-mcp-servers:main` | **PR open**, awaiting maintainer review |
+| awesome-mcp-servers (punkpeye) | PR #12705 | https://github.com/punkpeye/awesome-mcp-servers/pull/12705 | Forked `qectorlab/awesome-mcp-servers`, added one entry to the 🔬 Research section, opened a PR against `punkpeye/awesome-mcp-servers:main` | **PR open**. Maintainer has asked for a Glama listing before merging; the Glama badge has been added to the entry. PR now also includes the Glama score badge pattern. |
+| Glama (`glama.ai/mcp/servers`) | not yet submitted | https://glama.ai/mcp/servers | Self-serve form on glama.ai. The submission pack is at [`GLAMA_SUBMISSION.md`](GLAMA_SUBMISSION.md); the Dockerfile that Glama will build/run is at [`glama/Dockerfile`](glama/Dockerfile) (it wraps the stdio library server in `mcp-proxy` over streamable-HTTP so Glama's probe can introspect). | **Ready to submit.** The PR is already pre-populated with the Glama badge URL `https://glama.ai/mcp/servers/GuillaumeLessard/qector-claude-plugin/badges/score.svg`; it will start scoring as soon as Glama publishes the entry. |
 
 ## Queued (not yet submitted — directory closed or waiting for some condition)
 
