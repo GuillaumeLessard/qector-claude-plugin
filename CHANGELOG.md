@@ -24,6 +24,13 @@ Claude.ai marketplace compliance and environment-agnostic setup release.
   Bash diagnostics instead of dead-ending on the missing
   `scripts/qector_system_setup.py`. It never claims the script ran when it
   used the fallback path.
+- **Brand refresh**: the Desktop extension icon (`.claude-desktop-extension/icon.png`)
+  and the `brand/qector_icon.png` / `brand/qector_icon_512.png` marketing
+  assets now use the updated QECTOR mark. `manifest.json`'s `platform_overrides`
+  key was also relocated from the manifest root into `server.mcp_config`
+  (its correct location per the MCPB manifest spec), fixing an "Invalid
+  manifest: Unrecognized key(s) in object: 'platform_overrides'" preview
+  failure in Claude Desktop.
 
 ## 1.0.5 - 2026-08-23
 

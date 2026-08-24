@@ -35,23 +35,9 @@
         "QECTOR_SILENT": "1",
         "PYTHONUNBUFFERED": "1",
         "QECTOR_PYTHON": "${user_config.python_path}"
-      }
-    }
-  },
-  "user_config": {
-    "python_path": {
-      "type": "file",
-      "title": "Python interpreter (optional)",
-      "description": "Absolute path to a Python 3.9-3.13 interpreter with qector-decoder-v3 installed. Leave unset to auto-resolve via the bundled launcher.",
-      "required": false
-    }
-  },
-  "platform_overrides": {
-    "win32": {
-      "server": {
-        "type": "python",
-        "entry_point": "mcp/mcp_server_desktop.py",
-        "mcp_config": {
+      },
+      "platform_overrides": {
+        "win32": {
           "command": "${__dirname}\\scripts\\qector-python.cmd",
           "args": [
             "${__dirname}\\mcp\\mcp_server_desktop.py",
@@ -65,6 +51,14 @@
           }
         }
       }
+    }
+  },
+  "user_config": {
+    "python_path": {
+      "type": "file",
+      "title": "Python interpreter (optional)",
+      "description": "Absolute path to a Python 3.9-3.13 interpreter with qector-decoder-v3 installed. Leave unset to auto-resolve via the bundled launcher.",
+      "required": false
     }
   },
   "tools": [
