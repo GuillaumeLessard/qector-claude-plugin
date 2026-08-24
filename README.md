@@ -15,12 +15,12 @@ and the default configuration performs no network request of any kind.
 
 ---
 
-## Why v1.0.5
+## Why v1.0.6
 
 Version 1.0.4 assumed the operating system would hand it a usable
 interpreter, and the modern world no longer does: macOS, Debian, Ubuntu,
 and Fedora ship `python3` without bare `python`, while Windows adds its
-own resolver quirks. Version 1.0.5 retires that assumption entirely.
+own resolver quirks. Version 1.0.6 retires that assumption entirely.
 
 * **A universal launcher ships inside every artifact.** The plugin
   archive, the source distribution, and the Desktop bundle all carry
@@ -66,7 +66,7 @@ the shipped launcher resolve one.
 
 **Claude Desktop, single click**
 
-Download `qector-claude-desktop-1.0.5.mcpb` from the release page, open
+Download `qector-claude-desktop-1.0.6.mcpb` from the release page, open
 Settings → Extensions → Advanced settings → Install Extension, choose the
 bundle, and restart. Prefer scripted control?
 
@@ -110,9 +110,9 @@ identical, so the hashes below are stable forever.
 
 | Artifact | SHA-256 |
 |:---------|:--------|
-| `dist/qector-claude-plugin-1.0.5.zip` | `e7bf953eca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b` |
-| `dist/qector-claude-plugin-source-1.0.5.zip` | `29db3522fc53ce69008529b0946dd3b8267e0ec612b661b645a4c64d49e023a9` |
-| `dist/qector-claude-desktop-1.0.5.mcpb` | `dc529600bae2f4ab1f13921737f20ded89fb41e5ce99dcabce5c2bc8ae0ed4c6` |
+| `dist/qector-claude-plugin-1.0.6.zip` | `e1660a45ca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b` |
+| `dist/qector-claude-plugin-source-1.0.6.zip` | `e0e04d94546799acda0d8f3258bc8911b8125c4bf2b78bb80c04d3e49588dc59` |
+| `dist/qector-claude-desktop-1.0.6.mcpb` | `5b6b4c247ef6159dc92441023fd08a0dc800894a220ba8a61b4143bde92190ff` |
 
 Per artifact sidecars, a combined `SHA256SUMS`, an SPDX 2.3 SBOM, and
 provenance records binding each file to its release commit and runtime
@@ -148,8 +148,8 @@ the network stance in [PRIVACY.md](PRIVACY.md).
 |:---------|:-----|
 | User manual | [docs/User_Manual.md](docs/User_Manual.md) |
 | MCP API reference | [MCP_API.md](MCP_API.md) |
-| v1.0.5 release announcement | [RELEASE_ANNOUNCEMENT_v1.0.5.md](RELEASE_ANNOUNCEMENT_v1.0.5.md) |
-| Release notes | [RELEASE_NOTES_v1.0.5.md](RELEASE_NOTES_v1.0.5.md) |
+| v1.0.6 release announcement | [RELEASE_ANNOUNCEMENT_v1.0.6.md](RELEASE_ANNOUNCEMENT_v1.0.6.md) |
+| Release notes | [RELEASE_NOTES_v1.0.6.md](RELEASE_NOTES_v1.0.6.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
 | Desktop setup | [CLAUDE_DESKTOP.md](CLAUDE_DESKTOP.md) |
 | Validation gates | [RELEASE_VALIDATION.md](RELEASE_VALIDATION.md) |
@@ -183,7 +183,7 @@ Support <admin@qector.store> · Security disclosure
 <admin@qector.store> (private)
 
 <p align="center">
-<strong>QECTOR Claude Plugin v1.0.5</strong><br/>
+<strong>QECTOR Claude Plugin v1.0.6</strong><br/>
 Built on <code>qector-decoder-v3</code> v1.0.0 · Rust / PyO3 core<br/>
 Every correction verified against <code>H c = s (mod 2)</code>
 </p>

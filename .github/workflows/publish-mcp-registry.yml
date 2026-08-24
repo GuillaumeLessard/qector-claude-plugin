@@ -1,6 +1,6 @@
 name: Publish to MCP Registry
 
-# Triggers on version tags, e.g. v1.0.5 (must match the version in
+# Triggers on version tags, e.g. v1.0.6 (must match the version in
 # .claude-desktop-extension/manifest.json and .claude-plugin/plugin.json).
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to (re-)publish, e.g. v1.0.5"
+        description: "Tag to (re-)publish, e.g. v1.0.6"
         required: true
 
 permissions:

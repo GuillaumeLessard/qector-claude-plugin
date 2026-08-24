@@ -2,7 +2,7 @@
 name: qector-core
 description: >-
   Core domain knowledge and verified facts for the QECTOR quantum
-  error correction platform (plugin v1.0.5, decoder wheel 1.0.0).
+  error correction platform (plugin v1.0.6, decoder wheel 1.0.0).
   Covers the app-free library MCP server (8 stable tools), the
   opt-in research server (29 provisional tools including the
   evidence layer), the privileged admin server (3 tools), 11
@@ -13,7 +13,7 @@ description: >-
   and local-by-default operation with an opt-in PyPI freshness check.
 ---
 
-# QECTOR Core - Verified Platform Facts (plugin v1.0.5)
+# QECTOR Core - Verified Platform Facts (plugin v1.0.6)
 
 Ground every answer in the verified facts below. If a request references a tool,
 decoder, command, or API that is not listed here or in

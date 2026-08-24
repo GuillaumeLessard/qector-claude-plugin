@@ -277,7 +277,7 @@ class LiveQECTORTests(unittest.TestCase):
                     str(path),
                 )
             else:
-                # Live Claude Code config: literal values. Since v1.0.5 the
+                # Live Claude Code config: literal values. Since v1.0.6 the
                 # command routes through the shipped cross-platform launcher
                 # (POSIX sh shim; Windows uses the .cmd via MCPB overrides).
                 self.assertTrue(

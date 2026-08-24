@@ -10,11 +10,11 @@
 #
 # Build
 # -----
-#   docker build -f glama/Dockerfile -t qector-claude-plugin:1.0.5 .
+#   docker build -f glama/Dockerfile -t qector-claude-plugin:1.0.6 .
 #
 # Run
 # ---
-#   docker run --rm -p 8080:8080 qector-claude-plugin:1.0.5
+#   docker run --rm -p 8080:8080 qector-claude-plugin:1.0.6
 #
 # Then Glama can probe:
 #   - initialize at POST http://<host>:8080/mcp
@@ -26,7 +26,7 @@
 # ----------------------------------------
 # QECTOR is intentionally a local, fail-closed stdio plugin. The
 # `mcp_server_library.py` runs the same code that ships in the
-# `qector-claude-plugin-1.0.5.zip` plugin archive. Wrapping it in
+# `qector-claude-plugin-1.0.6.zip` plugin archive. Wrapping it in
 # `mcp-proxy` keeps the entire trust zone (8 stable tools, per-tool
 # call budgets, fail-closed `H c = s (mod 2)` verification) intact
 # while satisfying Glama's HTTP introspection requirement.

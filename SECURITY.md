@@ -6,7 +6,7 @@
 |:------|:------|
 | Plugin name | `qector` |
 | Display name | QECTOR Quantum Error Correction |
-| Version | 1.0.5 |
+| Version | 1.0.6 |
 | License | Proprietary — see [LICENSE.md](LICENSE.md) |
 | Author | Guillaume Lessard <admin@qector.store> |
 | Repository | https://github.com/GuillaumeLessard/qector-claude-plugin |
@@ -133,7 +133,7 @@ Write or Execute tools.
 
 ## Runtime Dependabot Advisories (status)
 
-The `1.0.5` release ships with `mcp==1.26.0`. GitHub's Dependabot
+The `1.0.6` release ships with `mcp==1.26.0`. GitHub's Dependabot
 flags three CVEs in that version. Each is in a code path the QECTOR
 plugin does not exercise, and the runtime wheel
 (`qector-decoder-v3==1.0.0`) does not require `mcp` at all. The

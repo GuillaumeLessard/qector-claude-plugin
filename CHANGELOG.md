@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.0.6 - 2026-08-23
+
+Claude.ai marketplace compliance and environment-agnostic setup release.
+
+- **Canonical marketplace manifests**: `marketplace.json` now uses the relative
+  same-repo plugin source (`"source": "./"`) — the form every official
+  marketplace uses — plus documented fields only (`homepage`, `repository`,
+  `keywords`, owner `url`). Removed the `userConfig` block from `plugin.json`
+  (newest, least-standard field absent from the strict sync schema); interpreter
+  pinning still works via the `QECTOR_PYTHON` environment variable.
+- **Launchers moved from `bin/` to `scripts/`**: claude.ai-hosted plugins may
+  not ship `bin/` executables (they land on PATH without appearing on the admin
+  approval surface). Both launchers now live in `scripts/` with the exec bit
+  preserved (git mode `100755`, zip attr `0o755`). All references updated:
+  `plugin.json`, `.mcp.json`, `hooks/hooks.json`, MCPB manifest (+ win32
+  override), builder whitelists, and the bundle validator.
+- **`bin/` ban guard**: `validate_plugin_bundle.py` now hard-fails if any
+  `bin/` entry appears in the plugin zip, source zip, or Desktop MCPB — the
+  directory can never regress into a release.
+- **`/qec-setup` environment-agnostic**: the command now detects sandboxed /
+  remote / cloud environments (no project checkout) and falls back to native
+  Bash diagnostics instead of dead-ending on the missing
+  `scripts/qector_system_setup.py`. It never claims the script ran when it
+  used the fallback path.
+
 ## 1.0.5 - 2026-08-23
 
 Cross-platform launcher release. Every entry point now resolves a Python 3

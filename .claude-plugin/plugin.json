@@ -1,7 +1,7 @@
 {
   "name": "qector",
   "description": "Local QECTOR quantum error correction plugin for Claude Code and Claude Desktop with strict math skills, focused agents, and qector-decoder-v3 MCP servers.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "license": "Proprietary",
   "author": {
     "name": "Guillaume Lessard",

@@ -1,4 +1,4 @@
-# QECTOR Claude Plugin User Manual (v1.0.5)
+# QECTOR Claude Plugin User Manual (v1.0.6)
 
 This public plugin provides local Claude skills, agents, commands, and app-free
 MCP servers for the QECTOR quantum-error-correction decoding engine. The
@@ -107,9 +107,9 @@ For the public GitHub source, use
 ### Prebuilt archives
 
 Canonical release archives are generated from `scripts/build_release.py`:
-`dist/qector-claude-plugin-1.0.5.zip` (Claude Code),
-`dist/qector-claude-plugin-source-1.0.5.zip` (source), and
-`dist/qector-claude-desktop-1.0.5.mcpb` (Claude Desktop), each with a
+`dist/qector-claude-plugin-1.0.6.zip` (Claude Code),
+`dist/qector-claude-plugin-source-1.0.6.zip` (source), and
+`dist/qector-claude-desktop-1.0.6.mcpb` (Claude Desktop), each with a
 `.sha256` sidecar. An optional single-skill ZIP for the claude.ai custom-skill
 uploader is still produced by `scripts/pro_pack.py --skill qector-core`.
 

@@ -1,4 +1,4 @@
-# QECTOR MCP Cheat Sheet (plugin v1.0.5)
+# QECTOR MCP Cheat Sheet (plugin v1.0.6)
 
 ## 1. Default Library Surface (`qector-library` — 8 Frozen Stable Tools)
 

@@ -1,7 +1,7 @@
 # MCP Directory Submissions — QECTOR Claude Plugin
 
 This file tracks every public directory and registry where the QECTOR
-Claude Plugin v1.0.5 has been published or is queued for submission. It
+Claude Plugin v1.0.6 has been published or is queued for submission. It
 is the single source of truth for "where is QECTOR listed?".
 
 ## Live (active, public)
@@ -9,8 +9,8 @@ is the single source of truth for "where is QECTOR listed?".
 | Directory | Identifier | URL | Method | Status | First published |
 |:----------|:-----------|:----|:-------|:-------|:----------------|
 | Claude Code marketplace (QECTOR's own marketplace) | `qector@qector-tools` (the plugin handle on the QECTOR marketplace) | `https://github.com/GuillaumeLessard/qector-claude-plugin` (`.claude-plugin/marketplace.json` and `.claude-plugin/plugin.json`) | Self-hosted. Users add the marketplace with `claude plugin marketplace add GuillaumeLessard/qector-claude-plugin` and install with `claude plugin install qector@qector-tools`. | **Live today**. Works without any third-party catalog. | 2026-08-23 |
-| Official MCP Registry | `io.github.GuillaumeLessard/qector-desktop` | https://registry.modelcontextprotocol.io/v0/servers?search=GuillaumeLessard | `mcp-publisher publish` via CI workflow `.github/workflows/publish-mcp-registry.yml` on tag push | active, `isLatest: true`, `status: "active"` | 2026-08-23 (v1.0.5) |
-| GitHub Release | v1.0.5 | https://github.com/GuillaumeLessard/qector-claude-plugin/releases/tag/v1.0.5 | `gh release create` (CI auto-creates on tag push; manually uploaded extra assets) | 9 assets, all SHA-256s match `dist/` | 2026-08-23 |
+| Official MCP Registry | `io.github.GuillaumeLessard/qector-desktop` | https://registry.modelcontextprotocol.io/v0/servers?search=GuillaumeLessard | `mcp-publisher publish` via CI workflow `.github/workflows/publish-mcp-registry.yml` on tag push | active, `isLatest: true`, `status: "active"` | 2026-08-23 (v1.0.6) |
+| GitHub Release | v1.0.6 | https://github.com/GuillaumeLessard/qector-claude-plugin/releases/tag/v1.0.6 | `gh release create` (CI auto-creates on tag push; manually uploaded extra assets) | 9 assets, all SHA-256s match `dist/` | 2026-08-23 |
 | PolicyLayer (free `/v0` tier) | `com.policylayer/qector-claude-plugin` | https://policylayer.com/tools/qector-claude-plugin | Picked up automatically by PolicyLayer's periodic re-scan of the public GitHub repo | Tracked; will refresh on next re-scan cycle (currently shows v1.0.2 snapshot) | 2026-08-20 (catalog entry) |
 | Glama (mirror) | `qector-claude-plugin` | https://glama.ai/mcp/servers | Mirrors the official MCP Registry; picked up automatically | Auto-mirrored from the Registry | 2026-08-23 |
 | mcp.so (mirror) | `qector-claude-plugin` | https://mcp.so/ | Mirrors the official MCP Registry; picked up automatically | Auto-mirrored from the Registry | 2026-08-23 |
@@ -54,13 +54,13 @@ Expected (truncated):
     "server": {
       "name": "io.github.GuillaumeLessard/qector-desktop",
       "title": "QECTOR Quantum Error Correction",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "websiteUrl": "https://qector.store",
       "packages": [{
         "registryType": "mcpb",
-        "identifier": "https://github.com/GuillaumeLessard/qector-claude-plugin/releases/download/v1.0.5/qector-claude-desktop-1.0.5.mcpb",
-        "version": "1.0.5",
-        "fileSha256": "dc529600bae2f4ab1f13921737f20ded89fb41e5ce99dcabce5c2bc8ae0ed4c6",
+        "identifier": "https://github.com/GuillaumeLessard/qector-claude-plugin/releases/download/v1.0.6/qector-claude-desktop-1.0.6.mcpb",
+        "version": "1.0.6",
+        "fileSha256": "5b6b4c247ef6159dc92441023fd08a0dc800894a220ba8a61b4143bde92190ff",
         "transport": { "type": "stdio" }
       }]
     },
@@ -104,4 +104,4 @@ faster updates.
   Registry within 24 hours of any change. There is no separate
   submission to make.
 - PulseMCP reopens "until mid-August" per their own banner; that
-  language was on their submit page as of the v1.0.5 cut.
+  language was on their submit page as of the v1.0.6 cut.

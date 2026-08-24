@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "qector",
   "display_name": "QECTOR Quantum Error Correction",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Local, fail-closed quantum error correction tools for Claude Desktop.",
   "long_description": "QECTOR provides a local Quantum Error Correction (QEC) tool surface for Claude Desktop. The default safe profile exposes eight stable tools for decoding, code construction, threshold sweeps, license inspection, and runtime compatibility. Every returned correction is verified against the parity-check relation H c = s (mod 2).\n\nThe default path uses local stdio and makes no network request. An explicit PyPI freshness check is available only through opt-in compatibility tool arguments; it sends no QEC workload data. Research and administrative surfaces are separate opt-in MCP servers and are not bundled into this safe Desktop extension.",
   "author": {

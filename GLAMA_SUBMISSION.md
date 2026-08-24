@@ -1,4 +1,4 @@
-# Glama submission — QECTOR Claude Plugin v1.0.5
+# Glama submission — QECTOR Claude Plugin v1.0.6
 
 ## Why Glama
 
@@ -67,7 +67,7 @@ parity-check relation H c = s (mod 2) before being returned.
 Identification
 - name: qector
 - display_name: QECTOR Quantum Error Correction
-- version: 1.0.5
+- version: 1.0.6
 - license: Proprietary
 - author: Guillaume Lessard <admin@qector.store>
 - repository: https://github.com/GuillaumeLessard/qector-claude-plugin
@@ -116,8 +116,8 @@ publishes the entry.
 ### Build locally to verify
 
 ```bash
-docker build -f glama/Dockerfile -t qector-claude-plugin:1.0.5 .
-docker run --rm -p 8080:8080 qector-claude-plugin:1.0.5
+docker build -f glama/Dockerfile -t qector-claude-plugin:1.0.6 .
+docker run --rm -p 8080:8080 qector-claude-plugin:1.0.6
 # in another shell:
 curl -X POST http://127.0.0.1:8080/mcp \
   -H 'Content-Type: application/json' \
@@ -129,7 +129,7 @@ curl -X POST http://127.0.0.1:8080/mcp \
 ```
 
 The response should include the server identity:
-`name: "qector-library"`, `version: "1.0.5"`.
+`name: "qector-library"`, `version: "1.0.6"`.
 
 Then:
 
@@ -166,9 +166,9 @@ score, but the link works the moment the page is live.)
 
 ## Submission checklist
 
-- [x] Dockerfile builds locally with `docker build -f glama/Dockerfile -t qector-claude-plugin:1.0.5 .`
+- [x] Dockerfile builds locally with `docker build -f glama/Dockerfile -t qector-claude-plugin:1.0.6 .`
 - [x] Container starts on port 8080 and exposes `/mcp`
-- [x] `initialize` returns the qector-library server identity at version 1.0.5
+- [x] `initialize` returns the qector-library server identity at version 1.0.6
 - [x] `tools/list` returns the 8 stable tools
 - [x] `mcp_server_library.py` is the same code that ships in the public plugin zip
 - [x] No proprietary source files in the build context

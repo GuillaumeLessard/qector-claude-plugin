@@ -1,4 +1,4 @@
-# Anthropic Marketplace Submission — QECTOR Claude Plugin v1.0.5
+# Anthropic Marketplace Submission — QECTOR Claude Plugin v1.0.6
 
 ## Two Anthropic marketplaces — choose both
 
@@ -96,7 +96,7 @@ RESOURCE_LIMIT.
 Identification
 - name: qector
 - display_name: QECTOR Quantum Error Correction
-- version: 1.0.5
+- version: 1.0.6
 - license: Proprietary
 - author: Guillaume Lessard <admin@qector.store>
 - repository: https://github.com/GuillaumeLessard/qector-claude-plugin
@@ -117,15 +117,15 @@ Install
 - Claude Code marketplace: claude plugin marketplace add
   GuillaumeLessard/qector-claude-plugin && claude plugin install
   qector@qector-tools
-- Claude Desktop: qector-claude-desktop-1.0.5.mcpb is the artifact
+- Claude Desktop: qector-claude-desktop-1.0.6.mcpb is the artifact
   Claude Desktop's MCP Registry serves automatically. Manual install
   via python scripts/configure_claude_desktop.py --confirm.
 
-Canonical artifacts (v1.0.5)
-- qector-claude-plugin-1.0.5.zip          e7bf953e... (Claude Code plugin)
-- qector-claude-plugin-source-1.0.5.zip   29db3522... (public source)
-- qector-claude-desktop-1.0.5.mcpb        dc529600... (Desktop safe MCPB)
-- qector-claude-plugin-1.0.5.sbom.json    (SPDX-2.3 SBOM)
+Canonical artifacts (v1.0.6)
+- qector-claude-plugin-1.0.6.zip          e1660a45... (Claude Code plugin)
+- qector-claude-plugin-source-1.0.6.zip   e0e04d94... (public source)
+- qector-claude-desktop-1.0.6.mcpb        5b6b4c24... (Desktop safe MCPB)
+- qector-claude-plugin-1.0.6.sbom.json    (SPDX-2.3 SBOM)
 - SHA256SUMS, provenance.json, per-file .sha256 sidecars
 ```
 
@@ -154,7 +154,7 @@ in-app form serializes to this and the read-only mirror at
 ```
 
 > The `source.sha` is the current `main` HEAD as of 2026-08-23.
-> Re-pin to the `v1.0.5` release commit (`34eabe720571b3f9daf6bb06ad149c0153687d84`)
+> Re-pin to the `v1.0.6` release commit (`34eabe720571b3f9daf6bb06ad149c0153687d84`)
 > if you want a fixed-version pin. The community marketplace syncs
 > nightly and re-pins to the latest `main` HEAD by default.
 
@@ -172,28 +172,28 @@ inclusion. The key signals the official maintainer looks for:
   Identification block, Trust Boundaries, Tool Risk Classification,
   Static Scanner Notes, and Runtime Dependabot Advisories sections)
 - Stable, maintained surface with versioned releases (we have v1.0.1,
-  v1.0.2, v1.0.5 with per-artifact SHA-256 sidecars)
+  v1.0.2, v1.0.6 with per-artifact SHA-256 sidecars)
 - License clearly stated (Proprietary, with a per-tier license
   breakdown in `LICENSE.md` and the QEC backend license in
   `release-manifest.json`)
 - No proprietary source files in the public tree (verified — no
   `src/*.rs`)
 - Provenance and SBOM at every release (we ship
-  `provenance.json`, `qector-claude-plugin-1.0.5.sbom.json`, and
+  `provenance.json`, `qector-claude-plugin-1.0.6.sbom.json`, and
   per-artifact `.sha256` sidecars)
 - MCP Registry entry live (we are at
-  `io.github.GuillaumeLessard/qector-desktop`, v1.0.5, `active`,
+  `io.github.GuillaumeLessard/qector-desktop`, v1.0.6, `active`,
   `isLatest: true`)
 
 **Recommended request email template** (one paragraph, signed):
 
 ```
-Subject: Inclusion request — QECTOR Claude Plugin v1.0.5
+Subject: Inclusion request — QECTOR Claude Plugin v1.0.6
 
 Hi Anthropic team,
 
 I'd like to nominate the QECTOR Claude Plugin
-(https://github.com/GuillaumeLessard/qector-claude-plugin, v1.0.5)
+(https://github.com/GuillaumeLessard/qector-claude-plugin, v1.0.6)
 for inclusion in anthropics/claude-plugins-official.
 
 QECTOR is a local, fail-closed quantum error correction integration
@@ -209,7 +209,7 @@ request.
   (active, isLatest:true)
 - License: Proprietary; the qector-decoder-v3 backend is free for
   personal, academic, educational, and non-commercial research
-- Repo activity: 1.0.1, 1.0.2, 1.0.5 tagged; the current main HEAD is
+- Repo activity: 1.0.1, 1.0.2, 1.0.6 tagged; the current main HEAD is
   45372d95
 
 If you need anything else to evaluate the submission, let me know.

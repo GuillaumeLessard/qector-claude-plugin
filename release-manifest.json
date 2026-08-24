@@ -2,7 +2,7 @@
   "schema_version": 1,
   "release": {
     "name": "qector-claude-plugin",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "license": "Proprietary",
     "repository": "https://github.com/GuillaumeLessard/qector-claude-plugin"
   },
@@ -21,7 +21,7 @@
     "claude_desktop": {
       "default_profile": "safe",
       "default_servers": ["qector-desktop-mcp"],
-      "artifact": "qector-claude-desktop-1.0.5.mcpb"
+      "artifact": "qector-claude-desktop-1.0.6.mcpb"
     },
     "claude_web_mobile": {
       "bundled_connector": false,

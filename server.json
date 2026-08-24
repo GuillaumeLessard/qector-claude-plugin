@@ -4,13 +4,13 @@
   "name": "io.github.GuillaumeLessard/qector-desktop",
   "packages": [
     {
-      "fileSha256": "dc529600bae2f4ab1f13921737f20ded89fb41e5ce99dcabce5c2bc8ae0ed4c6",
-      "identifier": "https://github.com/GuillaumeLessard/qector-claude-plugin/releases/download/v1.0.5/qector-claude-desktop-1.0.5.mcpb",
+      "fileSha256": "5b6b4c247ef6159dc92441023fd08a0dc800894a220ba8a61b4143bde92190ff",
+      "identifier": "https://github.com/GuillaumeLessard/qector-claude-plugin/releases/download/v1.0.6/qector-claude-desktop-1.0.6.mcpb",
       "registryType": "mcpb",
       "transport": {
         "type": "stdio"
       },
-      "version": "1.0.5"
+      "version": "1.0.6"
     }
   ],
   "repository": {
@@ -18,6 +18,6 @@
     "url": "https://github.com/GuillaumeLessard/qector-claude-plugin"
   },
   "title": "QECTOR Quantum Error Correction",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "websiteUrl": "https://qector.store"
 }
