@@ -147,13 +147,13 @@ SETUP_PROFILES: dict[str, tuple[str, ...]] = {
     "production": (
         "numpy>=1.26,<2.3",
         "qector-decoder-v3==1.0.0",
-        "mcp==1.26.0",
+        "mcp>=1.28.1,<2",
         "cryptography>=48.0.1,<50",
     ),
     "developer": (
         "numpy>=1.26,<2.3",
         "qector-decoder-v3==1.0.0",
-        "mcp==1.26.0",
+        "mcp>=1.28.1,<2",
         "cryptography>=48.0.1,<50",
         "pytest",
         "ruff",

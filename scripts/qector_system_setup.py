@@ -75,7 +75,11 @@ def run_setup(confirm: bool = False, install_deps: bool = True) -> dict[str, Any
     audit = audit_environment()
 
     actions_planned = [
-        "Install / verify production requirements: numpy>=1.26,<2.3, qector-decoder-v3==1.0.0, mcp==1.26.0, cryptography>=48.0.1,<50",
+        (
+            "Install / verify production requirements: "
+            "numpy>=1.26,<2.3, qector-decoder-v3==1.0.0, "
+            "mcp>=1.28.1,<2, cryptography>=48.0.1,<50"
+        ),
         "Create artifacts/ evidence directory",
         "Run live decoder syndrome faithfulness test (H c = s mod 2)",
     ]
@@ -88,8 +92,9 @@ def run_setup(confirm: bool = False, install_deps: bool = True) -> dict[str, Any
             "actions_planned": actions_planned,
             "diagnostics": audit,
             "message": (
-                "SAFETY GATE: Read-only inspection complete. No changes were made. "
-                "Re-run with --confirm (or set confirm=True in MCP) to grant user approbation."
+                "SAFETY GATE: Read-only inspection complete. "
+                "No changes were made. Re-run with --confirm "
+                "(or set confirm=True in MCP) to grant user approbation."
             ),
         }
 

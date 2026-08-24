@@ -18,7 +18,8 @@ from pathlib import Path
 os.environ["QECTOR_SILENT"] = "1"
 
 EXPECTED_QECTOR = "1.0.0"
-EXPECTED_MCP = "1.26.0"
+EXPECTED_MCP_MIN = "1.28.1"
+EXPECTED_MCP_MAX = "2"
 EXPECTED_TOOLS = {
     "list_code_families",
     "list_decoders",
@@ -39,6 +40,28 @@ def _version(name: str) -> str | None:
         return None
 
 
+def _parse_version(version: str) -> tuple[int, ...]:
+    parts: list[int] = []
+    for chunk in version.split("."):
+        digits = "".join(c for c in chunk if c.isdigit())
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts)
+
+
+def _mcp_satisfies(version: str | None) -> bool:
+    if version is None:
+        return False
+    try:
+        parsed = _parse_version(version)
+        min_parsed = _parse_version(EXPECTED_MCP_MIN)
+        max_parsed = _parse_version(EXPECTED_MCP_MAX)
+        return parsed >= min_parsed and parsed < max_parsed
+    except Exception:
+        return False
+
+
 def main() -> int:
     failures: list[str] = []
     qector_version = _version("qector-decoder-v3")
@@ -47,9 +70,9 @@ def main() -> int:
         failures.append(
             f"qector-decoder-v3=={EXPECTED_QECTOR} required; found {qector_version or 'missing'}"
         )
-    if mcp_version != EXPECTED_MCP:
+    if not _mcp_satisfies(mcp_version):
         failures.append(
-            f"mcp=={EXPECTED_MCP} required; found {mcp_version or 'missing'}"
+            f"mcp>={EXPECTED_MCP_MIN},<2 required; found {mcp_version or 'missing'}"
         )
 
     try:
