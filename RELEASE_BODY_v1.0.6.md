@@ -147,9 +147,9 @@ sidecar files, and the MCP Registry descriptor, and the registry entry's
 
 | Artifact | SHA-256 |
 |:---------|:--------|
-| `qector-claude-desktop-1.0.6.mcpb` | `fdab720ab3914b3a7e8da23a6706f99337acfb20c7709ebbcd981cf8c5d10cd6` |
-| `qector-claude-plugin-1.0.6.zip` | `ad80d8ae7b67196228b5af1e83585f353c37d4754fdb4f9308568437aa5a332d` |
-| `qector-claude-plugin-source-1.0.6.zip` | `5dcf83726c9e55ac5e89236fe81171fe597af3a30bd949cc20853d3218046792` |
+| `qector-claude-desktop-1.0.6.mcpb` | `fbf9bb9a1254d4867093279a07b715041862f8c9ce71aff1201409b6cccc616c` |
+| `qector-claude-plugin-1.0.6.zip` | `46ae976105d9813ef615985f30fe23cd76cf2ca11d63ee5de86758e4402903c5` |
+| `qector-claude-plugin-source-1.0.6.zip` | `4370c322b9e2fa083f841ee7a15e1468b6f991702db56d4779bd8ddb530def11` |
 
 **Verification summary:** 832/832 source checks · bundle ALL CLEAR · 15/15
 release metadata · 74/74 unit tests (+48 subtests) · `claude plugin validate

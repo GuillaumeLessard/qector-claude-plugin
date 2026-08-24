@@ -1,10 +1,10 @@
 {
   "artifacts": {
-    "qector-claude-desktop-1.0.6.mcpb": "fdab720ab3914b3a7e8da23a6706f99337acfb20c7709ebbcd981cf8c5d10cd6",
-    "qector-claude-plugin-1.0.6.zip": "ad80d8ae7b67196228b5af1e83585f353c37d4754fdb4f9308568437aa5a332d",
-    "qector-claude-plugin-source-1.0.6.zip": "5dcf83726c9e55ac5e89236fe81171fe597af3a30bd949cc20853d3218046792"
+    "qector-claude-desktop-1.0.6.mcpb": "fbf9bb9a1254d4867093279a07b715041862f8c9ce71aff1201409b6cccc616c",
+    "qector-claude-plugin-1.0.6.zip": "46ae976105d9813ef615985f30fe23cd76cf2ca11d63ee5de86758e4402903c5",
+    "qector-claude-plugin-source-1.0.6.zip": "4370c322b9e2fa083f841ee7a15e1468b6f991702db56d4779bd8ddb530def11"
   },
-  "git_commit": "781d51f8ec6cea3a62186e8a48862f0dd2190fed",
+  "git_commit": "87cca2e41d2eb301ecf72cde7c1c0d4645e41663",
   "release": {
     "evidence": {
       "external_proof_suite": {
