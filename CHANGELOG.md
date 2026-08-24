@@ -2,6 +2,8 @@
 
 ## 1.0.6 - 2026-08-23
 
+**QECTOR v1.0.6 post-release validation**: CI/validate pipelines confirmed passing (release metadata 15/15, source structure 832/832, unit tests 74/74, bundle checksums 41/41, deterministic rebuild SHA-256 synced across mcpb/zip/sbom/provenance.json/server.json). MCP pinned to >=1.28.1,<2 resolving 3 CVEs (GHSA-hvrp-rf83-w775 / GHSA-jpw9-pfvf-9f58 / GHSA-vj7q-gjh5-988w); Claude Desktop extension fix for `${__dirname}` path-with-spaces disconnect; `C:\qector` junction for no-space alias; `QECTOR_PYTHON` env var pin.
+
 Claude.ai marketplace compliance and environment-agnostic setup release.
 
 - **Canonical marketplace manifests**: `marketplace.json` now uses the relative
