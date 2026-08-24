@@ -26,7 +26,7 @@ architectures via Claude.
 3. **Verified tool names only** (run `tools/list` first);
    zero egress - never upload `.stim` / `.npy` / parity
    matrices.
-4. MCP SDK: production pins `mcp==1.26.0` and uses the
+4. MCP SDK: production pins `mcp>=1.28.1,<2` and uses the
    low-level `mcp.server.Server` adapter. Other SDK versions
    are unsupported until tested.
 

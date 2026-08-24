@@ -14,7 +14,7 @@ python -m pip install -r requirements.txt
 ```
 
 The production library path requires `qector-decoder-v3==1.0.0`,
-`mcp==1.26.0`, and a compatible `cryptography` release. A wheel outside the
+`mcp>=1.28.1,<2`, and a compatible `cryptography` release. A wheel outside the
 reviewed `[1.0.0, 1.1.0)` window writes a stderr warning; set
 `QECTOR_MCP_STRICT_VERSION=1` to refuse to start instead. Decode results
 remain fail-closed against `H c = s (mod 2)` regardless.

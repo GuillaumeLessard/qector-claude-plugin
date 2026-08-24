@@ -133,11 +133,13 @@ Write or Execute tools.
 
 ## Runtime Dependabot Advisories (status)
 
-The `1.0.6` release ships with `mcp==1.26.0`. GitHub's Dependabot
-flags three CVEs in that version. Each is in a code path the QECTOR
-plugin does not exercise, and the runtime wheel
-(`qector-decoder-v3==1.0.0`) does not require `mcp` at all. The
-exposure of each is therefore **not applicable** to this release:
+The `1.0.6` release ships with `mcp>=1.28.1,<2`, which is patched
+against three CVEs GitHub's Dependabot previously flagged against the
+earlier `mcp==1.26.0` pin. Each was in a code path the QECTOR plugin
+does not exercise, and the runtime wheel (`qector-decoder-v3==1.0.0`)
+does not require `mcp` at all, so exposure was **not applicable** to
+this release even before the bump. The pin was raised anyway as
+defense-in-depth so the dependency itself carries no open advisory:
 
 | CVE | Title | Why it does not apply to QECTOR |
 |:----|:------|:--------------------------------|
@@ -145,6 +147,6 @@ exposure of each is therefore **not applicable** to this release:
 | CVE-2026-52869 | MCP Python SDK: HTTP transports serve session requests without verifying the authenticated principal | QECTOR ships no HTTP MCP transport. The four MCP servers all use `stdio` transport; the only outbound HTTP is the explicit opt-in PyPI freshness check, which is a plain `urllib` GET with a fixed URL. |
 | CVE-2026-52870 | MCP Python SDK: Experimental task handlers allow any client to access and cancel other clients' tasks | QECTOR does not register any experimental task handlers. The `qector_mcp_contract.py` envelope does not expose a task-cancel surface. |
 
-If a future release adds an HTTP or WebSocket transport, the
-corresponding advisory will be re-evaluated and a bumped `mcp` pin
-will be issued in a minor version bump of the QECTOR plugin.
+All three alerts are resolved as of `mcp>=1.28.1,<2`. If a future
+release adds an HTTP or WebSocket transport, the corresponding
+advisory will be re-evaluated independently of this pin.

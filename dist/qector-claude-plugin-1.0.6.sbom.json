@@ -3,15 +3,15 @@
   "annotations": [
     {
       "annotationType": "OTHER",
-      "comment": "qector-claude-desktop-1.0.6.mcpb sha256=94fe59c6a224b26ffda1ff88822a192a6d2c9d842d686755b9225f4a949ffec4"
+      "comment": "qector-claude-desktop-1.0.6.mcpb sha256=d7810d473afed412d63b92d8955d76dc4ee5596e637b6c667c39161ba227c533"
     },
     {
       "annotationType": "OTHER",
-      "comment": "qector-claude-plugin-1.0.6.zip sha256=5cea1d3927bf2370e472519714cd40f2aaf1be30443a0158e03aa8e7dc7c12b8"
+      "comment": "qector-claude-plugin-1.0.6.zip sha256=698eb122e4a0819b18851f59b46ac761242aaad564546e6b62c176ef529b0960"
     },
     {
       "annotationType": "OTHER",
-      "comment": "qector-claude-plugin-source-1.0.6.zip sha256=2f773fcd80e2ca40c75c1f8fac79fcf24b690c46da60b6138cbf7311785db545"
+      "comment": "qector-claude-plugin-source-1.0.6.zip sha256=19a6e6288491847d061f8102a853eb59c7c8f5e89afd4de00644a815f321de69"
     }
   ],
   "dataLicense": "CC0-1.0",
@@ -34,7 +34,7 @@
       "SPDXID": "SPDXRef-MCP",
       "licenseConcluded": "NOASSERTION",
       "name": "mcp",
-      "versionInfo": "1.26.0"
+      "versionInfo": ">=1.28.1,<2"
     }
   ],
   "spdxVersion": "SPDX-2.3"

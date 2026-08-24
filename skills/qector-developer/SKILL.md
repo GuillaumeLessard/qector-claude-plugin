@@ -33,7 +33,7 @@ name.
 
 ## MCP SDK contract
 
-- The bundled library server pins `mcp==1.26.0` and uses the
+- The bundled library server pins `mcp>=1.28.1,<2` and uses the
   low-level `mcp.server.Server` adapter. Other SDK versions are
   unsupported until separately tested; do not call unpinned
   internals.

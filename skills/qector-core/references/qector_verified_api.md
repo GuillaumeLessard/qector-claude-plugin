@@ -152,6 +152,6 @@ contract.
 
 ## MCP SDK note
 
-The production plugin pins `mcp==1.26.0` and uses the low-level
+The production plugin pins `mcp>=1.28.1,<2` and uses the low-level
 `mcp.server.Server` adapter, which gives the server explicit tool schemas and
 error envelopes. Other SDK versions are unsupported until separately tested.

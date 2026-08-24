@@ -148,7 +148,7 @@ matches the Desktop bundle byte for byte.
 | Python | 3.9 through 3.13, enforced by the shipped launchers |
 | Platforms | Windows, macOS, Linux |
 | Backend engine | `qector-decoder-v3==1.0.0`, native Rust / PyO3 wheels |
-| MCP runtime | `mcp==1.26.0` |
+| MCP runtime | `mcp>=1.28.1,<2` |
 | Scientific stack | `numpy>=1.26,<2.3`, `cryptography>=48.0.1,<50` |
 | Network | none by default; one explicit PyPI freshness check exists |
 | GPU | optional at most; no portable performance claims are published |
