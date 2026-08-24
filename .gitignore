@@ -47,4 +47,28 @@ QectorDecoder_v3_Reference_Manual_v1.0.0.pdf
 # Internal onboarding/sales decks are dev-internal by policy (see CHANGELOG).
 presentations/
 
+# Python bytecode caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Old/backup files
+*.old
+*.bak
+*.orig
+*.rej
+*.swp
+*.swo
+*~
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Runtime artifacts (hashed evidence files)
+artifacts/qector_threshold_*.json
+artifacts/qector_threshold_*.json.sha256
+
 
