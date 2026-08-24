@@ -70,6 +70,16 @@ Who this release affects:
   instructs Claude to **never claim the script ran** when it used the
   fallback — honest reporting by design. Commit `c49b34f`.
 
+### 3. Dependency security hardening
+
+- **MCP SDK pinned to `mcp>=1.28.1,<2`.** Bumps the `mcp` runtime from
+  `1.26.0` to the patched `1.x` line, fixing three high-severity GitHub
+  Security Advisories: GHSA-hvrp-rf83-w775 / CVE-2026-52870, GHSA-jpw9-pfvf-9f58
+  / CVE-2026-52869, GHSA-vj7q-gjh5-988w / CVE-2026-59950. The `<2` upper bound
+  keeps the build on `1.x`; `2.0.0` removes the WebSocket transport and renames
+  core symbols this codebase imports directly. Commits `7b1a6b4`, `176247e`,
+  `af11a03`.
+
 ---
 
 ## Interpreter pinning note (no action unless you set it in v1.0.5)
@@ -137,9 +147,9 @@ sidecar files, and the MCP Registry descriptor, and the registry entry's
 
 | Artifact | SHA-256 |
 |:---------|:--------|
-| `qector-claude-desktop-1.0.6.mcpb` | `5b6b4c247ef6159dc92441023fd08a0dc800894a220ba8a61b4143bde92190ff` |
-| `qector-claude-plugin-1.0.6.zip` | `e1660a45e87e62d5b74f561273ff7cac2a5367a70b8418f1f9c80ea69591de7f` |
-| `qector-claude-plugin-source-1.0.6.zip` | `e0e04d94546799acda0d8f3258bc8911b8125c4bf2b78bb80c04d3e49588dc59` |
+| `qector-claude-desktop-1.0.6.mcpb` | `18f2ec403fe45c747644fb2b3b74018c5cee872945553b1adfb321e2f3d6a20a` |
+| `qector-claude-plugin-1.0.6.zip` | `3d8513ca4c42aff88e712839b1db5f7b10bd54ffdab240eb38ca7872de08d833` |
+| `qector-claude-plugin-source-1.0.6.zip` | `32685a6cd0a52e65ff9e9e542af1e5c4afb3a9873fbc8a139ff4f59423efd049` |
 
 **Verification summary:** 832/832 source checks · bundle ALL CLEAR · 15/15
 release metadata · 74/74 unit tests (+48 subtests) · `claude plugin validate
@@ -166,6 +176,9 @@ extension UI, restart when prompted.
 | `09ca506` | Drop unknown license fields (strict sync) |
 | `2bd1aa4` | Launchers `bin/` → `scripts/`, `bin/` ban guard |
 | `c49b34f` | `/qec-setup` environment-agnostic fallback |
+| `7b1a6b4` | Bump `mcp` to `>=1.28.1,<2` (3 GHSA fixes) |
+| `176247e` | Propagate `mcp` pin to `runtime_check`/`system_setup`/`bench` |
+| `650f5aa` | Rebuild `dist/` + `server.json` from patched HEAD |
 | `af8a2ac` | v1.0.6 release commit |
 
 ---

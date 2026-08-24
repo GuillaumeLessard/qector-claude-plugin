@@ -132,9 +132,9 @@ identical, so the hashes below are stable forever.
 
 | Artifact | SHA-256 |
 |:---------|:--------|
-| `dist/qector-claude-plugin-1.0.6.zip` | `e1660a45e87e62d5b74f561273ff7cac2a5367a70b8418f1f9c80ea69591de7f` |
-| `dist/qector-claude-plugin-source-1.0.6.zip` | `e0e04d94546799acda0d8f3258bc8911b8125c4bf2b78bb80c04d3e49588dc59` |
-| `dist/qector-claude-desktop-1.0.6.mcpb` | `5b6b4c247ef6159dc92441023fd08a0dc800894a220ba8a61b4143bde92190ff` |
+| `dist/qector-claude-plugin-1.0.6.zip` | `3d8513ca4c42aff88e712839b1db5f7b10bd54ffdab240eb38ca7872de08d833` |
+| `dist/qector-claude-plugin-source-1.0.6.zip` | `32685a6cd0a52e65ff9e9e542af1e5c4afb3a9873fbc8a139ff4f59423efd049` |
+| `dist/qector-claude-desktop-1.0.6.mcpb` | `18f2ec403fe45c747644fb2b3b74018c5cee872945553b1adfb321e2f3d6a20a` |
 
 Per artifact sidecars, a combined `SHA256SUMS`, an SPDX 2.3 SBOM, and
 provenance records binding each file to its release commit and runtime
