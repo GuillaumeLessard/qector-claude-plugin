@@ -13,32 +13,54 @@ and the default configuration performs no network request of any kind.
 > **4 MCP servers · 8 stable / 29 research / 3 admin tools · 11 commands
 > · 5 agents · 28 skills · zero egress by default**
 
+> **Latest release — [v1.0.6](RELEASE_NOTES_v1.0.6.md)** · Claude.ai
+> marketplace compliance (launchers to `scripts/`, canonical manifests),
+> environment-agnostic `/qec-setup`, deterministic artifacts. See the
+> [release announcement](RELEASE_BODY_v1.0.6.md).
+
 ---
 
 ## Why v1.0.6
 
-Version 1.0.4 assumed the operating system would hand it a usable
-interpreter, and the modern world no longer does: macOS, Debian, Ubuntu,
-and Fedora ship `python3` without bare `python`, while Windows adds its
-own resolver quirks. Version 1.0.6 retires that assumption entirely.
+Version 1.0.6 completes the portability and compliance story that 1.0.5
+started, then layers on marketplace correctness and universal setup. Two
+problems drove it: modern operating systems no longer hand you Python on a
+predictable command name (macOS, Debian, Ubuntu, and Fedora ship `python3`
+without bare `python`, while Windows adds its own resolver quirks), and the
+claude.ai marketplace approval pipeline rejects plugins that ship
+executables in `bin/`. This release retires both failure classes, permanently.
 
-* **A universal launcher ships inside every artifact.** The plugin
-  archive, the source distribution, and the Desktop bundle all carry
-  `scripts/qector-python` (POSIX sh) and `scripts/qector-python.cmd` (Windows).
-* **Resolution is governed, not guessed.** An administrator pinned
-  interpreter wins first, then `python3`, then `python`, with the Windows
-  py launcher tried ahead of them all.
-* **The supported window is enforced, not documented.** Only Python 3.9
+**1. A universal, compliant launcher ships inside every artifact.**
+
+* The plugin archive, the source distribution, and the Desktop bundle all
+  carry `scripts/qector-python` (POSIX sh) and `scripts/qector-python.cmd`
+  (Windows). They live in `scripts/`, not `bin/`: claude.ai-hosted plugins
+  may not ship `bin/` executables because they land on PATH without ever
+  appearing on the admin approval surface. A validator now hard-fails any
+  build that reintroduces `bin/`.
+* Resolution is governed, not guessed. An administrator pinned interpreter
+  wins first, then `python3`, then `python`, with the Windows `py` launcher
+  tried ahead of them all.
+* The supported window is enforced, not documented. Only Python 3.9
   through 3.13 executes, matching the published native wheel matrix; an
   out of range machine receives precise remediation guidance instead of
   a deep import crash.
-* **Pinning is first class on both surfaces.** Claude Code prompts via
-  user configuration and Claude Desktop via bundle configuration; your
-  choice reaches the runtime as `QECTOR_PYTHON` and always supersedes
-  discovery.
-* **Windows packaging is handled natively.** Platform overrides select
-  the command shim inside the Desktop bundle, while bundled runtime
-  builds take full control of interpreter selection.
+* Pinning is first class on both surfaces. Set `QECTOR_PYTHON` to an
+  absolute interpreter path and every launcher honors it above discovery.
+
+**2. The marketplace surface is canonical.**
+
+Both `plugin.json` and `marketplace.json` use only documented fields and a
+relative same-repo plugin source — the form every official marketplace uses
+and the only form every sync path can resolve. The Desktop MCPB carries a
+`win32` platform override so Windows always selects the `.cmd` launcher.
+
+**3. Setup works in every environment.**
+
+`/qec-setup` detects sandboxed and remote environments (claude.ai code
+execution, Cowork, containers without a project checkout) and falls back to
+native diagnostics instead of dead ending on a missing local script — and it
+reports honestly which path it used.
 
 ## Platform support
 
@@ -111,7 +133,7 @@ identical, so the hashes below are stable forever.
 | Artifact | SHA-256 |
 |:---------|:--------|
 | `dist/qector-claude-plugin-1.0.6.zip` | `e1660a45e87e62d5b74f561273ff7cac2a5367a70b8418f1f9c80ea69591de7f` |
-| `dist/qector-claude-plugin-source-1.0.6.zip` | `e0e04d94a85b53c2af4f29fb35413d11b91932688cd54c558855d1ae279acede` |
+| `dist/qector-claude-plugin-source-1.0.6.zip` | `e0e04d94546799acda0d8f3258bc8911b8125c4bf2b78bb80c04d3e49588dc59` |
 | `dist/qector-claude-desktop-1.0.6.mcpb` | `5b6b4c247ef6159dc92441023fd08a0dc800894a220ba8a61b4143bde92190ff` |
 
 Per artifact sidecars, a combined `SHA256SUMS`, an SPDX 2.3 SBOM, and
@@ -148,7 +170,7 @@ the network stance in [PRIVACY.md](PRIVACY.md).
 |:---------|:-----|
 | User manual | [docs/User_Manual.md](docs/User_Manual.md) |
 | MCP API reference | [MCP_API.md](MCP_API.md) |
-| v1.0.6 release announcement | [RELEASE_ANNOUNCEMENT_v1.0.6.md](RELEASE_ANNOUNCEMENT_v1.0.6.md) |
+| v1.0.6 release announcement | [RELEASE_BODY_v1.0.6.md](RELEASE_BODY_v1.0.6.md) |
 | Release notes | [RELEASE_NOTES_v1.0.6.md](RELEASE_NOTES_v1.0.6.md) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
 | Desktop setup | [CLAUDE_DESKTOP.md](CLAUDE_DESKTOP.md) |
