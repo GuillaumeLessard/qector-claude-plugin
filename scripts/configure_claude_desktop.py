@@ -377,12 +377,27 @@ def configure_settings_connector_extension(
     # adapter's safe profile. Developer MCP configuration may opt into the
     # separately registered research/admin trust zones.
     manifest_data["server"]["entry_point"] = "mcp/mcp_server_desktop.py"
-    manifest_data["server"]["mcp_config"]["command"] = py_path
+    manifest_data["server"]["mcp_config"]["command"] = "python"
     manifest_data["server"]["mcp_config"]["args"] = [
         "${__dirname}/mcp/mcp_server_desktop.py",
         "--profile",
         "safe",
     ]
+    manifest_data["server"]["mcp_config"]["platform_overrides"] = {
+        "win32": {
+            "command": "python",
+            "args": [
+                "${__dirname}\\mcp\\mcp_server_desktop.py",
+                "--profile",
+                "safe",
+            ],
+            "env": {
+                "PYTHONUNBUFFERED": "1",
+                "QECTOR_PYTHON": "${user_config.python_path}",
+                "QECTOR_SILENT": "1",
+            },
+        }
+    }
 
     manifest_bytes = json.dumps(manifest_data, indent=2, sort_keys=True).encode("utf-8")
     manifest_hash = hashlib.sha256(manifest_bytes).hexdigest()
@@ -458,6 +473,19 @@ def configure_settings_connector_extension(
                 mcp_src = ROOT / "mcp"
                 if mcp_src.is_dir():
                     shutil.copytree(mcp_src, staging_dir / "mcp", ignore=_COPY_IGNORE)
+
+                scripts_src = ROOT / "scripts"
+                scripts_dst = staging_dir / "scripts"
+                scripts_dst.mkdir(parents=True, exist_ok=True)
+                for launcher in ("qector-python", "qector-python.cmd"):
+                    src = scripts_src / launcher
+                    if src.is_file():
+                        shutil.copy2(src, scripts_dst / launcher)
+                        if launcher == "qector-python":
+                            try:
+                                scripts_dst.joinpath(launcher).chmod(0o755)
+                            except Exception:
+                                pass
 
                 # Old copy is removed only after the new one is fully staged, and the
                 # staged copy is renamed into place immediately after -- the window in
