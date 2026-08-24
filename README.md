@@ -76,35 +76,78 @@ connector is the engineered path to those surfaces and lands in 1.1.x.
 
 ## Installation
 
-**Claude Code, from the marketplace**
+### Prerequisites
+
+| Requirement | How to check | Expected |
+|:------------|:-------------|:---------|
+| **Python** 3.9–3.13 | `python --version` and `py -3 --version` (Windows) | `3.11.x` or `3.12.x` recommended; `3.14+` is rejected on purpose |
+| **pip** | `python -m pip --version` | any recent |
+| **Claude Code** ≥2.0 or **Claude Desktop** ≥0.10.0 | `claude --version` | `2.1.x` / `1.34+` |
+
+> **Python with spaces in path** (e.g. `Anthropic Skills and agents`) is now handled — the Desktop extension in `v1.0.6` uses `python` directly (no `${__dirname}` launcher) and the Code plugin uses `scripts/qector-python`. If you still see `Server disconnected`, set `QECTOR_PYTHON` (see Troubleshooting).
+
+### Option A — Claude Code (marketplace, 30 s)
 
 ```bash
+# 1. Add the marketplace (once)
 claude plugin marketplace add GuillaumeLessard/qector-claude-plugin
+
+# 2. Install the plugin
 claude plugin install qector@qector-tools
+# When prompted for Python interpreter: leave empty for auto-resolve,
+# or paste an absolute path like C:\Program Files\Python311\python.exe
+
+# 3. Verify
+claude plugin list                          # → qector@qector-tools 1.0.6 enabled
+claude plugin validate . --strict           # → ✔ Validation passed
+python scripts/qector_runtime_check.py      # → status: ok, mcp 1.29.0
 ```
 
-Optionally pin your interpreter when prompted, or leave it empty and let
-the shipped launcher resolve one.
+### Option B — Claude Desktop (single click)
 
-**Claude Desktop, single click**
+**Via UI (recommended):**
 
-Download `qector-claude-desktop-1.0.6.mcpb` from the release page, open
-Settings → Extensions → Advanced settings → Install Extension, choose the
-bundle, and restart. Prefer scripted control?
+1. Download `qector-claude-desktop-1.0.6.mcpb` from the [release page](https://github.com/GuillaumeLessard/qector-claude-plugin/releases/tag/v1.0.6).
+2. Claude Desktop → Settings → Extensions → Advanced settings → **Install Extension** → select the `.mcpb` → **Enable**.
+3. **Fully quit** Claude Desktop (system tray → Quit) and reopen — the extension needs a full restart to load the 8-tool safe profile.
+
+**Via script (same result, auditable):**
 
 ```bash
-python scripts/configure_claude_desktop.py --check-only   # preview
-python scripts/configure_claude_desktop.py --confirm      # apply
+python scripts/configure_claude_desktop.py --check-only   # preview, no changes
+python scripts/configure_claude_desktop.py --confirm      # writes claude_desktop_config.json + installs extension
+# Restart Desktop afterwards
 ```
 
-**From source**
+**Verify Desktop:**
+
+- `C:\Users\<you>\AppData\Roaming\Claude\claude_desktop_config.json` contains `qector-library` (if you used the script) and `extensions-installations.json` contains `ant.dir.gh.guillaumelessard.qector`.
+- `C:\Users\<you>\AppData\Local\Claude\logs\mcp.log` shows `QECTOR Server started and connected → initialize → tools/list → result` (no `Server disconnected`).
+
+### Option C — From source (auditable, offline)
 
 ```bash
 git clone https://github.com/GuillaumeLessard/qector-claude-plugin.git
 cd qector-claude-plugin
-python -m pip install -r requirements.txt   # Python 3.9 to 3.13
-python scripts/qector_runtime_check.py      # verify the runtime
+
+# Install for every Python you use (Windows has both 3.11 and 3.12 via py launcher)
+python -m pip install -r requirements.txt          # → numpy 2.2.6, mcp 1.29.0, qector 1.0.0
+py -3 -m pip install -r requirements.txt           # ← do this too if py -3 exists
+
+# Verify
+python scripts/qector_runtime_check.py             # → status: ok, failures: []
+python scripts/qector_system_setup.py --check-only # → dry_run_pending_approval
+python scripts/qector_system_setup.py --confirm    # → ready, theorem_1_faithful: true
 ```
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|:--------|:------|:----|
+| `Server disconnected` / `Unable to connect to extension server` | Old `mcp 1.26.0` on one Python, or missing `scripts/` in installed extension, or path with spaces on old builds | `py -3 -m pip show mcp` and `python -m pip show mcp` must both be `≥1.28.1` — run `py -3 -m pip install -r requirements.txt --upgrade` for each. Re-run `python scripts/configure_claude_desktop.py --confirm` (now correctly copies launchers) and **fully restart** Desktop. If still failing, set the extension's **Python interpreter** field to `C:\Program Files\Python311\python.exe` (or `C:\Program Files\Python312\python.exe`). |
+| `No Python 3.9-3.13 interpreter found` | `python` not on PATH or only 3.14 available | Install Python 3.11/3.12 from python.org and/or set `QECTOR_PYTHON=C:\Program Files\Python311\python.exe` (environment variable or extension's interpreter field). |
+| `This extension may not work until all requirements are met` | Desktop version <0.10.0 or Python missing | Update Desktop (≥0.10.0, current 1.34+ is fine) and ensure `mcp`/`qector` installed for the Python Desktop actually uses (`py -3` on Windows). |
+| `qector-decoder-v3 not found` | `pip` installed to wrong Python | Run `python -m pip install -r requirements.txt` **and** `py -3 -m pip install -r requirements.txt` — check both with `* -m pip show qector-decoder-v3`. |
 
 ## The QECTOR surface
 
