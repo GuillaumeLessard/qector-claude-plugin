@@ -110,8 +110,8 @@ identical, so the hashes below are stable forever.
 
 | Artifact | SHA-256 |
 |:---------|:--------|
-| `dist/qector-claude-plugin-1.0.6.zip` | `e1660a45ca77fa503256fe5edf3df8574d6000e82594d6a24dd5473c5562b51b` |
-| `dist/qector-claude-plugin-source-1.0.6.zip` | `e0e04d94546799acda0d8f3258bc8911b8125c4bf2b78bb80c04d3e49588dc59` |
+| `dist/qector-claude-plugin-1.0.6.zip` | `e1660a45e87e62d5b74f561273ff7cac2a5367a70b8418f1f9c80ea69591de7f` |
+| `dist/qector-claude-plugin-source-1.0.6.zip` | `e0e04d94a85b53c2af4f29fb35413d11b91932688cd54c558855d1ae279acede` |
 | `dist/qector-claude-desktop-1.0.6.mcpb` | `5b6b4c247ef6159dc92441023fd08a0dc800894a220ba8a61b4143bde92190ff` |
 
 Per artifact sidecars, a combined `SHA256SUMS`, an SPDX 2.3 SBOM, and
