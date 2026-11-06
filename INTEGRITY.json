@@ -25,7 +25,7 @@
     "mcp/qector_signing.py": "70c836ab466761e2120c28287198c6a1305ca4e8df823706b3cbffe1ab7b19a3",
     "python/qector_math_ground_truth.py": "4831bda8db958e7c885c93bb111f7eb8ce84d9349b09168bfd11aac258cf5caf",
     "release-manifest.json": "b99526d3aa220f7904dbfc549f71995f326e7356e8c8869a5880a4bd1bcf2487",
-    "requirements.lock": "b6cfc0a60c9ee71b74f1c282302b5a7b793dac4c056df34d07abe4114217ff44",
+    "requirements.lock": "b1021d49d3b32988a2917312931a1f994fb4dfd6e57b29b7022e20fc0eac7a59",
     "requirements.txt": "cafc5c1c6b1532f9dd066de62e0bf3e300b1df430014be09cbcbd9f5d5e8a5f6",
     "scripts/boot_from_manifest.py": "4f54ecd955ee57bc2160ab340099410af087bf5f9624cad00dd6104a0fa88a6e",
     "scripts/build_release.py": "d65084139229f5c35d73be137455be8ba24db786702272242babd87e29539422",

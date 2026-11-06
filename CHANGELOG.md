@@ -16,6 +16,12 @@ only schema change is one new boolean in `airgap_status`.
   carries the SHA-256 digests of all 18 wheels as published by the release
   workflow (Trusted Publishing, with provenance), and the bundled
   wheelhouse uses the PyPI cp313 manylinux wheel byte for byte.
+- **Universal lock (Python 3.10-3.13, Linux/Windows/macOS).** The lock was
+  resolved on Linux/3.13 only, so CI failed on Windows (`pywin32`, required
+  by `mcp`, was missing) and on Python 3.10 (`pycparser` 3.12 needs 3.11+).
+  It is now resolved with `uv pip compile --universal`: environment markers
+  select per-interpreter and per-OS versions, every file is hash-pinned, and
+  3.11+ keeps exactly the previous versions.
 - **Backend pinned to `qector-decoder-v3==1.0.1`** (`requirements.txt`,
   `requirements.lock`, `release-manifest.json`, runtime checks, the library
   server's reviewed window `[1.0.1, 1.1.0)`). The lock pins the exact SHA-256
