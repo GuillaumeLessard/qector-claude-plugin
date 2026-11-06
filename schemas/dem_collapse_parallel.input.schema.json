@@ -1,0 +1,24 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/dem_collapse_parallel.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "dem_text": {
+      "type": "string"
+    },
+    "observable_rule": {
+      "default": "most_likely",
+      "enum": [
+        "most_likely",
+        "union",
+        "first"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "dem_text"
+  ],
+  "title": "dem_collapse_parallel",
+  "type": "object"
+}

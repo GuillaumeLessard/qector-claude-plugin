@@ -55,7 +55,7 @@ Every evidence artifact must include:
 
 The `qector-research.artifact_metadata_check` tool generates the full
 required-metadata block for a candidate artifact (no decoder
-execution). The library `qector-library.threshold_sweep` already
+execution). The library `qector-secure.threshold_sweep` already
 emits the same block plus the chapter 22.3 SHA-256 sidecar.
 
 ## Tagging rule (manual 15.3)
@@ -79,7 +79,7 @@ emits the same block plus the chapter 22.3 SHA-256 sidecar.
 - "on this machine, for this code/distance/noise/seed/batch
   configuration, decoder A had median hot-path latency X and p99 Y."
 - "on this checked-in artifact, QECTOR weighted Blossom produced
-  LER parity with PyMatching on the tested d=15 Stim workload."
+  LER within the Wilson interval of PyMatching on workload <hash>, machine <id>, artifact <sha256>." (fill every placeholder from a real artifact; this is a template, not a result)
 
 **Unsafe** (never published):
 

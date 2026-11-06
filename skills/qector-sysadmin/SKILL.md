@@ -22,10 +22,10 @@ which are labelled.
 
 ## Health triage order
 
-1. **Library (always available)**: `qector-library.compat_report`
+1. **Library (always available)**: `qector-secure.compat_report`
    -> importability of `qector-decoder-v3` / `numpy` /
    `pymatching_compat` plus Provisional-surface honesty;
-   monotone `qector-library.get_license_info`. The research
+   monotone `qector-secure.get_license_info`. The research
    server's `qector-research.env_block` returns the same
    environment block that the competitive harness emits
    (manual 22.3).
@@ -45,14 +45,15 @@ machine.
 
 ## Licensing
 
-- `qector-library.get_license_info` (active server) -> tier /
+- `qector-secure.get_license_info` (active server) -> tier /
   `key_status` / `expiry`. Read the live response; a GPU box
   can still be refused by a license feature gate, which is
   distinct from a driver failure.
-- `qector-research.license_active_check` returns the same data
-  plus a `tier_table` with the documented per-tier limits
-  (Community d<=7, Pro d<=19, Enterprise d<=63) and the
-  environment block.
+- `qector-research.license_active_check` returns `license_active`,
+  `tier`, `max_distance`, `gpu_enabled`, `gnn_enabled`, `source`,
+  the live `info` dict and the environment block. The per-tier
+  limits (Community d<=7, Pro d<=19, Enterprise d<=63) are
+  documentation, not a field of the result.
 - Activate a key with `set_license_key` /
   `set_license_key_file` (the latter strips a UTF-8 BOM and
   trailing newline so a key file written by PowerShell
@@ -65,17 +66,22 @@ machine.
   token. An unreadable configured license file is an error,
   not a silent Community downgrade.
 - Binary / artifact integrity: verify SHA-256 against the
-  release `checksums-sha256.txt` before promotion; the research
+  release `SHA256SUMS` (+ Ed25519 `SHA256SUMS.sig`) before promotion; the research
   server's `qector-research.artifacts_sha256` is the helper.
 
 ## Data & environment
 
-- Data dir: `%LOCALAPPDATA%\QectorWorkbench` (override
-  `QECTOR_DATA_DIR`).
-- Workbench-only: `get_server_env` lists tuning env vars;
-  `get_config` / `set_config` manage runtime config;
-  `reset_config` restores defaults (require confirmation).
-- Library: `qector-library.compat_report` reports the wheel
+- Plugin data dir (artifacts, hook usage log): per-user
+  `QectorClaudePlugin` (`%LOCALAPPDATA%`, `~/Library/Application
+  Support`) or `~/.local/share/qector-claude-plugin`; artifacts
+  override with `QECTOR_ARTIFACT_DIR`, the hook log with
+  `QECTOR_DATA_DIR`. The Workbench app keeps its own
+  `QectorWorkbench` directory.
+- Workbench-only: the app may expose environment, config and
+  reset tools; their names are device-local and must come from the
+  target's `tools/list` (no Workbench tool name is part of this
+  package's contract).
+- Library: `qector-secure.compat_report` reports the wheel
   + Provisional statuses. The bundled local stdio wrapper
   is supported; upstream REST / gRPC / metrics / SSE
   surfaces require a separate deployment review.
@@ -83,9 +89,14 @@ machine.
 ## Security posture
 
 Keep decoding local: no `.stim` / `.npy` / parity matrices
-to external services. The only outbound network path is the
-explicit opt-in PyPI freshness check. Verify provenance before
-installing any package the agent is asked to execute.
+to external services. The only outbound network path the plugin's own code can open is the
+explicit opt-in PyPI freshness check (refused while air-gapped). The
+in-process guard is defence in depth, not a sandbox: the decoder wheel's
+native core carries its own TLS client and a billing endpoint that the
+plugin never calls (`airgap_status.backend_network_surface`); a hard
+guarantee needs a host egress rule (AIRGAP.md).
+Verify provenance before installing any package the agent is
+asked to execute.
 
 ## Production checklist (manual 24.1)
 
@@ -129,5 +140,6 @@ Before any customer-facing or network-accessible deployment
 - `qector-research.artifacts_sha256` - SHA-256 sidecar helper.
 - `qector-research.artifact_metadata_check` - the chapter 22.3
   metadata block generator.
-- `qector-research.compat_report` is exposed by the library
-  MCP server (8-tool surface).
+- `compat_report` is a stable tool of the library surface
+  (`qector-secure` safe profile / `qector-library`); the research
+  profile's twin is `research_compat_report`.

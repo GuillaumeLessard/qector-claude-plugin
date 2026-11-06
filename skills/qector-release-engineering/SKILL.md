@@ -11,11 +11,20 @@ description: >-
 
 # QECTOR Release Engineering
 
+> **Scope note (plugin 2.0.0).** File names such as `tests/test_*_faithfulness.py`,
+> `scripts/competitive_*.py`, `docs/CORRECTNESS_AUDIT.md`, `docs/API_STABILITY.md`
+> and `docs/RELEASING.md` cited below belong to the **upstream qector-decoder-v3
+> source tree**, not to this plugin. The plugin's own executable gates are
+> `tests/` (unittest), `scripts/release_validate.py`, `scripts/export_schemas.py
+> --check`, `scripts/generate_integrity_manifest.py --check` and
+> `mcp/tests/test_mcp_stdio.py`. Never claim a file exists here that this note
+> attributes to the upstream tree.
+
 Source of authority: v1.0.0 reference manual, chapter 25; the
 plugin-side release gates in `RELEASE_VALIDATION.md` driven by
 `scripts/build_release.py` and `scripts/release_validate.py`.
 The manual also cites `docs/RELEASING.md` (decoder tree) and
-`docs/API_STABILITY.md` — those live in the upstream decoder
+`docs/API_STABILITY.md` - those live in the upstream decoder
 source tree, not in this plugin repository.
 
 ## Wheels only (manual 25.1)
@@ -74,7 +83,7 @@ A provisional symbol may be promoted to stable only after:
 2. The same test bar as stable symbols (a property test, a
    regression test, and an example).
 3. A move between the corresponding sections of the decoder
-   tree's (decoder tree) `docs/STABLE_API.md`.
+   tree's `docs/STABLE_API.md` (upstream decoder repository, not this package).
 4. A changelog note.
 
 As of the v1.0.0 manual, the promotion log is empty: no
@@ -150,5 +159,5 @@ verification uses `Get-FileHash -Algorithm SHA256`.
 - `qector-research.artifacts_sha256` computes the SHA-256 sidecar.
 - `qector-research.env_block` returns the chapter 22.3 environment
   block.
-- `qector-research.compat_report` (via `qector-library`) returns
+- `compat_report` (stable, on `qector-secure` / `qector-library`; the research-profile twin is `research_compat_report`) returns
   the package version.

@@ -1,0 +1,11 @@
+# INTEGRITY.json hashes the exact bytes of every runtime file and strict
+# mode refuses to start on any mismatch, so Git must never rewrite line
+# endings on checkout (Git for Windows defaults to core.autocrlf=true).
+# Every file is stored and checked out byte for byte, LF included; the
+# .cmd/.bat launchers are label-free and run correctly with LF.
+*            -text
+*.png        binary
+*.mcpb       binary
+*.whl        binary
+*.zip        binary
+*.gitbundle  binary

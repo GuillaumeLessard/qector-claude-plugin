@@ -147,8 +147,11 @@ class TestMCPServerContracts(unittest.TestCase):
         ]["version"]
         self.assertEqual(self.bench.SERVER_VERSION, version)
         self.assertEqual(self.admin.SERVER_VERSION, version)
+        self.assertEqual(self.desktop.SERVER_VERSION, version)
         self.assertEqual(len(self.bench.TOOLS), 29)
         self.assertEqual(len(self.bench.TOOL_FUNCTIONS), 29)
+        # Desktop now fronts the secure server: 8 stable + 4 control tools.
+        self.assertEqual(len(self.desktop.tools()), 12)
         self.assertTrue(
             set(self.bench.TOOL_FUNCTIONS).isdisjoint(
                 {"system_setup", "configure_claude_desktop", "workbench_probe"}
@@ -158,24 +161,26 @@ class TestMCPServerContracts(unittest.TestCase):
     def test_library_server_tools_have_contract(self) -> None:
         for tool in self.library.TOOLS:
             with self.subTest(tool=tool.name):
-                self.assertIn("outputSchema", tool.model_dump())
+                self.assertIn("outputSchema", tool.model_dump(by_alias=True))
                 annotations = tool.annotations
                 self.assertIsNotNone(annotations)
-                schema = tool.inputSchema
+                from qector_mcp_compat import tool_input_schema
+
+                schema = tool_input_schema(tool)
                 self.assertEqual(schema.get("$schema"),
                                  "https://json-schema.org/draft/2020-12/schema")
 
     def test_bench_server_tools_have_contract(self) -> None:
         for tool in self.bench.TOOLS:
             with self.subTest(tool=tool.name):
-                self.assertIn("outputSchema", tool.model_dump())
+                self.assertIn("outputSchema", tool.model_dump(by_alias=True))
                 annotations = tool.annotations
                 self.assertIsNotNone(annotations)
 
     def test_admin_server_tools_have_contract(self) -> None:
         for tool in self.admin.TOOLS:
             with self.subTest(tool=tool.name):
-                self.assertIn("outputSchema", tool.model_dump())
+                self.assertIn("outputSchema", tool.model_dump(by_alias=True))
                 annotations = tool.annotations
                 self.assertIsNotNone(annotations)
 
@@ -217,6 +222,8 @@ class TestSharedContract(unittest.TestCase):
         self.assertEqual(
             required,
             {
+                "contract_version",
+                "tool",
                 "status",
                 "claim_class",
                 "provenance",
@@ -227,6 +234,11 @@ class TestSharedContract(unittest.TestCase):
                 "warnings",
                 "result",
             },
+        )
+        self.assertEqual(self.contract.CONTRACT_VERSION, "2.0")
+        self.assertEqual(
+            self.contract.RESULT_OUTPUT_SCHEMA["$schema"],
+            "https://json-schema.org/draft/2020-12/schema",
         )
 
     def test_envelope_status_enum(self) -> None:
@@ -301,10 +313,12 @@ class TestSharedContract(unittest.TestCase):
             {"decoder": "blossom", "syndrome_valid": True, "reference_manual": "10.5281/zenodo.21941046"},
             tool_name="decode_syndrome",
             server_name="qector-decoder-v3-mcp",
-            server_version="1.0.6",
+            server_version="2.0.0",
             stability="stable",
         )
         self.assertEqual(envelope["status"], "verified")
+        self.assertEqual(envelope["contract_version"], "2.0")
+        self.assertEqual(envelope["tool"], "decode_syndrome")
         self.assertEqual(envelope["claim_class"], "runtime_verified")
         self.assertEqual(envelope["provenance"]["server"], "qector-decoder-v3-mcp")
         self.assertEqual(envelope["verification"]["status"], "verified")
@@ -322,12 +336,12 @@ class TestManifestConsistency(unittest.TestCase):
         plugin = self._load(".claude-plugin/plugin.json")
         marketplace = self._load(".claude-plugin/marketplace.json")
         desktop = self._load(".claude-desktop-extension/manifest.json")
-        registry = self._load("server.json")
         self.assertEqual(plugin["version"], expected)
         for entry in marketplace.get("plugins", []):
             self.assertEqual(entry["version"], expected)
         self.assertEqual(desktop["version"], expected)
-        self.assertEqual(registry["version"], expected)
+        if (ROOT / "server.json").is_file():  # repository checkout only
+            self.assertEqual(self._load("server.json")["version"], expected)
 
     def test_manifests_share_license(self) -> None:
         plugin = self._load(".claude-plugin/plugin.json")
@@ -340,13 +354,29 @@ class TestManifestConsistency(unittest.TestCase):
         self.assertNotIn("license", marketplace.get("plugins", [{}])[0])
         self.assertEqual(desktop["license"], "Proprietary")
 
-    def test_desktop_extension_is_eight_tools_safe(self) -> None:
+    def test_desktop_extension_is_twelve_tools_safe(self) -> None:
         desktop = self._load(".claude-desktop-extension/manifest.json")
-        self.assertEqual(len(desktop["tools"]), 8)
+        self.assertEqual(len(desktop["tools"]), 12)
+        # POSIX: sh + launcher (no reliance on an executable bit surviving extraction).
+        self.assertEqual(desktop["server"]["mcp_config"]["command"], "sh")
         self.assertEqual(
             desktop["server"]["mcp_config"]["args"],
-            ["${__dirname}/mcp/mcp_server_desktop.py", "--profile", "safe"],
+            ["${__dirname}/scripts/qector-python", "${__dirname}/mcp/mcp_server_secure.py", "--profile", "safe"],
         )
+        self.assertEqual(desktop["server"]["mcp_config"]["env"]["QECTOR_AIR_GAPPED"], "1")
+        self.assertEqual(desktop["server"]["mcp_config"]["env"]["QECTOR_INTEGRITY_STRICT"], "1")
+        self.assertEqual(desktop["compatibility"]["runtimes"]["python"], ">=3.10,<3.14")
+        self.assertFalse(desktop["tools_generated"])
+        # MCPB spec: platform_overrides lives inside server.mcp_config.
+        self.assertNotIn("platform_overrides", desktop)
+        win32 = desktop["server"]["mcp_config"]["platform_overrides"]["win32"]
+        # win32: a real executable (Node refuses to spawn .cmd without a shell).
+        self.assertEqual(win32["command"], "powershell.exe")
+        self.assertIn("-File", win32["args"])
+        self.assertTrue(any(arg.endswith("qector-python.ps1") for arg in win32["args"]))
+        self.assertEqual(win32["args"][-2:], ["--profile", "safe"])
+        self.assertEqual(win32["env"], desktop["server"]["mcp_config"]["env"])
+        self.assertEqual(win32["env"]["QECTOR_AIR_GAPPED"], "1")
 
     def test_release_manifest_artifact_name(self) -> None:
         release = self._load("release-manifest.json")
@@ -359,7 +389,10 @@ class TestManifestConsistency(unittest.TestCase):
     def test_default_mcp_servers(self) -> None:
         with open(ROOT / ".mcp.json", "r", encoding="utf-8") as handle:
             mcp = json.load(handle)
-        self.assertEqual(set(mcp["mcpServers"]), {"qector-library"})
+        self.assertEqual(set(mcp["mcpServers"]), {"qector-secure"})
+        server = mcp["mcpServers"]["qector-secure"]
+        self.assertEqual(server["args"][-2:], ["--profile", "safe"])
+        self.assertEqual(server["env"]["QECTOR_AIR_GAPPED"], "1")
 
     def test_hooks_launcher_uses_python_not_python3(self) -> None:
         with open(ROOT / "hooks" / "hooks.json", "r", encoding="utf-8") as handle:
@@ -372,6 +405,15 @@ class TestManifestConsistency(unittest.TestCase):
                                      msg=f"hooks.{event_name} regressed to python3")
 
 
+def _wheel_loaded() -> bool:
+    try:
+        import qector_decoder_v3  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
+@unittest.skipUnless(_mcp_loaded() and _wheel_loaded(), "runtime not installed")
 class TestSystemSetupAllowlist(unittest.TestCase):
     """system_setup must reject arbitrary package specifications."""
 
@@ -419,6 +461,7 @@ class TestSystemSetupAllowlist(unittest.TestCase):
                 os.environ["QECTOR_ADMIN_ENABLED"] = old
 
 
+@unittest.skipUnless(_mcp_loaded() and _wheel_loaded(), "runtime not installed")
 class TestArtifactRootContainment(unittest.TestCase):
     """tool_artifacts_sha256 must reject paths outside QECTOR_ARTIFACT_DIR."""
 
@@ -463,6 +506,7 @@ class TestArtifactRootContainment(unittest.TestCase):
             outside.rmdir()
 
 
+@unittest.skipUnless(_mcp_loaded() and _wheel_loaded(), "runtime not installed")
 class TestEvidenceLayerTools(unittest.TestCase):
     """The three new tools return a stable shape without decoder execution."""
 
@@ -594,14 +638,25 @@ class TestReleasePackaging(unittest.TestCase):
         )
         self.assertNotIn("mcp/mcp_server_qector_bench.py", self.builder.DESKTOP_FILES)
         self.assertNotIn("mcp/mcp_server_admin.py", self.builder.DESKTOP_FILES)
-        self.assertIn("mcp/mcp_server_library.py", self.builder.DESKTOP_FILES)
-        self.assertIn("mcp/qector_mcp_contract.py", self.builder.DESKTOP_FILES)
-        self.assertEqual(self.builder.ZIP_TIMESTAMP, (2026, 8, 23, 0, 0, 0))
+        for required in (
+            "mcp/mcp_server_secure.py",
+            "mcp/mcp_server_library.py",
+            "mcp/qector_mcp_contract.py",
+            "mcp/qector_mcp_compat.py",
+            "mcp/qector_schemas.py",
+            "mcp/qector_airgap.py",
+            "mcp/qector_audit.py",
+            "mcp/qector_integrity.py",
+            "requirements.lock",
+        ):
+            self.assertIn(required, self.builder.DESKTOP_FILES)
+        self.assertEqual(self.builder.ZIP_TIMESTAMP, (2026, 11, 2, 0, 0, 0))
 
-    def test_library_artifact_root_is_plugin_artifacts_not_cwd(self) -> None:
+    def test_library_artifact_root_is_user_data_dir_not_cwd_or_install_dir(self) -> None:
         text = (MCP_DIR / "mcp_server_library.py").read_text(encoding="utf-8")
         self.assertNotIn('Path.cwd() / "artifacts"', text)
-        self.assertIn('parent.parent / "artifacts"', text)
+        self.assertNotIn('parent.parent / "artifacts"', text)
+        self.assertIn("default_data_dir()", text)
 
 
 class TestInstallerPythonPath(unittest.TestCase):
@@ -637,3 +692,18 @@ class TestInstallerPythonPath(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDesktopBundleClosure(unittest.TestCase):
+    """The Desktop MCPB ships a hand-listed subset of mcp/; it must stay importable."""
+
+    def test_desktop_files_cover_every_module_the_bundled_servers_import(self) -> None:
+        build = _load_module("qector_build_release_for_test", SCRIPTS_DIR / "build_release.py")
+        required = build._local_import_closure(
+            name for name in build.DESKTOP_FILES if name.startswith("mcp/mcp_server_")
+        )
+        missing = sorted(required - set(build.DESKTOP_FILES))
+        self.assertEqual(missing, [], f"DESKTOP_FILES lacks modules the bundled servers import: {missing}")
+        for name in ("mcp/qector_signing.py", "mcp/qector_integrity.py", "mcp/qector_airgap.py", "mcp/qector_audit.py"):
+            self.assertIn(name, required)
+            self.assertIn(name, build.DESKTOP_FILES)

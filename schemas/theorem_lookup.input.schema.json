@@ -1,0 +1,18 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/theorem_lookup.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "number": {
+      "default": 1,
+      "maximum": 16,
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "number"
+  ],
+  "title": "theorem_lookup",
+  "type": "object"
+}

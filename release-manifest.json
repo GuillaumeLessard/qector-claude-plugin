@@ -2,30 +2,47 @@
   "schema_version": 1,
   "release": {
     "name": "qector-claude-plugin",
-    "version": "1.0.6",
+    "version": "2.0.1",
     "license": "Proprietary",
     "repository": "https://github.com/GuillaumeLessard/qector-claude-plugin"
   },
   "runtime": {
-    "python": ">=3.9,<3.14",
-    "qector_decoder_v3": "1.0.0",
-    "mcp": ">=1.28.1,<2",
-    "numpy": ">=1.26,<2.3"
+    "python": ">=3.10,<3.14",
+    "qector_decoder_v3": "1.0.1",
+    "mcp": ">=1.30,<3",
+    "numpy": ">=1.26,<2.3",
+    "jsonschema": ">=4.18,<5",
+    "lockfile": "requirements.lock"
   },
   "surfaces": {
     "claude_code": {
-      "default_servers": ["qector-library"],
+      "default_servers": [
+        "qector-secure"
+      ],
       "research_server": "qector-research",
-      "admin_server": "qector-admin"
+      "admin_server": "qector-admin",
+      "legacy_servers": [
+        "qector-library"
+      ]
     },
     "claude_desktop": {
       "default_profile": "safe",
-      "default_servers": ["qector-desktop-mcp"],
-      "artifact": "qector-claude-desktop-1.0.6.mcpb"
+      "default_servers": [
+        "qector-desktop-mcp"
+      ],
+      "artifact": "qector-claude-desktop-2.0.1.mcpb",
+      "entry_point": "mcp/mcp_server_secure.py --profile safe"
     },
     "claude_web_mobile": {
       "bundled_connector": false,
       "access": "Claude Code Remote Control or a separately reviewed hosted Remote MCP deployment"
+    },
+    "air_gapped_lab": {
+      "default": true,
+      "installer": "scripts/install_offline.sh | scripts/install_offline.ps1",
+      "wheelhouse": "scripts/build_wheelhouse.py",
+      "integrity": "INTEGRITY.json",
+      "audit": "QECTOR_AUDIT_DIR (hash-chained JSONL)"
     }
   },
   "evidence": {
@@ -40,5 +57,28 @@
       "sha256": "310442695c5e2af43f721fb74d08d8719494e44f32d816dc850718b22ed6ce5f",
       "coverage": "Theorems 1-16, Appendix E arithmetic, and live wheel faithfulness"
     }
+  },
+  "contract": {
+    "version": "2.0",
+    "envelope": "mcp/qector_mcp_contract.py",
+    "schemas": "schemas/",
+    "validation": "input and output, JSON Schema 2020-12"
+  },
+  "surfaces_tool_counts": {
+    "qector-secure safe": 12,
+    "qector-secure research": 41,
+    "qector-library": 8,
+    "qector-research": 29,
+    "qector-admin": 3
+  },
+  "signing": {
+    "algorithm": "ed25519",
+    "public_key": "kYwkMApz4zMgQmJsOya1UZuByvnuikzlxQkQiA8NOJg=",
+    "fingerprint": "6726953ded0a01a4a15cc92d460178f71aa2568c59ee969fc4efe8812c8299dc",
+    "signed_files": [
+      "INTEGRITY.json (inside every archive)",
+      "dist/SHA256SUMS"
+    ],
+    "verify": "python scripts/sign_release.py --verify dist --pubkey <public_key>"
   }
 }

@@ -95,15 +95,21 @@ whether the returned correction reproduces the syndrome.
 
 ## Tuning kwargs (manual 16.2 - Provisional)
 
-The `BPOSDDecoder` tuning kwarg names are stable; defaults may shift
-in 1.x. Verify the live values via introspection; do not hard-code.
+Verified 1.0.0 signatures (`inspect.signature`); verify again on
+the target build and never hard-code defaults:
 
-- `bp_method`: `"sum_product"` (default) or `"min_sum"`.
-- `osd_order`: integer, default 0; `>= 1` enables OSD-W with
-  `W = max(2 * osd_order, 6)`.
-- `max_bp_iters`: integer; default typically 50.
-- `tau`: reliability threshold; default typically 0.0 (no
-  ambiguity clustering).
+- `BPOSDDecoder(check_to_qubits, n_qubits=None, error_rate=0.1,
+  bp_method=None, osd_order=None)`: `bp_method` is `"sum_product"`
+  or `"min_sum"` (`None` = backend default); `osd_order >= 1`
+  enables OSD-W with `W = max(2 * osd_order, 6)`.
+- `qector_decoder_v3.bposd.BpOsdDecoder(H, error_rate, priors,
+  max_iter=30, ms_scale, osd_order, bp_method, use_gpu,
+  max_latency_ms, damping, osd_lambda)`: the matrix-level class;
+  the iteration cap is `max_iter`.
+- Ambiguity clustering lives in `AmbiguityClusterDecoder(
+  check_to_qubits, n_qubits=None, error_rate=0.05,
+  ambig_threshold=0.5, max_cluster_size=12)`; there is no `tau`
+  or `max_bp_iters` keyword anywhere in the wheel.
 
 ## Worked example (manual 8.5)
 
@@ -124,9 +130,13 @@ syndrome**.
 ## Numerical stability
 
 The `phi` LUT keeps the update numerically stable across the full
-dynamic range. `qector_decoder_v3.bp_osd` exposes the
-`plausibility_guard`; the regression suite includes
-`test_bp_numerical_stability.py` and `test_bposd_osd_orders.py`.
+dynamic range. The wheel module is `qector_decoder_v3.bposd`
+(`BpOsdDecoder`, `GraphBPOSDDecoder`, `MatrixBPOSDDecoder`,
+`min_sum_bp`, `sum_product_bp`); no `plausibility_guard` symbol
+exists in 1.0.0. The upstream decoder repository's regression
+tests (`test_bp_numerical_stability.py`, `test_bposd_osd_orders.py`)
+are not part of this package; this plugin's own obligations are in
+`tests/test_reference_manual_math.py` (Theorems 11-12).
 
 ## Common pitfalls
 

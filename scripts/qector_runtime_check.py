@@ -17,9 +17,8 @@ from pathlib import Path
 
 os.environ["QECTOR_SILENT"] = "1"
 
-EXPECTED_QECTOR = "1.0.0"
-EXPECTED_MCP_MIN = "1.28.1"
-EXPECTED_MCP_MAX = "2"
+EXPECTED_QECTOR = "1.0.1"
+EXPECTED_MCP_RANGE = ">=1.30,<3"
 EXPECTED_TOOLS = {
     "list_code_families",
     "list_decoders",
@@ -40,26 +39,18 @@ def _version(name: str) -> str | None:
         return None
 
 
-def _parse_version(version: str) -> tuple[int, ...]:
+def _mcp_in_range(version: str | None) -> bool:
+    if not version:
+        return False
     parts: list[int] = []
     for chunk in version.split("."):
-        digits = "".join(c for c in chunk if c.isdigit())
+        digits = "".join(ch for ch in chunk if ch.isdigit())
         if not digits:
             break
         parts.append(int(digits))
-    return tuple(parts)
-
-
-def _mcp_satisfies(version: str | None) -> bool:
-    if version is None:
+    if len(parts) < 2:
         return False
-    try:
-        parsed = _parse_version(version)
-        min_parsed = _parse_version(EXPECTED_MCP_MIN)
-        max_parsed = _parse_version(EXPECTED_MCP_MAX)
-        return parsed >= min_parsed and parsed < max_parsed
-    except Exception:
-        return False
+    return (parts[0] == 1 and parts[1] >= 30) or parts[0] == 2
 
 
 def main() -> int:
@@ -70,10 +61,12 @@ def main() -> int:
         failures.append(
             f"qector-decoder-v3=={EXPECTED_QECTOR} required; found {qector_version or 'missing'}"
         )
-    if not _mcp_satisfies(mcp_version):
+    if not _mcp_in_range(mcp_version):
         failures.append(
-            f"mcp>={EXPECTED_MCP_MIN},<2 required; found {mcp_version or 'missing'}"
+            f"mcp{EXPECTED_MCP_RANGE} required; found {mcp_version or 'missing'}"
         )
+    if not ((3, 10) <= sys.version_info[:2] < (3, 14)):
+        failures.append(f"Python 3.10-3.13 required; running {platform.python_version()}")
 
     try:
         import numpy as np
@@ -134,6 +127,7 @@ def main() -> int:
         "venv": sys.prefix != sys.base_prefix,
         "qector_decoder_v3": qector_version,
         "mcp": mcp_version,
+        "mcp_supported_range": EXPECTED_MCP_RANGE,
         "failures": failures,
     }
     print(json.dumps(payload, indent=2, sort_keys=True))

@@ -16,14 +16,20 @@ You are a staff software engineer integrating the QECTOR
 Rust / Python core into applications and agent architectures.
 Never ship an unverified API call.
 
-## The two library MCP servers
+## The MCP servers
 
-The plugin registers two MCP servers in `.mcp.json`:
+The plugin registers one MCP server in `.mcp.json`:
+`qector-secure` (`mcp/mcp_server_secure.py --profile safe`,
+12 tools, air-gapped, schema-validated, integrity-checked). It
+front-ends two tool modules that also run standalone:
 
 - `qector-library` - the 8-tool frozen library surface
-  (`mcp/mcp_server_library.py`).
-- `qector-research` - 25 Provisional companion tools
-  (`mcp/mcp_server_qector_bench.py`).
+  (`mcp/mcp_server_library.py`); the safe profile is these 8
+  plus `airgap_status`, `integrity_check`, `schema_catalog`,
+  `audit_log_status`.
+- `qector-research` - 29 Provisional companion tools
+  (`mcp/mcp_server_qector_bench.py`); reachable as
+  `qector-secure --profile research` (41 tools) or standalone.
 
 Library tools are part of the stable contract (manual 16.1,
 16.2). Bench tools are Provisional; never quote them as
@@ -33,7 +39,7 @@ name.
 
 ## MCP SDK contract
 
-- The bundled library server pins `mcp>=1.28.1,<2` and uses the
+- The bundled library server pins `mcp>=1.30,<3` and uses the
   low-level `mcp.server.Server` adapter. Other SDK versions are
   unsupported until separately tested; do not call unpinned
   internals.
@@ -69,8 +75,9 @@ name.
   contract.
 - Swaps: `qector_decoder_v3.pymatching_compat.Matching` is a
   drop-in for `pymatching.Matching`;
-  `qector_sinter_decoders()` exposes sinter entry points
-  (manual 17.1, 17.2). Probe the live list with
+  `qector_decoder_v3.sinter_compat.qector_sinter_decoders()`
+  returns four sinter shims when the optional `sinter` package is
+  installed (manual 17.1, 17.2). Probe the live list with
   `qector-research.sinter_decoder_list`.
 - On Windows driver issues or missing DLLs, use
   `compat_report` (library), live package introspection, and
@@ -107,8 +114,8 @@ When dealing with millions of shots:
   `initialize` and `tools/list`.
 - Drop-ins: `qector_decoder_v3.pymatching_compat.Matching`
   replaces `pymatching.Matching` with a one-line import
-  change; `qector_sinter_decoders()` exposes sinter entry
-  points.
+  change; `qector_decoder_v3.sinter_compat.qector_sinter_decoders()`
+  exposes sinter entry points when `sinter` is installed.
 
 ## DEM / circuit integration (manual 14)
 

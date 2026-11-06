@@ -1,0 +1,85 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/threshold_sweep.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_path": {
+      "default": null,
+      "description": "Optional path; must resolve inside the artifact root.",
+      "maxLength": 4096,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "decoder_name": {
+      "default": "blossom",
+      "enum": [
+        "blossom",
+        "fast_union_find",
+        "native_auto",
+        "sparse_blossom",
+        "union_find"
+      ],
+      "type": "string"
+    },
+    "distances": {
+      "default": [
+        3,
+        5,
+        7
+      ],
+      "items": {
+        "maximum": 63,
+        "minimum": 2,
+        "type": "integer"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "type": "array"
+    },
+    "error_rates": {
+      "default": [
+        0.01,
+        0.05,
+        0.1
+      ],
+      "items": {
+        "maximum": 1,
+        "minimum": 0,
+        "type": "number"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "type": "array"
+    },
+    "family": {
+      "default": "rotated_surface_corrected",
+      "enum": [
+        "repetition",
+        "ring",
+        "rotated_surface",
+        "unrotated_surface",
+        "toric",
+        "heavy_hex",
+        "color_code",
+        "rotated_surface_corrected"
+      ],
+      "type": "string"
+    },
+    "seed": {
+      "default": 42,
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "trials": {
+      "default": 100,
+      "maximum": 10000,
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "title": "threshold_sweep",
+  "type": "object"
+}

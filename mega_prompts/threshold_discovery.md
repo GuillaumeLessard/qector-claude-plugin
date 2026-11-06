@@ -13,7 +13,7 @@ coset; 95% Wilson intervals; screening-estimate caveat).
 **Target**: family=[e.g. rotated_surface], distance=[e.g. 5], p=[e.g. 0.05].
 
 **Phase 1 - Ingestion & Verification (library, app-free)**
-- On the `qector-library` server, call `list_code_families` to confirm the family,
+- On the `qector-secure` server (default; `qector-library` exposes the same tool), call `list_code_families` to confirm the family,
   then `decode_single` (distance, blossom, p, seed 42) to extract the real
   n_qubits / n_checks and confirm `syndrome_valid: true`.
 - If the target family is not in the library surface, say so plainly and test the

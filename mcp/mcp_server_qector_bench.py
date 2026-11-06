@@ -66,9 +66,9 @@ required-metadata block.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import hashlib
 import importlib
+import importlib.metadata
 import importlib.util
 import json
 import math
@@ -78,8 +78,6 @@ import statistics
 import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
 from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -88,13 +86,24 @@ _MCP_DIR = Path(__file__).resolve().parent
 if str(_MCP_DIR) not in sys.path:
     sys.path.insert(0, str(_MCP_DIR))
 
+from qector_mcp_compat import (  # noqa: E402
+    build_server,
+    make_tool,
+    run_stdio,
+    sdk_supported,
+)
 from qector_mcp_contract import (  # noqa: E402
+    QECTORUnknownToolError,
     apply_tool_contract,
     call_tool_result,
     consume_call_budget,
     error_envelope,
+    refund_call_budget,
     result_envelope,
+    validate_arguments,
+    validate_envelope,
 )
+import qector_airgap  # noqa: E402
 
 os.environ.setdefault("QECTOR_SILENT", "1")
 
@@ -114,10 +123,10 @@ except Exception:
 # ---------------------------------------------------------------------------
 
 REF_DOI = "10.5281/zenodo.21941046"
-EXPECTED_QECTOR_VERSION = "1.0.0"
+EXPECTED_QECTOR_VERSION = "1.0.1"
 SERVER_NAME = "qector-research-mcp"
-SERVER_VERSION = "1.0.6"
-WORKBENCH_PROTOCOL_VERSION = "2025-03-26"
+SERVER_VERSION = "2.0.1"
+WORKBENCH_PROTOCOL_VERSION = "2025-06-18"
 Z95 = 1.959963985
 
 # Safety caps. The library server's caps are authoritative for the frozen
@@ -127,6 +136,12 @@ MAX_TRIALS = int(os.environ.get("QECTOR_MCP_BENCH_MAX_TRIALS", "200000"))
 MAX_DEM_BYTES = int(os.environ.get("QECTOR_MCP_BENCH_MAX_DEM_BYTES", "2000000"))
 MAX_WILSON_ROWS = int(os.environ.get("QECTOR_MCP_BENCH_MAX_WILSON_ROWS", "10000"))
 MAX_BENCH_SHOTS = int(os.environ.get("QECTOR_MCP_BENCH_MAX_BENCH_SHOTS", "5000"))
+# Shots decoded (and verified) before timing starts, so the first-call cost
+# of the native decoder never enters the latency sample.
+MICROBENCH_WARMUP_SHOTS = int(os.environ.get("QECTOR_MCP_BENCH_WARMUP_SHOTS", "8"))
+# Below this many timed shots a normal-approximation CI on the mean is not
+# meaningful; the tool reports null instead of a possibly negative interval.
+MICROBENCH_MIN_SHOTS_FOR_CI = 30
 MAX_DISTANCE = int(os.environ.get("QECTOR_MCP_BENCH_MAX_DISTANCE", "63"))
 PYPI_FRESHNESS_TIMEOUT_S = float(
     os.environ.get("QECTOR_MCP_BENCH_PYPI_TIMEOUT_S", "3.0")
@@ -135,7 +150,6 @@ MAX_WILSON_K = 10_000_000
 MAX_BATCH = 4096
 MAX_CHECKS = 20000
 MAX_QUBITS = 200000
-WILSON_SAFETY_MIN = 1e-12
 
 QECTOR_VERSION = (
     getattr(qector_decoder_v3, "__version__", "unknown")
@@ -146,14 +160,14 @@ QECTOR_VERSION = (
 SETUP_PROFILES: dict[str, tuple[str, ...]] = {
     "production": (
         "numpy>=1.26,<2.3",
-        "qector-decoder-v3==1.0.0",
-        "mcp>=1.28.1,<2",
+        "qector-decoder-v3==1.0.1",
+        "mcp>=1.30,<3",
         "cryptography>=48.0.1,<50",
     ),
     "developer": (
         "numpy>=1.26,<2.3",
-        "qector-decoder-v3==1.0.0",
-        "mcp>=1.28.1,<2",
+        "qector-decoder-v3==1.0.1",
+        "mcp>=1.30,<3",
         "cryptography>=48.0.1,<50",
         "pytest",
         "ruff",
@@ -163,6 +177,11 @@ SETUP_PROFILES: dict[str, tuple[str, ...]] = {
 }
 ADMIN_TOOL_NAMES = frozenset(
     {"system_setup", "configure_claude_desktop", "workbench_probe"}
+)
+# Decoders whose constructor is ``cls(check_to_qubits, n_qubits=...)`` and
+# which the micro-benchmark can therefore drive without a DEM or matrix.
+MICROBENCH_DECODERS = frozenset(
+    {"union_find", "fast_union_find", "blossom", "sparse_blossom", "native_auto", "hybrid_cascade", "hybrid", "bposd"}
 )
 
 
@@ -297,6 +316,9 @@ FAMILY_FACTORY = {
     "toric": "toric_code",
     "heavy_hex": "heavy_hex_code",
     "color_code": "color_code",
+    # Built by the plugin (mcp/qector_codes.py), not the wheel; routed through
+    # mcp_server_library._code_for_family like every other family.
+    "rotated_surface_corrected": "rotated_surface_corrected",
 }
 
 DECODER_CLASS_HINTS = {
@@ -342,9 +364,19 @@ def _code_for_family(family: str, size: int):
         raise QECTORInputError(
             f"Unknown family {family!r}; choose one of {sorted(FAMILY_FACTORY)} or 'custom'"
         )
-    factory = getattr(_get_codes_module(), FAMILY_FACTORY[family])
     size = _require_integral(size, "size", minimum=2, maximum=63)
-    return factory(size)
+    library = _get_library()
+    try:
+        return library._code_for_family(family, size)
+    except library.QECTORInputError as exc:
+        raise QECTORInputError(str(exc)) from exc
+
+
+def _get_library():
+    """The frozen library server: shared code cache, size caps and the distance probe."""
+    import mcp_server_library
+
+    return mcp_server_library
 
 
 def _code_from_matrix(H_matrix: Any, name: str = "custom", distance: int | None = None):
@@ -450,14 +482,17 @@ def _check_pypi_freshness() -> dict[str, Any]:
     and never runs unless explicitly requested via
     ``env_block(check_pypi=True)``. Any network failure degrades to a
     ``"unavailable"`` status rather than propagating, preserving the
-    zero-egress-by-default contract of this server. Cached for the
+    air-gapped-by-default contract of this server. Cached for the
     lifetime of the server process.
     """
     global _PYPI_FRESHNESS_CACHE
+    qector_airgap.require_network("check_pypi=true")
     if _PYPI_FRESHNESS_CACHE is not None:
         return _PYPI_FRESHNESS_CACHE
     result: dict[str, Any]
     try:
+        import urllib.request
+
         request = urllib.request.Request(
             "https://pypi.org/pypi/qector-decoder-v3/json",
             headers={"User-Agent": f"{SERVER_NAME}/{SERVER_VERSION}"},
@@ -486,6 +521,21 @@ def _check_pypi_freshness() -> dict[str, Any]:
     return result
 
 
+def _pypi_block(check_pypi: bool) -> dict[str, Any]:
+    if not check_pypi:
+        return {
+            "status": "not_checked",
+            "reason": "pass check_pypi=true (and QECTOR_AIR_GAPPED=0) to query PyPI; default path stays fully offline",
+        }
+    if qector_airgap.is_air_gapped():
+        return {
+            "status": "disabled",
+            "reason": "air-gapped mode (QECTOR_AIR_GAPPED=1, default) refuses the PyPI freshness check",
+            "installed_version": QECTOR_VERSION,
+        }
+    return _check_pypi_freshness()
+
+
 # ---------------------------------------------------------------------------
 # Math utilities
 # ---------------------------------------------------------------------------
@@ -496,15 +546,16 @@ def wilson_ci(k: int, n: int, z: float = Z95) -> tuple[float, float]:
     k = _require_integral(k, "k", minimum=0, maximum=MAX_WILSON_K)
     n = _require_integral(n, "n", minimum=1, maximum=MAX_WILSON_K)
     if k > n:
-        raise QECTORInputError("k cannot exceed n")
+        raise QECTORInputError("k must be at most n")
+    if not isinstance(z, Real) or isinstance(z, bool) or not math.isfinite(float(z)) or float(z) <= 0:
+        raise QECTORInputError("z must be a finite positive number (1.959963985 for 95%)")
+    z = float(z)
     p = k / n
     denom = 1.0 + z * z / n
     centre = (p + z * z / (2.0 * n)) / denom
-    margin = (
-        z
-        * math.sqrt(max(p * (1.0 - p) / n + z * z / (4.0 * n * n), WILSON_SAFETY_MIN))
-        / denom
-    )
+    # The radicand z^2/(4n^2) + p(1-p)/n is strictly positive for every n >= 1,
+    # so no floor is needed; a floor would inflate the margin for large n.
+    margin = z * math.sqrt(p * (1.0 - p) / n + z * z / (4.0 * n * n)) / denom
     return max(0.0, centre - margin), min(1.0, centre + margin)
 
 
@@ -514,14 +565,17 @@ def logical_coset_score(
 ) -> dict[str, Any]:
     """Score logical failures on the logical coset (Theorem 2, manual 3.2).
 
-    The two matrices must be 2D ``(n_logicals, n_qubits)`` uint8. The score is
-    computed as the per-row XOR between predicted and sampled logical
-    observables; a failure is any row whose XOR is non-zero.
+    Both arrays are ``(n_trials, n_observables)``: one row per decoded shot,
+    one column per logical observable (the layout Stim/sinter produce). A
+    trial fails when any observable's predicted flip differs from the
+    sampled flip, i.e. when the residual anticommutes with a logical.
     """
     if predicted_logicals.shape != sampled_logicals.shape:
         raise QECTORInputError("predicted and sampled logicals must share shape")
     if predicted_logicals.ndim != 2:
         raise QECTORInputError("logicals must be 2D")
+    if predicted_logicals.shape[0] == 0 or predicted_logicals.shape[1] == 0:
+        raise QECTORInputError("logicals must have at least one trial row and one observable column")
     diff = predicted_logicals.astype(np.int64) ^ sampled_logicals.astype(np.int64)
     per_row = (diff.any(axis=1)).astype(int)
     failures = int(per_row.sum())
@@ -541,19 +595,23 @@ def logical_coset_score(
 
 
 def _parse_dem_text(text: str) -> dict[str, Any]:
-    """Parse a minimal Stim-style DEM text.
+    """Parse a flattened Stim-style detector error model.
 
-    Format (manual 14 + stim conventions):
-        error(0.001) D0 D2 L0
-        error(0.005) D1 D3
-        detector(0, 0) D0
-        detector(1, 0) D1
+    Accepted instructions (Stim conventions):
+        error(p) D0 D2 L0            one mechanism
+        error(p) D0 D1 ^ D1 D2       Stim's ``^`` decomposition: each
+                                     component becomes its own mechanism with
+                                     the same probability (how Stim hands a
+                                     decomposed error to a matching decoder)
+        detector(x, y) D0
         logical_observable L0
-        shift_detectors(0, 0, 0)
-    The parser is permissive on the first three; it does not handle Stim's full
-    instruction set. Its purpose is to feed ``dem_inspect`` and
-    ``dem_collapse_parallel``; the full Stim path uses the optional direct-wheel
-    ``dem`` module.
+        shift_detectors(...)         accepted and ignored (indices are taken
+                                     as written)
+    Rules: every ``error`` needs exactly one probability in [0, 1]; a detector
+    repeated inside one component cancels (XOR), as in Stim; ``repeat`` blocks
+    are refused because expanding them needs the detector-shift semantics of
+    the full ``stim`` package (flatten the model with ``DetectorErrorModel.flattened()``
+    first). Anything else is an error, never silently skipped.
     """
     text = text.strip()
     if not text:
@@ -572,49 +630,59 @@ def _parse_dem_text(text: str) -> dict[str, Any]:
         if not stripped:
             continue
         raw_lines += 1
-        # Split off the first token as the head, then keep the rest as the body.
-        # Stim's 'error' instruction has no space between 'error' and '(',
-        # so we accept either 'error(p)' or 'error (p)'.
         tokens = stripped.split(None, 1)
         head = tokens[0]
         body = tokens[1] if len(tokens) > 1 else ""
-        # Stim joins the keyword to '(' with no space for error/detector/
-        # logical_observable; the parser must accept both forms.
-        if head.startswith("error("):
-            body = head + (" " + body if body else "")
-            head = "error"
-        elif head.startswith("detector("):
-            body = head + (" " + body if body else "")
-            head = "detector"
+        # Stim joins the keyword to '(' with no space for error/detector;
+        # accept both spellings.
+        for keyword in ("error", "detector", "shift_detectors"):
+            if head.startswith(keyword + "("):
+                body = head + (" " + body if body else "")
+                head = keyword
+                break
         instruction_counts[head] = instruction_counts.get(head, 0) + 1
         if head == "error":
-            # error(p1 p2 ...) D... L...
             paren = body.find("(")
             close = body.find(")")
             if paren == -1 or close == -1 or close < paren:
-                raise QECTORInputError(
-                    f"DEM line {lineno}: 'error' requires parenthesized probability"
+                raise QECTORInputError(f"DEM line {lineno}: 'error' requires a parenthesized probability")
+            prob_tokens = body[paren + 1 : close].split()
+            if len(prob_tokens) != 1:
+                raise QECTORInputError(f"DEM line {lineno}: 'error' takes exactly one probability, got {len(prob_tokens)}")
+            try:
+                probability = float(prob_tokens[0])
+            except ValueError as exc:
+                raise QECTORInputError(f"DEM line {lineno}: probability {prob_tokens[0]!r} is not a number") from exc
+            if not math.isfinite(probability) or probability < 0.0 or probability > 1.0:
+                raise QECTORInputError(f"DEM line {lineno}: probability {probability!r} is outside [0, 1]")
+            components = [component.split() for component in body[close + 1 :].split("^")]
+            for component_index, tags in enumerate(components):
+                dets: list[str] = []
+                obs: list[str] = []
+                for tag in tags:
+                    if tag.startswith("D") and tag[1:].isdigit():
+                        if tag[1:] in dets:
+                            dets.remove(tag[1:])  # repeated detector cancels (XOR)
+                        else:
+                            dets.append(tag[1:])
+                    elif tag.startswith("L") and tag[1:].isdigit():
+                        if tag[1:] in obs:
+                            obs.remove(tag[1:])
+                        else:
+                            obs.append(tag[1:])
+                    else:
+                        raise QECTORInputError(f"DEM line {lineno}: unknown target {tag!r} (expected D<n> or L<n>)")
+                mechanisms.append(
+                    {
+                        "line": lineno,
+                        "probabilities": [probability],
+                        "detectors": sorted(dets, key=int),
+                        "observables": sorted(obs, key=int),
+                        "weight": len(dets),
+                        "component": component_index,
+                        "n_components": len(components),
+                    }
                 )
-            probs = []
-            for token in body[paren + 1 : close].split():
-                try:
-                    probs.append(float(token))
-                except ValueError as exc:
-                    raise QECTORInputError(
-                        f"DEM line {lineno}: probability {token!r} is not a number"
-                    ) from exc
-            tags = body[close + 1 :].split()
-            dets = [t[1:] for t in tags if t.startswith("D") and t[1:].isdigit()]
-            obs = [t[1:] for t in tags if t.startswith("L") and t[1:].isdigit()]
-            mechanisms.append(
-                {
-                    "line": lineno,
-                    "probabilities": probs,
-                    "detectors": dets,
-                    "observables": obs,
-                    "weight": len(dets),
-                }
-            )
         elif head == "detector":
             coords: list[float] = []
             paren = body.find("(")
@@ -626,17 +694,17 @@ def _parse_dem_text(text: str) -> dict[str, Any]:
                         try:
                             coords.append(float(token))
                         except ValueError as exc:
-                            raise QECTORInputError(
-                                f"DEM line {lineno}: coordinate {token!r} is not a number"
-                            ) from exc
+                            raise QECTORInputError(f"DEM line {lineno}: coordinate {token!r} is not a number") from exc
             detectors.append({"line": lineno, "coords": coords})
         elif head == "logical_observable":
-            sym = body.strip()
-            observables.append({"line": lineno, "symbol": sym})
+            observables.append({"line": lineno, "symbol": body.strip()})
         elif head == "shift_detectors":
             pass
         elif head == "repeat":
-            pass
+            raise QECTORInputError(
+                f"DEM line {lineno}: 'repeat' blocks are not supported by this parser; "
+                "flatten the model first (stim.DetectorErrorModel.flattened())"
+            )
         else:
             raise QECTORInputError(f"DEM line {lineno}: unknown instruction {head!r}")
 
@@ -652,87 +720,79 @@ def _parse_dem_text(text: str) -> dict[str, Any]:
 def dem_collapse_parallel(
     parsed: dict[str, Any], *, observable_rule: str = "most_likely"
 ) -> dict[str, Any]:
-    """Apply the manual 14.1 collapse rule: parallel mechanisms between the
-    same detector pair merge to one edge. Independent-XOR rule:
-    ``p = p1 (1 - p2) + p2 (1 - p1)``; weight = ``log((1-p)/p)``;
-    observable set = that of the more likely member.
+    """Apply the manual 14.1 collapse rule: parallel mechanisms on the same
+    detector set merge to one edge. Independent-XOR rule for n members:
+    ``p = (1 - prod(1 - 2 p_i)) / 2`` (two members: ``p1(1-p2) + p2(1-p1)``);
+    weight = ``log((1-p)/p)``; observable set = that of the most likely
+    member (or union / first). Boundary edges (one detector) collapse the
+    same way, keyed by their single detector. Hyperedges (three or more
+    detectors) are reported, not collapsed. A combined probability of 0 or
+    1 has no finite weight; ``weight_log`` is then null and a warning says so.
     """
     if observable_rule not in {"most_likely", "union", "first"}:
-        raise QECTORInputError(
-            "observable_rule must be one of: most_likely, union, first"
-        )
+        raise QECTORInputError("observable_rule must be one of: most_likely, union, first")
     mechanisms = parsed.get("mechanisms", [])
-    # Only weight-2 mechanisms form graphlike edges (manual 2.6).
-    edges: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    edges: dict[tuple[str, ...], list[dict[str, Any]]] = {}
+    warnings: list[str] = []
     for mech in mechanisms:
-        if mech["weight"] != 2:
+        if mech["weight"] not in (1, 2):
             continue
-        d = sorted(mech["detectors"])
-        if len(d) != 2:
-            continue
-        key = (d[0], d[1])
+        key = tuple(sorted(mech["detectors"], key=int))
         edges.setdefault(key, []).append(mech)
     collapsed: list[dict[str, Any]] = []
-    for key, group in sorted(edges.items()):
-        ps = []
-        for m in group:
-            for p in m["probabilities"]:
-                ps.append((p, m["observables"], m))
-        if not ps:
-            continue
-        # Cumulative XOR combination of every probability in the group
-        # (manual 14.1 + stim's detector_error_model(decompose_errors=True)).
-        # p_combined = 1 - prod (1 - 2 p_i) / 2
-        # but for two members the explicit formula p = p1(1-p2) + p2(1-p1)
-        # is what the manual documents and the tests assert.
+    for key, group in sorted(edges.items(), key=lambda item: tuple(int(d) for d in item[0])):
+        member_probabilities = [m["probabilities"][0] for m in group]
+        product = 1.0
+        for p_i in member_probabilities:
+            product *= 1.0 - 2.0 * p_i
+        p_combined = (1.0 - product) / 2.0
+        p_combined = min(1.0, max(0.0, p_combined))
         if len(group) == 1:
-            p_combined = group[0]["probabilities"][0]
+            winning_observables = group[0]["observables"]
+        elif observable_rule == "most_likely":
+            winning_observables = max(group, key=lambda m: m["probabilities"][0])["observables"]
+        elif observable_rule == "first":
             winning_observables = group[0]["observables"]
         else:
-            p1, p2 = group[0]["probabilities"][0], group[1]["probabilities"][0]
-            p_combined = p1 * (1.0 - p2) + p2 * (1.0 - p1)
-            if observable_rule == "most_likely":
-                winner = group[0] if p1 >= p2 else group[1]
-                winning_observables = winner["observables"]
-            elif observable_rule == "first":
-                winning_observables = group[0]["observables"]
-            else:
-                seen: list[str] = []
-                for m in group:
-                    for o in m["observables"]:
-                        if o not in seen:
-                            seen.append(o)
-                winning_observables = seen
-        weight = (
-            math.log((1.0 - p_combined) / p_combined)
-            if 0 < p_combined < 1
-            else float("inf")
-        )
+            seen: list[str] = []
+            for m in group:
+                for o in m["observables"]:
+                    if o not in seen:
+                        seen.append(o)
+            winning_observables = seen
+        if 0.0 < p_combined < 1.0:
+            weight: float | None = math.log((1.0 - p_combined) / p_combined)
+        else:
+            weight = None
+            warnings.append(
+                f"edge {list(key)} has combined probability {p_combined:g}; log((1-p)/p) is undefined, weight_log is null"
+            )
         collapsed.append(
             {
-                "detector_pair": list(key),
+                "detectors": list(key),
+                "kind": "boundary" if len(key) == 1 else "edge",
                 "p_combined": p_combined,
                 "weight_log": weight,
                 "n_members": len(group),
-                "members": [
-                    {
-                        "p": m["probabilities"][0],
-                        "observables": m["observables"],
-                    }
-                    for m in group
-                ],
+                "members": [{"p": m["probabilities"][0], "observables": m["observables"]} for m in group],
                 "winning_observables": winning_observables,
                 "observable_rule": observable_rule,
+                "combination_rule": "independent_xor: p = (1 - prod(1 - 2 p_i)) / 2",
             }
         )
-    # Hyperedges (weight > 2) cannot be collapsed; report them so the
-    # caller can route them to BP-OSD.
     hyperedges = [m for m in mechanisms if m["weight"] > 2]
+    detector_free = [m for m in mechanisms if m["weight"] == 0]
+    if detector_free:
+        warnings.append(
+            f"{len(detector_free)} mechanism(s) touch no detector (observable-only or cancelled); they form no edge"
+        )
     return {
         "graphlike_edges": collapsed,
         "hyperedges": hyperedges,
         "n_graphlike_members": sum(len(g) for g in edges.values()),
         "n_unique_edges": len(collapsed),
+        "n_detector_free": len(detector_free),
+        **({"warnings": warnings} if warnings else {}),
     }
 
 
@@ -812,7 +872,11 @@ def tool_dem_collapse_parallel(
 ) -> dict[str, Any]:
     parsed = _parse_dem_text(dem_text)
     result = dem_collapse_parallel(parsed, observable_rule=observable_rule)
-    # Sanity check on the manual's worked example (p1=0.01, p2=0.02 -> 0.0296)
+    collapse_warnings = result.pop("warnings", [])
+    # The manual's worked example (p1=0.01, p2=0.02 -> 0.0296) is recomputed
+    # with the same code path on every call, so a regression in the rule
+    # shows up here as a mismatch rather than as a constant.
+    example = dem_collapse_parallel(_parse_dem_text("error(0.01) D0 D1\nerror(0.02) D0 D1\n"))["graphlike_edges"][0]
     return {
         "dem_text_bytes": len(dem_text.encode("utf-8")),
         "collapse": result,
@@ -820,9 +884,13 @@ def tool_dem_collapse_parallel(
             "p1": 0.01,
             "p2": 0.02,
             "expected_p_combined": 0.0296,
+            "computed_p_combined": example["p_combined"],
             "expected_weight_log": math.log(0.9704 / 0.0296),
+            "computed_weight_log": example["weight_log"],
+            "matches": abs(example["p_combined"] - 0.0296) < 1e-12,
         },
         "reference_manual": REF_DOI,
+        **({"warnings": collapse_warnings} if collapse_warnings else {}),
     }
 
 
@@ -860,8 +928,59 @@ def tool_code_family_info(family: str, size: int) -> dict[str, Any]:
         "routing": (
             "graphlike matching decoders" if is_graphlike else "BP-OSD (non-graphlike)"
         ),
+        "health": _family_health(matrix, logicals, is_graphlike, int(size)),
         "qector_version": QECTOR_VERSION,
         "reference_manual": REF_DOI,
+    }
+
+
+def _gf2_rank(matrix: np.ndarray) -> int:
+    work = np.asarray(matrix, dtype=np.uint8).copy() % 2
+    rows, columns = work.shape
+    rank = 0
+    for column in range(columns):
+        pivot = next((row for row in range(rank, rows) if work[row, column]), None)
+        if pivot is None:
+            continue
+        if pivot != rank:
+            work[[rank, pivot]] = work[[pivot, rank]]
+        for row in range(rows):
+            if row != rank and work[row, column]:
+                work[row] ^= work[rank]
+        rank += 1
+        if rank == rows:
+            break
+    return rank
+
+
+def _family_health(matrix: np.ndarray, logicals: np.ndarray | None, graphlike: bool, size: int) -> dict[str, Any]:
+    """Classify a live construction (mirrors the library server's probe)."""
+    rank = _gf2_rank(matrix)
+    unchecked = [int(i) for i in np.where(~matrix.any(axis=0))[0]]
+    notes: list[str] = []
+    if matrix.shape[0] < 2 or rank == 0:
+        status = "degenerate"
+        notes.append("fewer than two checks or zero rank; decoding claims are refused for this family/size")
+    elif unchecked:
+        status = "weak"
+        notes.append(f"qubits {unchecked} participate in no check; effective distance is 1")
+        if logicals is None:
+            notes.append("no logical observables exposed; Theorem 2 scoring is undefined")
+    elif logicals is None:
+        status = "unscored"
+        notes.append("no logical observables exposed; Theorem 2 scoring is undefined")
+    else:
+        status = "ok"
+    return {
+        "status": status,
+        "probe_size": int(size),
+        "n_checks": int(matrix.shape[0]),
+        "n_qubits": int(matrix.shape[1]),
+        "rank": int(rank),
+        "logicals_present": logicals is not None,
+        "graphlike": bool(graphlike),
+        "unchecked_qubits": unchecked,
+        "notes": notes,
     }
 
 
@@ -919,18 +1038,50 @@ def tool_code_logicals_inspect(family: str, size: int) -> dict[str, Any]:
 
 
 def tool_code_distance_check(family: str, size: int) -> dict[str, Any]:
+    """Check the wheel's nominal distance instead of echoing it.
+
+    ``nominal_distance`` is what the wheel labels the code; ``effective_distance``
+    is what a bounded search over error supports finds (see
+    ``mcp_server_library.effective_distance``). ``distance_verified`` is True
+    only when the search is exact and agrees with the nominal value.
+    """
     code = _code_for_family(family, size)
     matrix = _code_matrix(code)
+    logicals = _logical_matrix(code)
+    probe = _get_library().effective_distance(matrix, logicals, nominal=int(size))
+    nominal = code.distance
+    if probe["exact"]:
+        verdict = "verified" if probe["min_logical_weight"] == nominal else "contradicted"
+    elif probe["lower_bound"] is None:
+        verdict = "unscorable"
+    else:
+        verdict = "bounded"
+    warnings: list[str] = []
+    if verdict == "contradicted":
+        warnings.append(
+            f"wheel labels {family}({size}) distance {nominal} but an undetectable logical error of weight "
+            f"{probe['min_logical_weight']} exists on qubits {probe['witness']}; do not use the nominal distance in claims"
+        )
+    elif verdict == "bounded":
+        warnings.append(
+            f"search budget exhausted at weight {probe['searched_weight']}; distance >= {probe['lower_bound']} is all that is established"
+        )
+    elif verdict == "unscorable":
+        warnings.append("no logical observables; the distance cannot be checked for this family")
     return {
         "family": family,
         "size": int(size),
         "n_qubits": int(code.n_qubits),
         "n_checks": int(code.n_checks),
-        "distance": code.distance,
+        "nominal_distance": nominal,
+        "effective_distance": probe,
+        "distance_verified": verdict == "verified",
+        "verdict": verdict,
         "matrix_shape": list(matrix.shape),
         "check_to_qubits": code.check_to_qubits,
         "qector_version": QECTOR_VERSION,
         "reference_manual": REF_DOI,
+        **({"warnings": warnings} if warnings else {}),
     }
 
 
@@ -1005,28 +1156,54 @@ def tool_sinter_decoder_list() -> dict[str, Any]:
     """List the sinter entry points exposed by the wheel (manual 17.2)."""
     if qector_decoder_v3 is None:
         raise QECTORUnsupportedError("qector-decoder-v3 is not installed")
+    # The wheel exposes the factory in ``qector_decoder_v3.sinter_compat``
+    # (not at top level); it needs the optional ``sinter`` package at call
+    # time. Report the three distinguishable states honestly.
     fn = getattr(qector_decoder_v3, "qector_sinter_decoders", None)
+    module_path = "qector_decoder_v3"
+    if fn is None:
+        try:
+            sinter_compat = importlib.import_module("qector_decoder_v3.sinter_compat")
+        except Exception:
+            sinter_compat = None
+        fn = getattr(sinter_compat, "qector_sinter_decoders", None) if sinter_compat is not None else None
+        module_path = "qector_decoder_v3.sinter_compat"
     if fn is None or not callable(fn):
         return {
             "sinter_decoders": [],
             "sinter_exposed": False,
+            "factory": None,
+            "sinter_installed": importlib.util.find_spec("sinter") is not None,
             "note": "qector_sinter_decoders() is not present on this build",
+            "reference_manual": REF_DOI,
+        }
+    sinter_installed = importlib.util.find_spec("sinter") is not None
+    if not sinter_installed:
+        return {
+            "sinter_decoders": [],
+            "sinter_exposed": False,
+            "factory": f"{module_path}.qector_sinter_decoders",
+            "sinter_installed": False,
+            "note": (
+                "the factory exists but the optional 'sinter' package is not installed, so no shim can be "
+                "registered; installing it is a network action outside the air-gapped default"
+            ),
             "reference_manual": REF_DOI,
         }
     try:
         decoders = fn()
-        out: dict[str, Any] = {
-            "sinter_exposed": True,
-            "sinter_decoders": [
-                {"name": name, "type": type(value).__name__}
-                for name, value in decoders.items()
-            ],
-            "reference_manual": REF_DOI,
-        }
-        return out
-    except Exception as exc:
         return {
             "sinter_exposed": True,
+            "factory": f"{module_path}.qector_sinter_decoders",
+            "sinter_installed": True,
+            "sinter_decoders": [{"name": name, "type": type(value).__name__} for name, value in decoders.items()],
+            "reference_manual": REF_DOI,
+        }
+    except Exception as exc:
+        return {
+            "sinter_exposed": False,
+            "factory": f"{module_path}.qector_sinter_decoders",
+            "sinter_installed": True,
             "sinter_decoders": [],
             "error": f"{type(exc).__name__}: {exc}",
             "reference_manual": REF_DOI,
@@ -1100,24 +1277,25 @@ def tool_license_active_check() -> dict[str, Any]:
     try:
         info = q.get_license_info()
     except Exception as exc:
+        # No tier is assumed when the wheel cannot answer: report the error
+        # and leave max_distance unknown instead of inventing "Community".
         return {
             "license_active": False,
             "error": f"{type(exc).__name__}: {exc}",
-            "tier": "Community",
-            "max_distance": 7,
+            "tier": "unknown",
+            "max_distance": None,
+            "source": "error",
             "reference_manual": REF_DOI,
         }
-    tier = info.get("tier", "Community") if isinstance(info, dict) else "Community"
-    max_distance = info.get("max_distance", 7) if isinstance(info, dict) else 7
+    info = dict(info) if isinstance(info, dict) else {"raw": str(info)}
+    max_distance = info.get("max_distance")
     return {
-        "license_active": True,
-        "tier": tier,
-        "max_distance": int(max_distance),
-        "tier_table": {
-            "Community": {"max_distance": 7, "gpu_batch": False},
-            "Pro": {"max_distance": 19, "gpu_batch": False},
-            "Enterprise": {"max_distance": 63, "gpu_batch": True},
-        }.get(tier, {"max_distance": 7, "gpu_batch": False}),
+        "license_active": not bool(info.get("is_expired", False)),
+        "tier": str(info.get("tier", "unknown")),
+        "max_distance": int(max_distance) if isinstance(max_distance, (int, float)) and not isinstance(max_distance, bool) else None,
+        "gpu_enabled": bool(info["gpu_enabled"]) if "gpu_enabled" in info else None,
+        "gnn_enabled": bool(info["gnn_enabled"]) if "gnn_enabled" in info else None,
+        "source": "live_wheel",
         "info": info,
         "environment": _env_block(),
         "reference_manual": REF_DOI,
@@ -1131,13 +1309,7 @@ def tool_env_block(check_pypi: bool = False) -> dict[str, Any]:
         "qector_decoder_v3_version": QECTOR_VERSION,
         "reference_manual": REF_DOI,
     }
-    if check_pypi:
-        out["pypi_freshness"] = _check_pypi_freshness()
-    else:
-        out["pypi_freshness"] = {
-            "status": "not_checked",
-            "reason": "pass check_pypi=true to query PyPI; default path stays fully offline",
-        }
+    out["pypi_freshness"] = _pypi_block(check_pypi)
     return out
 
 
@@ -1162,12 +1334,14 @@ def tool_compat_report(check_pypi: bool = False) -> dict[str, Any]:
             or importlib.util.find_spec("qector_decoder_v3.pymatching_compat")
             is not None
         )
+    sdk_ok, sdk_detail = sdk_supported()
     report: dict[str, Any] = {
         "runtime_ok": (
             qector_installed
             and QECTOR_VERSION == EXPECTED_QECTOR_VERSION
             and numpy_available
             and mcp_available
+            and sdk_ok
         ),
         "server": {
             "name": SERVER_NAME,
@@ -1180,9 +1354,10 @@ def tool_compat_report(check_pypi: bool = False) -> dict[str, Any]:
             "expected": EXPECTED_QECTOR_VERSION,
         },
         "numpy": {"installed": numpy_available, "version": np.__version__},
-        "mcp_sdk": {"installed": mcp_available, "version": _installed_version("mcp")},
+        "mcp_sdk": {"installed": mcp_available, "version": _installed_version("mcp"), "supported": sdk_ok, "detail": sdk_detail},
         "pymatching_compat": {"available": pymatching_compat_available},
         "reference_manual": REF_DOI,
+        "network_policy": qector_airgap.network_policy(),
         "provisional_surfaces": {
             "library_stdio_mcp": "supported local stdio wrapper (library server, 8 frozen tools)",
             "research_stdio_mcp": "this server; 29 provisional research tools",
@@ -1194,13 +1369,7 @@ def tool_compat_report(check_pypi: bool = False) -> dict[str, Any]:
             "opencl": "OpenCL requires the documented source-build path",
         },
     }
-    if check_pypi:
-        report["pypi_freshness"] = _check_pypi_freshness()
-    else:
-        report["pypi_freshness"] = {
-            "status": "not_checked",
-            "reason": "pass check_pypi=true to query PyPI; default path stays fully offline",
-        }
+    report["pypi_freshness"] = _pypi_block(check_pypi)
     return report
 
 
@@ -1351,15 +1520,33 @@ def tool_workbench_probe(
     return _subprocess_workbench_probe(executable, timeout, list_tools, limit)
 
 
+def default_data_dir() -> Path:
+    """Per-user writable data directory (identical to the library server's)."""
+    system = platform.system()
+    if system == "Windows":
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        return Path(base) / "QectorClaudePlugin"
+    if system == "Darwin":
+        return Path.home() / "Library" / "Application Support" / "QectorClaudePlugin"
+    base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    return Path(base) / "qector-claude-plugin"
+
+
 def _artifact_root() -> Path:
-    root_dir = Path(__file__).resolve().parent.parent
     configured = os.environ.get("QECTOR_ARTIFACT_DIR")
-    return Path(configured).expanduser().resolve() if configured else (root_dir / "artifacts").resolve()
+    if configured and not configured.startswith("${"):
+        return Path(configured).expanduser().resolve()
+    return (default_data_dir() / "artifacts").resolve()
 
 
 def _approved_artifact_path(raw_path: str) -> Path:
-    candidate = Path(raw_path).expanduser().resolve()
     artifact_root = _artifact_root()
+    candidate = Path(raw_path).expanduser()
+    if not candidate.is_absolute():
+        # Relative names are artifact names, never cwd-relative paths: the
+        # server's working directory is not meaningful under Claude Desktop.
+        candidate = artifact_root / candidate
+    candidate = candidate.resolve()
     try:
         candidate.relative_to(artifact_root)
     except ValueError as exc:
@@ -1407,9 +1594,16 @@ def tool_artifact_metadata_check(
     trials: int = 100,
     error_rates: Sequence[float] = (0.01, 0.05, 0.1),
     seed: int = 42,
+    artifact_path: str | None = None,
 ) -> dict[str, Any]:
-    """Verify that a candidate artifact carries the chapter 22.3 required
-    metadata fields. Pure utility; does not run any decoder.
+    """Check an artifact's chapter 22.3 metadata, or emit the template.
+
+    With ``artifact_path`` (a ``.json`` inside the artifact root, as written
+    by ``threshold_sweep``), the file is loaded, its ``required_metadata``
+    block is checked field by field, and the ``.sha256`` sidecar is
+    recomputed and compared. Without it, the tool returns the template a
+    conforming artifact must carry and says so (``mode: "template"``,
+    ``checked: false``); nothing is verified in that mode.
     """
     if family not in FAMILY_FACTORY:
         raise QECTORInputError(f"Unknown family {family!r}")
@@ -1419,37 +1613,6 @@ def tool_artifact_metadata_check(
     seed = _require_integral(seed, "seed", minimum=0)
     code = _code_for_family(family, size)
     matrix = _code_matrix(code)
-    required = {
-        "code_family": family,
-        "distance_size": [
-            {
-                "distance": int(size),
-                "n_checks": int(code.n_checks),
-                "n_qubits": int(code.n_qubits),
-            }
-        ],
-        "noise_model": {
-            "tag": "code_capacity",
-            "error_rates": list(error_rates),
-            "source": "qector Code.random_error",
-        },
-        "dem_settings": {
-            "decompose_errors": None,
-            "graphlike_collapse": None,
-            "applicable": False,
-        },
-        "decoder": {
-            "class": DECODER_CLASS_HINTS[decoder_name],
-            "name": decoder_name,
-            "weighted": False,
-            "batch": False,
-            "gpu": False,
-        },
-        "sample_count": {"trials_per_point": trials, "seed": seed},
-        "metric": "logical_error_rate (logical coset scoring, Theorem 2)",
-        "environment": _env_block(),
-        "artifact": {"format": "raw JSON", "sha256": "TBD"},
-    }
     required_fields = [
         "code_family",
         "distance_size",
@@ -1461,17 +1624,76 @@ def tool_artifact_metadata_check(
         "environment",
         "artifact",
     ]
-    return {
+    template = {
+        "code_family": family,
+        "distance_size": [{"distance": int(size), "n_checks": int(code.n_checks), "n_qubits": int(code.n_qubits)}],
+        "noise_model": {"tag": "code_capacity", "error_rates": list(error_rates), "source": "qector Code.random_error"},
+        "dem_settings": {"decompose_errors": None, "graphlike_collapse": None, "applicable": False},
+        "decoder": {"class": DECODER_CLASS_HINTS[decoder_name], "name": decoder_name, "weighted": False, "batch": False, "gpu": False},
+        "sample_count": {"trials_per_point": trials, "seed": seed},
+        "metric": "logical_error_rate (logical coset scoring, Theorem 2)",
+        "environment": _env_block(),
+        "artifact": {"format": "raw JSON", "path": "<written by threshold_sweep>", "sha256_sidecar": "<path>.sha256"},
+    }
+    base = {
         "family": family,
         "size": int(size),
         "decoder": decoder_name,
-        "required_metadata": required,
         "required_fields": required_fields,
         "matrix_shape": list(matrix.shape),
-        "all_required_fields_present": all(
-            field in required for field in required_fields
-        ),
         "reference_manual": REF_DOI,
+    }
+    if artifact_path is None:
+        return {
+            **base,
+            "mode": "template",
+            "checked": False,
+            "required_metadata": template,
+            "missing_fields": [],
+            "all_required_fields_present": False,
+            "artifact_sha256": None,
+            "sidecar_matches": None,
+            "warnings": ["no artifact_path given: this is the metadata template, nothing was checked"],
+        }
+    library = _get_library()
+    try:
+        path = library._artifact_path(artifact_path)
+    except library.QECTORArtifactError as exc:
+        raise QECTORInputError(str(exc)) from exc
+    if not path.is_file():
+        raise QECTORInputError(f"artifact {path.name} does not exist inside the artifact root")
+    payload = path.read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    try:
+        document = json.loads(payload.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise QECTORInputError(f"artifact {path.name} is not valid JSON: {exc.__class__.__name__}") from exc
+    metadata = document.get("required_metadata") if isinstance(document, dict) else None
+    if not isinstance(metadata, dict):
+        metadata = {}
+    missing = [field for field in required_fields if field not in metadata]
+    sidecar = Path(f"{path}.sha256")
+    sidecar_matches: bool | None = None
+    warnings: list[str] = []
+    if sidecar.is_file():
+        recorded = sidecar.read_text(encoding="ascii", errors="replace").split()[:1]
+        sidecar_matches = bool(recorded) and recorded[0] == digest
+        if not sidecar_matches:
+            warnings.append("the .sha256 sidecar does not match the artifact bytes; the file changed after it was written")
+    else:
+        warnings.append("no .sha256 sidecar next to the artifact")
+    if missing:
+        warnings.append(f"required_metadata lacks {missing}")
+    return {
+        **base,
+        "mode": "checked",
+        "checked": True,
+        "required_metadata": metadata if not missing else template,
+        "missing_fields": missing,
+        "all_required_fields_present": not missing,
+        "artifact_sha256": digest,
+        "sidecar_matches": sidecar_matches,
+        **({"warnings": warnings} if warnings else {}),
     }
 
 
@@ -1490,15 +1712,17 @@ def tool_decode_faithfulness_check(
     H = _validated_matrix(H_matrix)
     s = _binary_vector(syndrome, "syndrome", expected_length=H.shape[0])
     c = _binary_vector(correction, "correction", expected_length=H.shape[1])
-    calculated = (H.astype(np.int64) @ c.astype(np.int64)) % 2
-    valid = bool(np.array_equal(calculated.astype(np.uint8), s))
+    calculated = ((H.astype(np.int64) @ c.astype(np.int64)) % 2).astype(np.uint8)
+    valid = bool(np.array_equal(calculated, s))
+    mismatch = [int(i) for i in np.where(calculated != s)[0]]
     return {
         "syndrome_valid": valid,
         "n_checks": int(H.shape[0]),
         "n_qubits": int(H.shape[1]),
         "correction_weight": int(c.sum()),
         "syndrome_weight": int(s.sum()),
-        "residual_weight": int(((c ^ np.zeros_like(c)).sum())),
+        "computed_syndrome": calculated.astype(int).tolist(),
+        "syndrome_mismatch_indices": mismatch,
         "theorem": "Theorem 1 (manual chapter 3)",
         "reference_manual": REF_DOI,
     }
@@ -1528,20 +1752,40 @@ def tool_hot_path_microbench(
         raise QECTORUnsupportedError(
             f"decoder class {DECODER_CLASS_HINTS[decoder_name]!r} is not present in this build"
         )
+    if decoder_name not in MICROBENCH_DECODERS:
+        raise QECTORInputError(
+            f"hot_path_microbench supports the check-list constructor decoders {sorted(MICROBENCH_DECODERS)}; "
+            f"{decoder_name!r} needs a matrix/DEM constructor and is not benchmarked here"
+        )
+    if decoder_name in {"union_find", "fast_union_find", "blossom", "sparse_blossom"} and hasattr(code, "is_matching_graph") and not code.is_matching_graph():
+        raise QECTORInputError(f"decoder {decoder_name!r} requires a graphlike code; {family!r} is not graphlike")
     decoder = decoder_cls(code.check_to_qubits, n_qubits=code.n_qubits)
     rng = np.random.default_rng(seed)
     latencies_us: list[float] = []
     syndrome_invalid = 0
-    for _ in range(int(shots)):
-        err = code.random_error(0.05, rng=rng)
-        s = code.syndrome(err)
-        started = time.perf_counter()
+    # Warm-up: the first calls into the native decoder pay one-off costs
+    # (allocation, graph construction) that are not hot-path latency. They
+    # are decoded and verified but not timed.
+    for _ in range(MICROBENCH_WARMUP_SHOTS):
+        s = code.syndrome(code.random_error(0.05, rng=rng))
         try:
             _verify_faithfulness(matrix, decoder.decode(s), s)
         except QECTORFaithfulnessError:
+            pass
+    for _ in range(int(shots)):
+        err = code.random_error(0.05, rng=rng)
+        s = code.syndrome(err)
+        # The timed window is decoder.decode() alone. The Theorem 1 check
+        # runs afterwards, outside the window, and still fails closed.
+        started = time.perf_counter()
+        correction = decoder.decode(s)
+        elapsed_us = (time.perf_counter() - started) * 1e6
+        try:
+            _verify_faithfulness(matrix, correction, s)
+        except QECTORFaithfulnessError:
             syndrome_invalid += 1
             continue
-        latencies_us.append((time.perf_counter() - started) * 1e6)
+        latencies_us.append(elapsed_us)
     if not latencies_us:
         workload_hash_input = (
             f"{family}|d={int(size)}|decoder={decoder_name}|"
@@ -1589,6 +1833,11 @@ def tool_hot_path_microbench(
             "qector_version": QECTOR_VERSION,
             "reference_manual": REF_DOI,
         }
+    bench_warnings: list[str] = []
+    if syndrome_invalid:
+        bench_warnings.append(
+            f"{syndrome_invalid} of {int(shots)} shots violated H c = s (mod 2); the latency sample excludes them"
+        )
     sorted_lat = sorted(latencies_us)
     n = len(sorted_lat)
 
@@ -1650,16 +1899,24 @@ def tool_hot_path_microbench(
             "p90": _pct(0.90),
             "p95": _pct(0.95),
             "p99": _pct(0.99),
-            "ci95_mean": [mean - 1.959963985 * se, mean + 1.959963985 * se],
+            "ci95_mean": (
+                [max(0.0, mean - 1.959963985 * se), mean + 1.959963985 * se]
+                if n >= MICROBENCH_MIN_SHOTS_FOR_CI
+                else None
+            ),
         },
+        "timed_window": "decoder.decode(syndrome) only; the H c = s verification runs outside the window",
+        "warmup_shots": MICROBENCH_WARMUP_SHOTS,
         "scope_note": (
-            "Per-machine, per-workload, per-build hot-path latency sample. "
-            "Not a portable performance claim (manual 22.5)."
+            "Per-machine, per-workload, per-build hot-path latency sample of decoder.decode() after "
+            f"{MICROBENCH_WARMUP_SHOTS} untimed warm-up shots. Not a portable performance claim (manual 22.5); "
+            f"ci95_mean is null below {MICROBENCH_MIN_SHOTS_FOR_CI} timed shots."
         ),
         "measurement_scope": measurement_scope,
         "environment": env,
         "qector_version": QECTOR_VERSION,
         "reference_manual": REF_DOI,
+        **({"warnings": bench_warnings} if bench_warnings else {}),
     }
 
 
@@ -1791,7 +2048,7 @@ def tool_sinter_task_template(
             f"Unknown decoder {decoder_name!r}; choose one of {sorted(DECODER_CLASS_HINTS)}"
         )
     size = _require_integral(size, "size", minimum=2, maximum=MAX_DISTANCE)
-    error_rate = _require_probability(error_rate)
+    error_rate = _require_probability(error_rate, "error_rate")
     shots = _require_integral(shots, "shots", minimum=1, maximum=MAX_TRIALS)
     seed = _require_integral(seed, "seed", minimum=0)
 
@@ -1858,18 +2115,20 @@ def tool_workload_hash(
     is content-addressed and stable across runs.
     """
     payload: dict[str, Any] = {}
-    if H_matrix is not None:
+    # An empty array means "not supplied" (JSON clients cannot always send
+    # null), so a syndrome-only or correction-only fingerprint is possible.
+    if H_matrix is not None and len(H_matrix) > 0:
         H = _validated_matrix(H_matrix)
         payload["H_shape"] = list(H.shape)
         payload["H_bytes"] = H.tobytes().hex()
-    if syndrome is not None:
+    if syndrome is not None and len(syndrome) > 0:
         if not isinstance(syndrome, Sequence) or isinstance(syndrome, (str, bytes)):
             raise QECTORInputError("syndrome must be a sequence of 0/1")
         s = np.asarray(syndrome, dtype=np.uint8)
         if not np.all((s == 0) | (s == 1)):
             raise QECTORInputError("syndrome must contain only 0/1")
         payload["syndrome_bytes"] = s.tobytes().hex()
-    if correction is not None:
+    if correction is not None and len(correction) > 0:
         if not isinstance(correction, Sequence) or isinstance(correction, (str, bytes)):
             raise QECTORInputError("correction must be a sequence of 0/1")
         c = np.asarray(correction, dtype=np.uint8)
@@ -1878,7 +2137,7 @@ def tool_workload_hash(
         payload["correction_bytes"] = c.tobytes().hex()
     if not payload:
         raise QECTORInputError(
-            "at least one of H_matrix, syndrome, correction is required"
+            "at least one non-empty H_matrix, syndrome or correction is required"
         )
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -1911,9 +2170,11 @@ _THEOREMS: dict[int, dict[str, str]] = {
         "chapter": "3.2",
         "name": "Logical error criterion",
         "statement": (
-            "Let rank(H) = r, and let e, c in F2^n satisfy H c = H e = s. "
-            "Decoding is logically correct iff c + e in im(H^T); it suffers "
-            "an uncorrectable logical error iff c + e in ker(H) \\ im(H^T)."
+            "Let e, c in F2^n satisfy H c = H e = s, so c + e in ker(H). Decoding is logically correct "
+            "iff c + e lies in the span of the stabilizers acting on this sector (im(H_dual^T) for a CSS "
+            "code; equal to im(H^T) only for self-dual codes such as Steane); it suffers an uncorrectable "
+            "logical error iff L (c + e) != 0 (mod 2), where L is the sector's logical-observable matrix. "
+            "QECTOR scores the second form with the wheel's logicals_matrix()."
         ),
     },
     3: {
@@ -2145,7 +2406,7 @@ _GLOSSARY: dict[str, dict[str, str]] = {
     },
     "logical operator": {
         "chapter": "Appendix B",
-        "definition": "An element of ker(H) \\ im(H^T); flipping it changes the logical state undetectably.",
+        "definition": "An undetectable error (in ker(H)) outside the stabilizer span of its sector, i.e. one with L e != 0 for the sector's logical-observable matrix L; flipping it changes the logical state undetectably. ker(H) \\ im(H^T) is the same set only for self-dual CSS codes.",
     },
     "wilson interval": {
         "chapter": "Appendix B",
@@ -2294,7 +2555,7 @@ _REPRODUCTION_COMMANDS: dict[str, dict[str, Any]] = {
         "section": "Appendix D.1",
         "title": "Build and import smoke test",
         "command": "python -c \"import qector_decoder_v3; print(qector_decoder_v3.__version__)\"",
-        "description": "Validates wheel installation and stable import of qector-decoder-v3==1.0.0 without app dependency.",
+        "description": "Validates wheel installation and stable import of qector-decoder-v3==1.0.1 without app dependency.",
     },
     "d2_validation_suite": {
         "section": "Appendix D.2",
@@ -2368,6 +2629,7 @@ def tool_system_setup(
     install_requirements: bool = True,
     create_artifact_dir: bool = True,
     run_validation_test: bool = True,
+    offline_wheelhouse: str | None = None,
 ) -> dict[str, Any]:
     """Guided first-time system setup tool for the QECTOR quantum decoder package.
 
@@ -2388,6 +2650,19 @@ def tool_system_setup(
             f"profile must be one of {sorted(SETUP_PROFILES)}"
         )
     packages_to_install = list(SETUP_PROFILES[profile])
+    wheelhouse: Path | None = None
+    if offline_wheelhouse is not None:
+        if not isinstance(offline_wheelhouse, str) or not offline_wheelhouse.strip():
+            raise QECTORInputError("offline_wheelhouse must be a non-empty directory path")
+        wheelhouse = Path(offline_wheelhouse).expanduser().resolve()
+        if not wheelhouse.is_dir():
+            raise QECTORInputError(f"offline_wheelhouse is not a directory: {wheelhouse}")
+    if install_requirements and wheelhouse is None:
+        # Online pip resolution is egress; refuse it in air-gapped mode even
+        # on a dry run so the plan never advertises an action it cannot take.
+        qector_airgap.require_network(
+            "system_setup(install_requirements=true) without offline_wheelhouse"
+        )
 
     # Gather system diagnostics (read-only)
     py_exe = sys.executable
@@ -2398,7 +2673,9 @@ def tool_system_setup(
     qector_ver = _installed_version("qector-decoder-v3")
     mcp_ver = _installed_version("mcp")
     crypto_ver = _installed_version("cryptography")
-    artifact_dir = Path(os.environ.get("QECTOR_ARTIFACT_DIR", root_dir / "artifacts"))
+    # Same root every other tool uses (per-user data dir unless
+    # QECTOR_ARTIFACT_DIR names a real directory; unexpanded ${...} ignored).
+    artifact_dir = _artifact_root()
 
     diagnostics = {
         "python_executable": py_exe,
@@ -2426,6 +2703,7 @@ def tool_system_setup(
     if install_requirements:
         actions_planned.append(
             f"Install/verify packages: {', '.join(packages_to_install)}"
+            + (f" from offline wheelhouse {wheelhouse}" if wheelhouse else " from the configured package index")
         )
     if create_artifact_dir:
         actions_planned.append(f"Ensure artifact directory exists: {artifact_dir}")
@@ -2446,6 +2724,7 @@ def tool_system_setup(
             ),
             "actions_planned": actions_planned,
             "diagnostics": diagnostics,
+            "network_policy": qector_airgap.network_policy(),
             "reference_manual": REF_DOI,
         }
 
@@ -2455,6 +2734,8 @@ def tool_system_setup(
     # 1. Install requirements
     if install_requirements and has_pip:
         install_cmd = [py_exe, "-m", "pip", "install"]
+        if wheelhouse is not None:
+            install_cmd.extend(["--no-index", "--find-links", str(wheelhouse)])
         if profile == "production" and req_file.is_file():
             install_cmd.extend(["-r", str(req_file)])
         else:
@@ -2560,6 +2841,7 @@ def tool_system_setup(
         "actions_executed": actions_executed,
         "diagnostics": diagnostics,
         "validation_result": validation_result,
+        "network_policy": qector_airgap.network_policy(),
         "reference_manual": REF_DOI,
     }
 
@@ -2902,17 +3184,12 @@ def tool_get_runtime_provenance(check_pypi: bool = False) -> dict[str, Any]:
         "qector_decoder_v3": QECTOR_VERSION,
         "qector_decoder_v3_present": qector_decoder_v3 is not None,
         "mcp_protocol": WORKBENCH_PROTOCOL_VERSION,
+        "mcp_sdk": _installed_version("mcp"),
         "environment": _env_block(),
         "stability": "provisional",
         "reference_manual": REF_DOI,
     }
-    if check_pypi:
-        provenance["pypi_freshness"] = _check_pypi_freshness()
-    else:
-        provenance["pypi_freshness"] = {
-            "status": "not_checked",
-            "reason": "pass check_pypi=true to query PyPI; default path stays fully offline",
-        }
+    provenance["pypi_freshness"] = _pypi_block(check_pypi)
     return provenance
 
 
@@ -2982,6 +3259,7 @@ TOOL_DEFAULTS: dict[str, dict[str, Any]] = {
         "trials": 100,
         "error_rates": [0.01, 0.05, 0.1],
         "seed": 42,
+        "artifact_path": None,
     },
     "decode_faithfulness_check": {"H_matrix": [], "syndrome": [], "correction": []},
     "hot_path_microbench": {
@@ -3000,7 +3278,7 @@ TOOL_DEFAULTS: dict[str, dict[str, Any]] = {
         "shots": 1000,
         "seed": 42,
     },
-    "workload_hash": {"H_matrix": [], "syndrome": [], "correction": []},
+    "workload_hash": {"H_matrix": None, "syndrome": None, "correction": None},
     "theorem_lookup": {"number": 1},
     "glossary_lookup": {"term": ""},
     "reproduction_command_lookup": {"section": "all"},
@@ -3030,60 +3308,32 @@ def dispatch_tool(
             f"Unknown tool {name!r}; choose one of {sorted(TOOL_FUNCTIONS)}"
         )
     consume_call_budget(name)
-    return function(**_merged_arguments(name, arguments))
+    try:
+        return function(**_merged_arguments(name, arguments))
+    except (QECTORInputError, QECTORUnsupportedError):
+        refund_call_budget(name)
+        raise
 
 
-def _error_payload(exc: Exception) -> dict[str, Any]:
-    return {
-        "error": {
-            "type": exc.__class__.__name__,
-            "message": str(exc),
-            "verified": False,
-        }
-    }
-
-
-# ---------------------------------------------------------------------------
-# MCP stdio server
-# ---------------------------------------------------------------------------
-
-try:
-    from mcp.types import (
-    CallToolResult,
-    ServerCapabilities,
-    Tool,
-        ToolsCapability,
-    )
-except Exception as exc:  # pragma: no cover
-    raise RuntimeError(
-        "The MCP Python SDK is required; install requirements.txt"
-    ) from exc
-
-try:
-    from mcp.server import Server as _LowLevelServer
-except Exception:  # pragma: no cover
-    _LowLevelServer = None
-
-
-def _tool_schema() -> list[Tool]:
+def _tool_schema() -> list[Any]:
     return [
-        Tool(
+        make_tool(
             name="wilson_ci",
             description="Wilson 95% score interval (manual 15.2). k, n, optional z.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "k": {"type": "integer", "minimum": 0, "default": 10},
                     "n": {"type": "integer", "minimum": 1, "default": 1000},
-                    "z": {"type": "number", "default": Z95},
+                    "z": {"type": "number", "exclusiveMinimum": 0, "default": Z95},
                 },
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="wilson_table",
             description="Batch Wilson 95% CI table for a series of k values at fixed n.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "n": {"type": "integer", "minimum": 1, "default": 1000},
@@ -3092,15 +3342,15 @@ def _tool_schema() -> list[Tool]:
                         "items": {"type": "integer", "minimum": 0},
                         "default": [0, 1, 5, 10, 50, 100],
                     },
-                    "z": {"type": "number", "default": Z95},
+                    "z": {"type": "number", "exclusiveMinimum": 0, "default": Z95},
                 },
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="logical_coset_score",
             description="Score a batch of (predicted, sampled) logical observables on the logical coset (Theorem 2).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "predicted_logicals": {
@@ -3122,10 +3372,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="dem_inspect",
             description="Parse a minimal Stim-style DEM text; report structure, weight histogram, and routing hint (manual 14).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "dem_text": {"type": "string"},
@@ -3134,10 +3384,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="dem_collapse_parallel",
             description="Apply the manual 14.1 collapse rule to a DEM; report collapsed graph edges and the worked-example sanity check.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "dem_text": {"type": "string"},
@@ -3151,10 +3401,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="code_family_info",
             description="Return live structural info about a code family at a given size (manual 4).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "family": {
@@ -3168,10 +3418,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="code_export_matrices",
             description="Export a code's parity_check_matrix, logicals_matrix, and check_to_qubits in JSON form (manual 16.1).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "family": {
@@ -3193,10 +3443,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="code_logicals_inspect",
             description="Return a code's logical observables or a clear statement that logical scoring is unavailable (manual 3.2 / 16.1).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "family": {
@@ -3210,10 +3460,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="code_distance_check",
             description="Return the documented distance and structure for a code at a given size (manual 16.1).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "family": {
@@ -3227,10 +3477,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="pymatching_compat_check",
             description="Smoke-test a QECTOR code against a pymatching.Matching pipeline; report bitwise correction agreement (manual 17.1).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "family": {
@@ -3244,43 +3494,43 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="sinter_decoder_list",
             description="List the sinter decoder entry points exposed by the wheel (manual 17.2).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="qiskit_plugin_check",
             description="Probe the optional Qiskit plugin (manual 17.3).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="hardware_probe",
             description="Live probe of CUDA / OpenCL availability and license tier (manual 18, no assumptions).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="license_active_check",
             description="Read the live offline license tier and feature gates (manual 18.1).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="env_block",
             description=(
                 "Return the environment block (manual 22.3). Set "
@@ -3288,7 +3538,7 @@ def _tool_schema() -> list[Tool]:
                 "qector-decoder-v3 release (single outbound HTTPS call, "
                 "cached for the process lifetime); default stays fully offline."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "check_pypi": {
@@ -3303,7 +3553,7 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="compat_report",
             description=(
                 "Bench-server compatibility report: numpy / mcp SDK / "
@@ -3314,7 +3564,7 @@ def _tool_schema() -> list[Tool]:
                 "(single outbound HTTPS call, cached for the process "
                 "lifetime); default stays fully offline."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "check_pypi": {
@@ -3329,10 +3579,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="artifacts_sha256",
             description="Compute SHA-256 of one or more files for the chapter 22.3 metadata sidecar.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "paths": {
@@ -3344,10 +3594,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="artifact_metadata_check",
-            description="Generate the chapter 22.3 required-metadata block for a candidate artifact (no decoder execution).",
-            inputSchema={
+            description="Check a threshold_sweep artifact's chapter 22.3 required metadata and .sha256 sidecar (artifact_path), or emit the template it must carry.",
+            input_schema={
                 "type": "object",
                 "properties": {
                     "family": {
@@ -3368,14 +3618,19 @@ def _tool_schema() -> list[Tool]:
                         "default": [0.01, 0.05, 0.1],
                     },
                     "seed": {"type": "integer", "minimum": 0, "default": 42},
+                    "artifact_path": {
+                        "type": ["string", "null"],
+                        "default": None,
+                        "description": "A .json artifact inside QECTOR_ARTIFACT_DIR to check; omit for the template.",
+                    },
                 },
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="decode_faithfulness_check",
             description="Re-verify the H c = s (mod 2) gate (Theorem 1) externally.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "H_matrix": {
@@ -3398,10 +3653,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="hot_path_microbench",
             description="Per-machine hot-path latency sample; never a portable claim (manual 22.5).",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "family": {
@@ -3421,7 +3676,7 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="stim_circuit_probe",
             description=(
                 "Parse a small Stim circuit text; return its structure "
@@ -3429,7 +3684,7 @@ def _tool_schema() -> list[Tool]:
                 "parser for the subset used in the reference manual. "
                 "Workbench-free; does not require the Stim package."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "circuit_text": {"type": "string"},
@@ -3438,14 +3693,14 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="sinter_task_template",
             description=(
                 "Generate a sinter task template (manual 17.2) for a "
                 "code / decoder / error rate. Returns a JSON-friendly "
                 "task; does not execute the task."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "family": {
@@ -3472,13 +3727,13 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="workload_hash",
             description=(
                 "Compute a stable SHA-256 over a (H, syndrome, "
                 "correction) workload (manual 22.3 artifact sidecar)."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "H_matrix": {
@@ -3500,13 +3755,13 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="theorem_lookup",
             description=(
                 "Return the v1.0.0 reference manual theorem statement by "
                 "number (1-16). Pure-Python; no decode, no I/O."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "number": {
@@ -3520,14 +3775,14 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="glossary_lookup",
             description=(
                 "Return a v1.0.0 reference manual glossary entry. "
                 "Covers the Appendix B glossary and the manual's "
                 "operational terms. Pure-Python; no decode, no I/O."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "term": {"type": "string"},
@@ -3536,10 +3791,10 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="reproduction_command_lookup",
             description="Return reproduction commands from Reference Manual Appendix D (D.1-D.6). Pure-Python; no decode, no I/O.",
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "section": {
@@ -3566,7 +3821,7 @@ def _tool_schema() -> list[Tool]:
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="get_capability_matrix",
             description=(
                 "Return the static capability matrix for the QECTOR MCP surfaces. "
@@ -3575,13 +3830,13 @@ def _tool_schema() -> list[Tool]:
                 "including the trust zone each surface lives in. Read-only; no "
                 "decoder, no I/O."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="get_evidence_policy",
             description=(
                 "Return the published QECTOR evidence / verification policy: the "
@@ -3589,13 +3844,13 @@ def _tool_schema() -> list[Tool]:
                 "codes, and the agent must / must-not rules. Read-only; no decoder, "
                 "no I/O."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "additionalProperties": False,
             },
         ),
-        Tool(
+        make_tool(
             name="get_runtime_provenance",
             description=(
                 "Return the live runtime provenance block for this server process. "
@@ -3604,7 +3859,7 @@ def _tool_schema() -> list[Tool]:
                 "is contacted only when check_pypi=true; default path stays fully "
                 "offline."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "check_pypi": {
@@ -3623,87 +3878,71 @@ def _tool_schema() -> list[Tool]:
 
 
 TOOLS = apply_tool_contract(
-    [tool for tool in _tool_schema() if tool.name not in ADMIN_TOOL_NAMES]
+    [tool for tool in _tool_schema() if tool.name not in ADMIN_TOOL_NAMES],
+    surface="research",
 )
+TOOL_BY_NAME = {tool.name: tool for tool in TOOLS}
 
 
-async def _dispatch_mcp_call(
-    name: str, arguments: Mapping[str, Any] | None
-) -> CallToolResult:
+async def _dispatch_mcp_call(name: str, arguments: Mapping[str, Any] | None):
+    started = time.perf_counter()
     try:
-        result = dispatch_tool(name, arguments)
-        return call_tool_result(
-            result_envelope(
-                result,
-                tool_name=name,
-                server_name=SERVER_NAME,
-                server_version=SERVER_VERSION,
-                stability="provisional",
-            )
+        tool = TOOL_BY_NAME.get(name)
+        if tool is None:
+            raise QECTORUnknownToolError(f"Unknown tool {name!r}; choose one of {sorted(TOOL_BY_NAME)}")
+        validated = validate_arguments(tool, arguments)
+        result = dispatch_tool(name, validated)
+        envelope = result_envelope(
+            result,
+            tool_name=name,
+            server_name=SERVER_NAME,
+            server_version=SERVER_VERSION,
+            stability="provisional",
+            elapsed_ms=(time.perf_counter() - started) * 1e3,
         )
+        validate_envelope(tool, envelope)
+        return call_tool_result(envelope)
     except Exception as exc:
         return call_tool_result(
             error_envelope(
                 exc,
-                tool_name=name,
+                tool_name=name if name in TOOL_BY_NAME else "unknown_tool",
                 server_name=SERVER_NAME,
                 server_version=SERVER_VERSION,
                 stability="provisional",
+                elapsed_ms=(time.perf_counter() - started) * 1e3,
             ),
             is_error=True,
         )
 
 
-def _build_low_level_server() -> Any:
-    if _LowLevelServer is None:
-        raise RuntimeError(
-            "No supported low-level MCP server implementation is installed"
-        )
-    server = _LowLevelServer(
-        SERVER_NAME,
-        version=SERVER_VERSION,
-        instructions=(
-            "QECTOR provisional research tools. Companion to the 8-tool library server. "
-            "Wilson CI, DEM inspection, code-family introspection, hardware "
-            "probes, and micro-benchmarks. No portable claims."
-        ),
-    )
+INSTRUCTIONS = (
+    "QECTOR provisional research tools. Companion to the 8-tool library server. "
+    "Wilson CI, DEM inspection, code-family introspection, hardware "
+    "probes, and micro-benchmarks. No portable claims. Air-gapped by default."
+)
 
-    @server.list_tools()
-    async def _list_tools() -> list[Tool]:
+
+def _build_low_level_server() -> Any:
+    async def _list_tools():
         return TOOLS
 
-    @server.call_tool()
-    async def _call_tool(
-        name: str, arguments: dict[str, Any]
-    ) -> CallToolResult:
-        return await _dispatch_mcp_call(name, arguments)
-
-    return server
+    return build_server(
+        name=SERVER_NAME,
+        version=SERVER_VERSION,
+        instructions=INSTRUCTIONS,
+        list_tools=_list_tools,
+        call_tool=_dispatch_mcp_call,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="QECTOR Decoder v3 research MCP server (Provisional)"
-    )
+    parser = argparse.ArgumentParser(description="QECTOR Decoder v3 research MCP server (Provisional)")
     parser.add_argument("--transport", choices=("stdio",), default="stdio")
     parser.parse_args(argv)
+    qector_airgap.install()
     server = _build_low_level_server()
-    from mcp.server.models import InitializationOptions
-
-    initialization_options = InitializationOptions(
-        server_name=SERVER_NAME,
-        server_version=SERVER_VERSION,
-        capabilities=ServerCapabilities(tools=ToolsCapability(listChanged=False)),
-    )
-
-    async def run_server() -> None:
-        from mcp.server.stdio import stdio_server
-
-        async with stdio_server() as (read, write):
-            await server.run(read, write, initialization_options)
-
-    asyncio.run(run_server())
+    run_stdio(server, name=SERVER_NAME, version=SERVER_VERSION, instructions=INSTRUCTIONS)
     return 0
 
 

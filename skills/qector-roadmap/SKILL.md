@@ -12,6 +12,15 @@ description: >-
 
 # QECTOR Roadmap and Promotion Path
 
+> **Scope note (plugin 2.0.0).** File names such as `tests/test_*_faithfulness.py`,
+> `scripts/competitive_*.py`, `docs/CORRECTNESS_AUDIT.md`, `docs/API_STABILITY.md`
+> and `docs/RELEASING.md` cited below belong to the **upstream qector-decoder-v3
+> source tree**, not to this plugin. The plugin's own executable gates are
+> `tests/` (unittest), `scripts/release_validate.py`, `scripts/export_schemas.py
+> --check`, `scripts/generate_integrity_manifest.py --check` and
+> `mcp/tests/test_mcp_stdio.py`. Never claim a file exists here that this note
+> attributes to the upstream tree.
+
 Source of authority: v1.0.0 reference manual, chapter 27.
 
 ## From provisional to stable (manual 27.1)
@@ -23,7 +32,7 @@ A provisional symbol may be promoted to stable only after:
 2. **The same test bar as stable symbols**: a property test, a
    regression test, and an example.
 3. **A move** between the corresponding sections of the decoder
-   tree's (decoder tree) `docs/STABLE_API.md`.
+   tree's `docs/STABLE_API.md` (upstream decoder repository, not this package).
 4. **A changelog note**.
 
 As of the v1.0.0 manual, **the promotion log is empty**: no
@@ -92,8 +101,9 @@ in any 1.x release.
   controller (benchmark job queue, JSON/CSV/PDF export).
 - Its docstring references a `run-qector` skill that is not part
   of this package.
-- It is real historical code (changelog 0.7.0 -> 1.0.0) but is
-  absent from the shipped wheel (manual 17.5).
+- The `qector_decoder_v3.workbench` module is present in the 1.0.0
+  wheel; the Workbench *application* and its MCP server are a
+  separate download (manual 17.5), see `skills/qector-workbench`.
 
 ## What the roadmap does **not** promise
 
@@ -108,7 +118,7 @@ for what is a candidate.
 
 ## How the bench server helps
 
-- `qector-research.compat_report` (via `qector-library`) returns
+- `compat_report` (stable, on `qector-secure` / `qector-library`; the research-profile twin is `research_compat_report`) returns
   the live package version and the Provisional-surface
   boundaries.
 - `qector-research.env_block` returns the chapter 22.3 environment

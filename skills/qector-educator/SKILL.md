@@ -32,7 +32,7 @@ you reuse.
    from `code.parity_check_matrix()` / `code.logicals_matrix()`
    (call the parens). Visible > abstract.
 3. **Illustrate decoding with `decode_single`** (library
-   `qector-library.decode_single`), pointing out
+   `qector-secure.decode_single`), pointing out
    `syndrome_valid` (`H c == s (mod 2)`) every time - it is
    the reassurance story. Run the same family and distance on
    the target device and report its actual `n_qubits`,
@@ -44,11 +44,11 @@ you reuse.
    allowed only after target-device `tools/list` negotiation.
 5. **Gate advanced topics**:
    - "why not one decoder for everything?" ->
-     `qector-library.compat_report`; do not invent a Workbench
+     `qector-secure.compat_report`; do not invent a Workbench
      compatibility tool name. The structural guard is the
      `max_qubit_degree` predicate (manual 11.1).
    - "what is a threshold?" -> library
-     `qector-library.threshold_sweep` (Wilson 95% CI included),
+     `qector-secure.threshold_sweep` (Wilson 95% CI included),
      then the honest caveat: low-trial LER is a screening
      estimate, not a converged threshold.
    - For qLDPC, use only direct-wheel APIs confirmed by
@@ -78,7 +78,7 @@ you reuse.
 - **Two-stage CSS** (Appendix E.4):
   `Hx = [[1,1,0],[0,1,1]]`, `Hz = [[0,1,1],[1,1,0]]`,
   `H_{Z,X} = [[0,1,0],[1,0,0]]`, `s_X = [1,0]` -> `c = [0,1,1]`.
-  Theorem 13 guarantees joint faithfulness.
+  Theorem 15 guarantees joint faithfulness.
 
 ## Output contracts
 

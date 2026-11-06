@@ -9,11 +9,13 @@ architectures via Claude.
 
 1. **Library-first**: `python -m pip install -r requirements.txt`
    gives full functionality without a desktop app. The plugin
-   registers two local stdio MCP servers in `.mcp.json`:
-   `qector-library` (the 8-tool frozen library surface) and
-   `qector-research` (25 Provisional companion tools for DEM,
-   Wilson CI, code introspection, hardware probes, and the
-   workbench probe). The Workbench MCP server is an optional
+   registers one local stdio MCP server in `.mcp.json`:
+   `qector-secure` (safe profile: the 8-tool frozen library
+   surface plus 4 control-plane tools). `--profile research`
+   adds the 29 Provisional companion tools for DEM, Wilson CI,
+   code introspection and hardware probes; `workbench_probe`
+   belongs to the opt-in `qector-admin` server. The Workbench
+   MCP server is an optional
    extension only; negotiate its tool surface on the target
    device.
 2. **Strict math**: follow `qector-math-foundations` (M3).
@@ -24,9 +26,9 @@ architectures via Claude.
    `qector-research.decode_faithfulness_check` is the external
    Theorem 1 verifier.
 3. **Verified tool names only** (run `tools/list` first);
-   zero egress - never upload `.stim` / `.npy` / parity
+   air-gapped by default - never upload `.stim` / `.npy` / parity
    matrices.
-4. MCP SDK: production pins `mcp>=1.28.1,<2` and uses the
+4. MCP SDK: production pins `mcp>=1.30,<3` and uses the
    low-level `mcp.server.Server` adapter. Other SDK versions
    are unsupported until tested.
 
@@ -57,8 +59,8 @@ When dealing with millions of shots:
   `initialize` and `tools/list`.
 - Drop-ins: `qector_decoder_v3.pymatching_compat.Matching`
   replaces `pymatching.Matching` with a one-line import
-  change; `qector_sinter_decoders()` exposes sinter entry
-  points. The bench server's `qector-research.sinter_decoder_list`
+  change; `qector_decoder_v3.sinter_compat.qector_sinter_decoders()`
+  exposes four sinter entry points when `sinter` is installed. The bench server's `qector-research.sinter_decoder_list`
   and `qector-research.pymatching_compat_check` are the live
   probes for these.
 
@@ -81,7 +83,7 @@ When dealing with millions of shots:
 - If users hit `RuntimeWarning` NaN / Inf casts, sanitize
   inputs with `np.nan_to_num` or explicit dtype casts
   (backend enforces strict floats).
-- Check the environment with `qector-library.compat_report`
+- Check the environment with `qector-secure.compat_report`
   or `qector-research.env_block`. Optional Workbench diagnostics
   require target-device `tools/list` negotiation.
 - For CUDA / OpenCL / tier questions, use

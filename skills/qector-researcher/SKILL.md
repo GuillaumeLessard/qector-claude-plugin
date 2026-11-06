@@ -26,27 +26,27 @@ safe wording (manual 22.5) are non-negotiable.
 ## Workflow
 
 1. **Ground your session. This works APP-FREE**: prefer the
-   library surface. Call `qector-library.list_code_families`
-   and `qector-library.list_decoders` **first** (never assume a
+   library surface. Call `qector-secure.list_code_families`
+   and `qector-secure.list_decoders` **first** (never assume a
    family or decoder exists). Confirm family + distance; read
    `qector-core` for verified facts. The bench server's
    `qector-research.code_family_info` returns the live structure
    for any family and size.
 2. **Understand the problem before measuring**. Decode
    `n_qubits` / `n_checks` via a small
-   `qector-library.decode_single` (or
+   `qector-secure.decode_single` (or
    `qector-research.code_family_info`) before launching production
    sweeps. If the family is non-graphlike, route to `bposd`
    (the only decoder defined for arbitrary GF(2) matrices;
    manual 11.1).
 3. **Choose measurement by question**:
    - "which decoder on this code?" -> library
-     `qector-library.list_decoders` + per-decoder
+     `qector-secure.list_decoders` + per-decoder
      `decode_single` sweeps; an optional Workbench can be
      used only after its target-device `tools/list` response
      is inspected.
    - "crossover / threshold" -> library
-     `qector-library.threshold_sweep` (Wilson 95% CI
+     `qector-secure.threshold_sweep` (Wilson 95% CI
      included) or a target-device Workbench tool discovered
      through `tools/list`.
    - "scaling with distance" -> a seeded sweep via the
@@ -112,5 +112,5 @@ an externally recorded SHA-256 sidecar (`--out`) when a
 result is final. The bench server's
 `qector-research.artifact_metadata_check` and
 `qector-research.artifacts_sha256` are the chapter 22.3
-helpers; the library `qector-library.threshold_sweep` already
+helpers; the library `qector-secure.threshold_sweep` already
 emits both.

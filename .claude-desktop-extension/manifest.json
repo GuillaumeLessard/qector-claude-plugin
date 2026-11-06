@@ -2,9 +2,9 @@
   "manifest_version": "0.3",
   "name": "qector",
   "display_name": "QECTOR Quantum Error Correction",
-  "version": "1.0.6",
-  "description": "Local, fail-closed quantum error correction tools for Claude Desktop.",
-  "long_description": "QECTOR provides a local Quantum Error Correction (QEC) tool surface for Claude Desktop. The default safe profile exposes eight stable tools for decoding, code construction, threshold sweeps, license inspection, and runtime compatibility. Every returned correction is verified against the parity-check relation H c = s (mod 2).\n\nThe default path uses local stdio and makes no network request. An explicit PyPI freshness check is available only through opt-in compatibility tool arguments; it sends no QEC workload data. Research and administrative surfaces are separate opt-in MCP servers and are not bundled into this safe Desktop extension.",
+  "version": "2.0.1",
+  "description": "Air-gapped, schema-validated quantum error correction tools for Claude Desktop.",
+  "long_description": "QECTOR 2.0.1 provides a local Quantum Error Correction (QEC) tool surface for Claude Desktop through the qector-secure MCP server. The safe profile exposes twelve tools: eight stable decoding, code construction, threshold-sweep, licence and compatibility tools plus four control-plane tools (airgap_status, integrity_check, schema_catalog, audit_log_status). Every returned correction is verified against the parity-check relation H c = s (mod 2); every request and response is validated against JSON Schema 2020-12.\n\nThe server is air-gapped by default: it refuses non-loopback sockets, subprocess launches and the opt-in PyPI check inside the process, verifies its own files against INTEGRITY.json at startup, and can write a hash-chained audit log. It uses local stdio only. Research and administrative surfaces are separate opt-in MCP servers and are not bundled into this extension.\n\nThe portable bundle requires a local Python 3.10-3.13 environment with the dependencies from requirements.lock installed (scripts/install_offline.sh for air-gapped hosts); the platform-specific '-bundled-' variant vendors them into server/lib.",
   "author": {
     "name": "Guillaume Lessard",
     "url": "https://qector.store"
@@ -23,31 +23,44 @@
   "license": "Proprietary",
   "server": {
     "type": "python",
-    "entry_point": "mcp/mcp_server_desktop.py",
+    "entry_point": "mcp/mcp_server_secure.py",
     "mcp_config": {
-      "command": "python",
+      "command": "sh",
       "args": [
-        "${__dirname}/mcp/mcp_server_desktop.py",
+        "${__dirname}/scripts/qector-python",
+        "${__dirname}/mcp/mcp_server_secure.py",
         "--profile",
         "safe"
       ],
       "env": {
         "QECTOR_SILENT": "1",
         "PYTHONUNBUFFERED": "1",
-        "QECTOR_PYTHON": "${user_config.python_path}"
+        "QECTOR_PYTHON": "${user_config.python_path}",
+        "QECTOR_AIR_GAPPED": "1",
+        "QECTOR_INTEGRITY_STRICT": "1",
+        "QECTOR_AUDIT_DIR": "${user_config.audit_dir}"
       },
       "platform_overrides": {
         "win32": {
-          "command": "python",
+          "command": "powershell.exe",
           "args": [
-            "${__dirname}\\mcp\\mcp_server_desktop.py",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "${__dirname}\\scripts\\qector-python.ps1",
+            "${__dirname}\\mcp\\mcp_server_secure.py",
             "--profile",
             "safe"
           ],
           "env": {
             "QECTOR_SILENT": "1",
             "PYTHONUNBUFFERED": "1",
-            "QECTOR_PYTHON": "${user_config.python_path}"
+            "QECTOR_PYTHON": "${user_config.python_path}",
+            "QECTOR_AIR_GAPPED": "1",
+            "QECTOR_INTEGRITY_STRICT": "1",
+            "QECTOR_AUDIT_DIR": "${user_config.audit_dir}"
           }
         }
       }
@@ -57,42 +70,64 @@
     "python_path": {
       "type": "file",
       "title": "Python interpreter (optional)",
-      "description": "Absolute path to a Python 3.9-3.13 interpreter with qector-decoder-v3 installed. Leave unset to auto-resolve via the bundled launcher.",
+      "description": "Absolute path to a Python 3.10-3.13 interpreter with qector-decoder-v3 installed. Leave unset to auto-resolve via the bundled launcher.",
+      "required": false
+    },
+    "audit_dir": {
+      "type": "directory",
+      "title": "Audit log directory (optional)",
+      "description": "Directory for the hash-chained JSONL audit log. Leave unset to disable auditing; nothing is written anywhere by default.",
       "required": false
     }
   },
   "tools": [
     {
-      "name": "list_code_families",
-      "description": "List registered quantum code families and live runtime availability."
+      "name": "airgap_status",
+      "description": "Report the live network posture: air-gap mode, installed guards, scrubbed billing variables and the decoder wheel's native network surface."
     },
     {
-      "name": "list_decoders",
-      "description": "List stable decoder classes and algorithm contracts."
+      "name": "audit_log_status",
+      "description": "Report hash-chained audit log state, record count, chain head and validity."
     },
     {
-      "name": "get_license_info",
-      "description": "Read the live offline QECTOR license tier, distance limits, and gates."
+      "name": "build_code_from_matrix",
+      "description": "Validate and build a binary parity-check matrix; report GF(2) rank and graphlike-ness."
+    },
+    {
+      "name": "compat_report",
+      "description": "Report runtime compatibility, SDK and Python support windows and the network policy; PyPI freshness is opt-in and refused when air-gapped."
+    },
+    {
+      "name": "decode_single",
+      "description": "Run one seeded code-capacity decode with Theorem 1 and Theorem 2 checks."
     },
     {
       "name": "decode_syndrome",
       "description": "Decode a binary syndrome; fail unless H c = s (mod 2)."
     },
     {
-      "name": "decode_single",
-      "description": "Run one seeded code-capacity decode with Theorems 1 and 2 checks."
+      "name": "get_license_info",
+      "description": "Read the live offline QECTOR license tier, distance limits, and gates."
+    },
+    {
+      "name": "integrity_check",
+      "description": "Verify every runtime file against INTEGRITY.json (SHA-256)."
+    },
+    {
+      "name": "list_code_families",
+      "description": "List registered quantum code families, live availability and a per-family health probe."
+    },
+    {
+      "name": "list_decoders",
+      "description": "List stable decoder classes and whether each is graphlike-only."
+    },
+    {
+      "name": "schema_catalog",
+      "description": "Return the JSON Schema 2020-12 input/output schema of every tool with SHA-256 digests."
     },
     {
       "name": "threshold_sweep",
       "description": "Run a code-capacity LER sweep with Wilson 95% intervals and a hashed JSON artifact."
-    },
-    {
-      "name": "build_code_from_matrix",
-      "description": "Validate and build a binary parity-check matrix."
-    },
-    {
-      "name": "compat_report",
-      "description": "Report runtime compatibility; PyPI freshness is opt-in only."
     }
   ],
   "keywords": [
@@ -107,7 +142,10 @@
     "union-find",
     "stim",
     "sinter",
-    "physics"
+    "physics",
+    "air-gapped",
+    "json-schema",
+    "audit"
   ],
   "compatibility": {
     "claude_desktop": ">=0.10.0",
@@ -117,7 +155,8 @@
       "linux"
     ],
     "runtimes": {
-      "python": ">=3.9,<3.14"
+      "python": ">=3.10,<3.14"
     }
-  }
+  },
+  "tools_generated": false
 }

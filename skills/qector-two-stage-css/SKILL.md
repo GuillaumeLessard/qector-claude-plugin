@@ -6,7 +6,7 @@ description: >-
   violates this. Two-stage decoding removes the cross-talk
   explicitly. Load for any question about depolarising noise, CSS
   sector coupling, feedforward X->Z syndrome updates, or the
-  Theorem 13 joint-faithfulness guarantee.
+  Theorem 15 joint-faithfulness guarantee.
 ---
 
 # QECTOR Two-Stage CSS Decoding
@@ -39,7 +39,7 @@ the cross-coupling `H_{Z,X}`; subtracting it before the Z decode
 removes the cross-talk. Both stages may use any faithful decoder
 (Blossom, Sparse Blossom, Union-Find, BP-OSD).
 
-## Theorem 13 (joint faithfulness, manual 12.1)
+## Theorem 15 (joint faithfulness, manual 12.1)
 
 > If `DecodeX` and `DecodeZ` are syndrome-faithful on their
 > respective inputs, then the combined correction satisfies
@@ -69,9 +69,14 @@ c      =  c_X xor c_Z
 
 ## What the engine ships
 
-- **Library (Provisional, manual 16.2)**: `TwoStageDecoder`. The
-  constructor takes two parity-check matrices `H_X` and `H_Z` plus
-  a per-sector decoder factory.
+- **Library (Provisional, manual 16.2)**: `TwoStageDecoder`. Its
+  verified 1.0.0 signature is
+  `TwoStageDecoder(check_to_qubits, check_types, n_qubits=None,
+  x_decoder="blossom", z_decoder="blossom")`: one combined check
+  list (X checks then Z checks), a boolean per check (`True` for X),
+  and a decoder name per stage (`"blossom"`, `"unionfind"`,
+  `"sparse_blossom"`, `"bposd[:rate[:osd_order]]"`). It does not
+  take two matrices or a factory callable.
 - **Library (manual 16.4)**: the optional direct-wheel
   `qector_decoder_v3.dem` module can be combined with a
   per-sector decode by hand, but there is no top-level

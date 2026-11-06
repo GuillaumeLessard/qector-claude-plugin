@@ -5,8 +5,8 @@ description: >-
   checklist. Covers the six deployment modes (manual 24, Table
   24.1), the production checklist (manual 24.1, 10 items), the
   service hardening rules (10 MB cap, bearer token, strict
-  decoder-type enum), the zero-egress policy, the
-  package-provenance rule, the SHA-256 checksums-sha256.txt
+  decoder-type enum), the air-gapped-by-default policy, the
+  package-provenance rule, the signed SHA256SUMS
   rule, and the "service behind TLS and a reverse proxy" rule.
   Load for any question about deploying, hosting, exposing, or
   shipping QECTOR in any non-local context.
@@ -91,7 +91,7 @@ use, review:
 
 ## Binary / artifact integrity
 
-- Verify SHA-256 against the release `checksums-sha256.txt` before
+- Verify SHA-256 against the release `SHA256SUMS` (and its Ed25519 `SHA256SUMS.sig`) before
   promotion.
 - The Rust core is delivered to the build pipeline through a
   chunked, hash-anchored packaging mechanism (12 base64 chunks
@@ -100,15 +100,19 @@ use, review:
 - This mechanism is build infrastructure; the chunks and digest
   are not reproduced in the manual.
 
-## Zero-egress policy
+## Air-gapped-by-default policy
 
 - All compute stays local via the MCP server. No `.stim` /
   `.npy` / parity matrices leave the machine.
 - The Python streaming layer is local. The decoder is local. The
   MCP server is local.
-- Stripe billing (`flush_usage`) is the only exception; it is
-  documented and gated by `QECTOR_STRIPE_CUSTOMER_ID` /
-  `STRIPE_SECRET_KEY`.
+- Two network-capable paths exist and neither runs by default: the
+  opt-in PyPI freshness check (refused while air-gapped) and the
+  wheel's own metering function (`flush_usage`, native TLS client,
+  Stripe endpoint) that the plugin never calls and whose credentials
+  (`QECTOR_STRIPE_CUSTOMER_ID` / `STRIPE_SECRET_KEY`) it scrubs from
+  the server process. The Python-level guard is defence in depth; a
+  host egress rule is the hard guarantee (AIRGAP.md, SECURITY.md).
 
 ## Feature flags in published wheels (manual 25.3)
 
@@ -143,7 +147,7 @@ use, review:
   license tier and feature gates.
 - `qector-research.env_block` returns the chapter 22.3 environment
   block for the deployment artifact.
-- `qector-research.compat_report` (via `qector-library`) returns
+- `compat_report` (stable, on `qector-secure` / `qector-library`; the research-profile twin is `research_compat_report`) returns
   the package version and Provisional-surface boundaries.
 - `qector-research.artifacts_sha256` computes the SHA-256 sidecar
   required by the production checklist.

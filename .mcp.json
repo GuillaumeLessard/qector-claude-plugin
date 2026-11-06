@@ -1,11 +1,17 @@
 {
   "mcpServers": {
-    "qector-library": {
+    "qector-secure": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/qector-python",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_library.py"],
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_secure.py",
+        "--profile",
+        "safe"
+      ],
       "env": {
         "QECTOR_SILENT": "1",
-        "PYTHONUNBUFFERED": "1"
+        "PYTHONUNBUFFERED": "1",
+        "QECTOR_AIR_GAPPED": "1",
+        "QECTOR_INTEGRITY_STRICT": "1"
       }
     }
   }

@@ -20,11 +20,10 @@ todo.md
 run*.txt
 scripts/Connectors
 
-# Local build/scratch output — never part of the published source tree.
-# dist/*.zip and dist/*.sha256 ARE tracked (prebuilt release artifacts);
-# only the transient extracted-copy directories are ignored here.
-dist/qector-claude-plugin-v*/
-dist/qector-claude-plugin-*/
+# Build output is never tracked: artifacts are produced from a committed tree
+# by scripts/build_release.py and published as GitHub release assets, so
+# provenance.json always names the commit the archive was built from.
+dist/
 dist/qector-qector-core-skill.zip
 dist/qector-qector-core-skill.zip.sha256
 brand/exports/
@@ -47,28 +46,12 @@ QectorDecoder_v3_Reference_Manual_v1.0.0.pdf
 # Internal onboarding/sales decks are dev-internal by policy (see CHANGELOG).
 presentations/
 
-# Python bytecode caches
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Old/backup files
-*.old
-*.bak
-*.orig
-*.rej
-*.swp
-*.swo
-*~
-
-# OS artifacts
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Runtime artifacts (hashed evidence files)
-artifacts/qector_threshold_*.json
-artifacts/qector_threshold_*.json.sha256
 
 
+# 2.0.0 offline-install artifacts
+wheelhouse*/
+.venv-qector/
+INTEGRITY.json.sig
+
+# Release signing: the private key never lives in the tree
+*.pem

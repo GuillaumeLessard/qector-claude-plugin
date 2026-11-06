@@ -14,6 +14,15 @@ description: >-
 
 # QECTOR Reproducibility and Claim Boundaries
 
+> **Scope note (plugin 2.0.0).** File names such as `tests/test_*_faithfulness.py`,
+> `scripts/competitive_*.py`, `docs/CORRECTNESS_AUDIT.md`, `docs/API_STABILITY.md`
+> and `docs/RELEASING.md` cited below belong to the **upstream qector-decoder-v3
+> source tree**, not to this plugin. The plugin's own executable gates are
+> `tests/` (unittest), `scripts/release_validate.py`, `scripts/export_schemas.py
+> --check`, `scripts/generate_integrity_manifest.py --check` and
+> `mcp/tests/test_mcp_stdio.py`. Never claim a file exists here that this note
+> attributes to the upstream tree.
+
 Source of authority: v1.0.0 reference manual, chapters 19, 22, 27;
 Appendix D.
 
@@ -45,7 +54,7 @@ For every published result, the repository policy requires:
 | artifact        | raw JSON / CSV path plus SHA-256 sidecar                                         |
 
 `qector-research.artifact_metadata_check` generates the full block
-(no decoder execution); `qector-library.threshold_sweep` already
+(no decoder execution); `qector-secure.threshold_sweep` already
 emits the same block plus the SHA-256 sidecar.
 
 ## Safe / unsafe wording (manual 22.5)
@@ -56,7 +65,7 @@ emits the same block plus the SHA-256 sidecar.
   configuration, decoder A had median hot-path latency X and p99
   Y."
 - "on this checked-in artifact, QECTOR weighted Blossom produced
-  LER parity with PyMatching on the tested d=15 Stim workload."
+  LER within the Wilson interval of PyMatching on workload <hash>, machine <id>, artifact <sha256>." (fill every placeholder from a real artifact; this is a template, not a result)
 
 **Unsafe** (never published):
 
@@ -101,6 +110,18 @@ a public claim.
   **never** mixed as a single metric.
 
 ## Reproduction commands (manual Appendix D)
+
+Two distinct recipes exist and must not be confused:
+
+- **This plugin (air-gapped, no clone):** `reproduction_command_lookup(section=...)`
+  on the research profile returns plugin-local commands
+  (`scripts/qector_runtime_check.py`, `scripts/run_manual_math_validation.py`,
+  `python -m unittest discover -s tests`, `scripts/run_threshold_sweep.py`,
+  `artifacts_sha256`). `/qec-reproduce` uses these; they need no network.
+- **The upstream decoder repository (below):** builds the wheel from source
+  and runs its own test suite. It needs `git clone`, `pip install` and a Rust
+  toolchain, so it is not usable in an air-gapped deployment and is quoted
+  here for reference only.
 
 ```bash
 # D.1 Build and import smoke

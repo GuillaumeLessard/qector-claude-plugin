@@ -1,0 +1,39 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/logical_coset_score.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "predicted_logicals": {
+      "items": {
+        "items": {
+          "enum": [
+            0,
+            1
+          ],
+          "type": "integer"
+        },
+        "type": "array"
+      },
+      "type": "array"
+    },
+    "sampled_logicals": {
+      "items": {
+        "items": {
+          "enum": [
+            0,
+            1
+          ],
+          "type": "integer"
+        },
+        "type": "array"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "predicted_logicals",
+    "sampled_logicals"
+  ],
+  "title": "logical_coset_score",
+  "type": "object"
+}

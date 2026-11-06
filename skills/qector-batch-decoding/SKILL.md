@@ -61,8 +61,9 @@ For a graphlike code with `n_checks` and `n_qubits`,
 
 - `u32` scratch stride: `6N + 1 + 4E` words
 - `u8` scratch stride: `5N + E` bytes
-- A batch of `B` shots: `B * 251 * 4` bytes (u32) plus `B * 150`
-  bytes (u8), in addition to syndrome and correction buffers.
+- A batch of `B` shots: `B * (6N + 1 + 4E) * 4` bytes (u32) plus
+  `B * (5N + E)` bytes (u8), in addition to syndrome and correction
+  buffers; e.g. `251` words and `150` bytes per shot for N = E = 25.
 
 The workspace allocates these sizes in advance, checks against
 available memory, and falls back to managed memory on large codes.

@@ -49,7 +49,7 @@ change.
   `H c = s (mod 2)` (Theorem 1) for reachable syndromes on
   graphlike codes.
 - The exact Blossom back-end is the same one the library
-  `qector-decoder-v3.BlossomDecoder` exposes.
+  `qector_decoder_v3.BlossomDecoder` exposes.
 - The supported method subset is the most-used surface; methods
   not listed are not part of the contract and may be absent from
   the shim.

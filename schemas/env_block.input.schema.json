@@ -1,0 +1,14 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/env_block.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "check_pypi": {
+      "default": false,
+      "description": "Opt in to a one-time PyPI freshness check for this server process. Never automatic.",
+      "type": "boolean"
+    }
+  },
+  "title": "env_block",
+  "type": "object"
+}

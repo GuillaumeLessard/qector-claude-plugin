@@ -20,13 +20,13 @@ and weights, and returns a faithful decoder.
 
 ## The two surfaces
 
-1. **Library bench server (Provisional)** — `qector-research.dem_inspect`
+1. **Research server (Provisional)** - `qector-research.dem_inspect`
    and `qector-research.dem_collapse_parallel`. A minimal Stim-style
    parser that is enough for the small fixtures the reference manual
    uses; it does not require Stim or the optional direct-wheel `dem`
    module.
 2. **Optional direct-wheel `dem` module** (Provisional, manual 16.4)
-   — `dem.from_stim(text)`, `model.collapse_to_graph()`,
+   - `dem.from_stim(text)`, `model.collapse_to_graph()`,
    `model.make_decoder('blossom')`. Verify the exact API on the target
    device by introspecting the installed wheel.
 
@@ -84,7 +84,7 @@ Priors can be estimated empirically from detection events:
   detectors.
 
 A model can be recalibrated from measured events before decoding. The
-optional direct-wheel `dem.recalibrate(events)` accepts a numpy array
+optional direct-wheel `DemModel.recalibrate(events)` method accepts a numpy array
 of measured detector firings; verify the exact signature by
 introspection on the target device.
 
@@ -110,18 +110,18 @@ The regression tests verify this on designed parallel-edge fixtures
 The library has no top-level `two_stage_dem` helper. The pattern is
 manual: parse the X DEM and Z DEM, run X decode, compute the induced
 Z syndrome `s'_Z = s_Z + H_{Z,X} c_X`, run Z decode, XOR the
-corrections. Theorem 13 (manual 12.1) guarantees joint faithfulness
+corrections. Theorem 15 (manual 12.1) guarantees joint faithfulness
 when both stages are faithful on their inputs.
 
 ## Cross-references
 
-- `qector-decoders-deep-dive` — for the decoders this pipeline
+- `qector-decoders-deep-dive` - for the decoders this pipeline
   produces.
-- `qector-math-foundations` M0, M2 (Theorems 11, 13) — for the
+- `qector-math-foundations` M0, M2 (Theorems 11, 13) - for the
   algebraic guarantees.
-- `qector-codes-builder` — for building a `Code` from a parity-check
+- `qector-codes-builder` - for building a `Code` from a parity-check
   matrix when the DEM is already collapsed.
-- `qector-ler-methodology` M4 — for the LER methodology that the
+- `qector-ler-methodology` M4 - for the LER methodology that the
   pipeline feeds.
 
 ## What the bench server's DEM tools do and do not do

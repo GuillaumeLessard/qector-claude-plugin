@@ -52,7 +52,7 @@ print("=== DEM collapse parallel ===")
 r = m.dispatch_tool("dem_collapse_parallel", {"dem_text": dem_text})
 for e in r["collapse"]["graphlike_edges"]:
     print(
-        f"  D{e['detector_pair'][0]}-D{e['detector_pair'][1]}: "
+        f"  {'-'.join('D' + d for d in e['detectors'])}: "
         f"p={e['p_combined']:.4f}, weight={e['weight_log']:.3f}, n_members={e['n_members']}"
     )
 print(f"  manual sanity check: {r['manual_worked_example_check']}")

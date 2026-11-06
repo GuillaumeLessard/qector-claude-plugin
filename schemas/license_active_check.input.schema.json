@@ -1,0 +1,8 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/license_active_check.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {},
+  "title": "license_active_check",
+  "type": "object"
+}

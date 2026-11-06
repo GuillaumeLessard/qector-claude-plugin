@@ -1,6 +1,6 @@
 """Run a strict, local QECTOR code-capacity LER sweep.
 
-The script targets the published ``qector-decoder-v3==1.0.0`` wheel directly.
+The script targets the published ``qector-decoder-v3==1.0.1`` wheel directly.
 It uses logical-coset scoring, fails closed on any syndrome-faithfulness
 violation, writes a raw JSON artifact, and prints the artifact SHA-256.
 
@@ -40,7 +40,7 @@ if str(PYTHON_DIR) not in sys.path:
 from qector_math_ground_truth import REFERENCE_MANUAL_DOI, wilson_ci  # noqa: E402
 
 
-EXPECTED_VERSION = "1.0.0"
+EXPECTED_VERSION = "1.0.1"
 if getattr(qector, "__version__", None) != EXPECTED_VERSION:
     raise RuntimeError(
         f"qector-decoder-v3=={EXPECTED_VERSION} is required; "
@@ -64,6 +64,9 @@ FAMILY_FACTORIES: dict[str, Callable[[int], Any]] = {
     "toric": qector.codes.toric_code,
     "heavy_hex": qector.codes.heavy_hex_code,
     "color_code": qector.codes.color_code,
+    # Built by the plugin (mcp/qector_codes.py), distance verified at
+    # construction; the wheel's rotated_surface has effective distance 2.
+    "rotated_surface_corrected": None,
 }
 DECODERS = {
     "union_find": qector.UnionFindDecoder,
@@ -168,7 +171,13 @@ def run_sweep(
     rows: list[dict[str, Any]] = []
     sizes: list[dict[str, int]] = []
     for distance in distances:
-        code = FAMILY_FACTORIES[family](distance)
+        factory = FAMILY_FACTORIES[family]
+        if factory is None:
+            sys.path.insert(0, str(ROOT / "mcp"))
+            from qector_codes import rotated_surface_corrected
+
+            factory = rotated_surface_corrected
+        code = factory(distance)
         matrix = np.asarray(code.parity_check_matrix(), dtype=np.uint8)
         logicals = code.logicals_matrix()
         if logicals is None:
@@ -184,7 +193,6 @@ def run_sweep(
         decoder = DECODERS[decoder_name](code.check_to_qubits, n_qubits=code.n_qubits)
         for error_rate in error_rates:
             logical_errors = 0
-            theorem1_violations = 0
             for trial in range(trials):
                 rng = np.random.default_rng(seed + trial)
                 error = np.asarray(
@@ -193,7 +201,6 @@ def run_sweep(
                 syndrome = np.asarray(code.syndrome(error), dtype=np.uint8)
                 correction = np.asarray(decoder.decode(syndrome), dtype=np.uint8)
                 if not _faithful(matrix, correction, syndrome):
-                    theorem1_violations += 1
                     raise RuntimeError(
                         f"Theorem 1 violation at family={family}, distance={distance}, "
                         f"p={error_rate}, trial={trial}"
@@ -214,7 +221,6 @@ def run_sweep(
                     "trials": trials,
                     "logical_error_rate": logical_errors / trials,
                     "wilson_95": [lo, hi],
-                    "theorem1_violations": theorem1_violations,
                 }
             )
 
@@ -252,8 +258,10 @@ def run_sweep(
             "environment": _environment(),
         },
         "harness": {
-            "theorem1_violations": 0,
-            "faithfulness_policy": "fail closed before logical scoring",
+            "faithfulness_policy": (
+                "fail closed: every correction is checked against H c = s (mod 2) before logical scoring; "
+                "a single violation aborts the sweep, so a written artifact has zero violations by construction"
+            ),
         },
         "results": rows,
         "caveat": (
@@ -308,7 +316,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="QECTOR v1.0.0 strict-math threshold sweep"
     )
     parser.add_argument(
-        "--family", default="rotated_surface", help="canonical QECTOR code family"
+        "--family", default="rotated_surface_corrected", help="canonical QECTOR code family (rotated_surface_corrected is the plugin's verified construction; the wheel's rotated_surface has effective distance 2)"
     )
     parser.add_argument("--distances", type=int, nargs="+", default=[3, 5, 7])
     parser.add_argument(

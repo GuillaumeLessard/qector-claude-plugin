@@ -11,7 +11,13 @@ permissions:
 
 jobs:
   validate:
+    name: py${{ matrix.python }} / mcp ${{ matrix.mcp }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12", "3.13"]
+        mcp: ["1.x", "2.x"]
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -19,10 +25,24 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
 
-      - name: Install runtime
-        run: python -m pip install -r requirements.txt ruff
+      - name: Install runtime (locked, hash-checked closure)
+        # requirements.lock carries --hash lines, so pip runs in
+        # --require-hashes mode for this invocation; ruff (lint only) is
+        # installed separately so an unhashed requirement never shares the line.
+        run: |
+          python -m pip install --require-hashes -r requirements.lock
+          python -m pip install ruff
+
+      - name: Select MCP SDK generation
+        # The 1.x leg stays on the locked mcp==1.30.0 from requirements.lock;
+        # the 2.x leg upgrades to the newest 2.x to prove the compat layer.
+        run: |
+          if [ "${{ matrix.mcp }}" = "2.x" ]; then
+            python -m pip install "mcp>=2,<3"
+          fi
+          python -c "import importlib.metadata as m; print('mcp', m.version('mcp'))"
 
       - name: Release metadata
         run: python scripts/release_validate.py
@@ -30,8 +50,21 @@ jobs:
       - name: Source structure
         run: python scripts/validate_source.py
 
-      - name: Unit tests
+      - name: Schema catalog in sync
+        run: python scripts/export_schemas.py --check
+        env:
+          QECTOR_SILENT: "1"
+
+      - name: Integrity manifest in sync
+        run: python scripts/generate_integrity_manifest.py --check
+
+      - name: Unit, contract and stdio conformance tests
         run: python -m unittest discover -s tests -v
+        env:
+          QECTOR_SILENT: "1"
+
+      - name: Five servers over stdio
+        run: python mcp/tests/test_mcp_stdio.py
         env:
           QECTOR_SILENT: "1"
 
@@ -43,3 +76,135 @@ jobs:
 
       - name: Bundle validation
         run: python scripts/validate_plugin_bundle.py
+
+  offline-install:
+    name: offline wheelhouse install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build wheelhouse
+        run: python scripts/build_wheelhouse.py --out /tmp/wheelhouse
+      - name: Verify wheelhouse
+        run: python scripts/build_wheelhouse.py --verify /tmp/wheelhouse
+      - name: Install offline and run the runtime check
+        run: sh scripts/install_offline.sh /tmp/wheelhouse /tmp/venv-qector
+      - name: Build a bundled Desktop artifact
+        run: |
+          /tmp/venv-qector/bin/python scripts/build_release.py --desktop --bundle-lib /tmp/wheelhouse
+          ls -la dist/
+
+  native:
+    # The checks only a real Windows or macOS machine can give: a git checkout
+    # with the platform's default line-ending policy still verifies against
+    # INTEGRITY.json, the launchers resolve an interpreter, the suite passes,
+    # the archives build, and the Desktop bundle boots through the exact
+    # command its manifest names for this platform (exec form, no shell).
+    name: native ${{ matrix.os }} / py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+        python: ["3.12"]
+    steps:
+      - name: Git for Windows default line-ending policy
+        if: runner.os == 'Windows'
+        run: git config --global core.autocrlf true
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install runtime (locked, hash-checked closure)
+        run: python -m pip install --require-hashes -r requirements.lock
+
+      - name: "Integrity manifest verifies on this checkout (no CRLF conversion)"
+        run: python scripts/generate_integrity_manifest.py --check
+
+      - name: "Launcher resolves an interpreter (POSIX)"
+        if: runner.os != 'Windows'
+        run: |
+          sh scripts/qector-python -c "import sys, qector_decoder_v3; print(sys.version, sys.executable)"
+          sh scripts/qector-python scripts/qector_runtime_check.py
+        env:
+          QECTOR_SILENT: "1"
+
+      - name: "Launchers resolve an interpreter (Windows, .cmd and .ps1)"
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call scripts\qector-python.cmd -c "import sys, qector_decoder_v3; print(sys.version, sys.executable)" || exit /b 1
+          powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts\qector-python.ps1 -c "import sys, qector_decoder_v3; print(sys.version, sys.executable)" || exit /b 1
+          call scripts\qector-python.cmd scripts\qector_runtime_check.py || exit /b 1
+        env:
+          QECTOR_SILENT: "1"
+
+      - name: "Launchers fail closed with exit 127 when no interpreter qualifies (Windows)"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:QECTOR_PYTHON = ""
+          $env:PATH = "C:\Windows\System32"
+          $out = & cmd /c "scripts\qector-python.cmd -c pass" 2>&1
+          if ($LASTEXITCODE -ne 127) { throw "expected exit 127, got $LASTEXITCODE" }
+          $outPs = & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts\qector-python.ps1 -c pass 2>&1
+          if ($LASTEXITCODE -ne 127) { throw "expected exit 127 from .ps1, got $LASTEXITCODE" }
+
+      - name: Unit, contract and stdio conformance tests
+        run: python -m unittest discover -s tests -v
+        env:
+          QECTOR_SILENT: "1"
+
+      - name: Five servers over stdio
+        run: python mcp/tests/test_mcp_stdio.py
+        env:
+          QECTOR_SILENT: "1"
+
+      - name: "Hook scripts run on this platform"
+        run: |
+          python scripts/qector_session_start.py
+          python scripts/qector_tool_log.py < /dev/null || true
+        shell: bash
+        env:
+          QECTOR_SILENT: "1"
+
+      - name: Build release artifacts
+        run: python scripts/build_release.py --all
+
+      - name: "Bundle validation (extracts every archive and boots it strict)"
+        run: python scripts/validate_plugin_bundle.py
+
+      - name: "Boot the Desktop bundle through its manifest command (interpreter configured)"
+        run: python scripts/boot_from_manifest.py dist/qector-claude-desktop-2.0.1.mcpb --python-path "${{ env.pythonLocation }}/python${{ runner.os == 'Windows' && '.exe' || '' }}"
+        shell: bash
+
+      - name: "Boot the Desktop bundle through its manifest command (no setting, launcher searches)"
+        run: python scripts/boot_from_manifest.py dist/qector-claude-desktop-2.0.1.mcpb
+        shell: bash
+
+      - name: "Offline wheelhouse install (POSIX installer, shasum on macOS)"
+        if: runner.os != 'Windows'
+        run: |
+          python scripts/build_wheelhouse.py --out "$RUNNER_TEMP/wh"
+          sh scripts/install_offline.sh "$RUNNER_TEMP/wh" "$RUNNER_TEMP/venv-qector"
+
+      - name: "Offline wheelhouse install (PowerShell installer)"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python scripts/build_wheelhouse.py --out "$env:RUNNER_TEMP\wh"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install_offline.ps1 -Wheelhouse "$env:RUNNER_TEMP\wh" -Venv "$env:RUNNER_TEMP\venv-qector"
+
+      - name: "Bundled Desktop artifact for this platform boots"
+        run: |
+          python scripts/build_release.py --desktop --bundle-lib "$RUNNER_TEMP/wh"
+          ls dist/
+          for f in dist/qector-claude-desktop-2.0.1-bundled-*.mcpb; do python scripts/boot_from_manifest.py "$f"; done
+        shell: bash

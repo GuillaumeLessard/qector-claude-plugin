@@ -1,0 +1,739 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/threshold_sweep.output.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Machine-verifiable QECTOR MCP result envelope (contract 2.0).",
+  "properties": {
+    "artifact": {
+      "additionalProperties": true,
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "audit": {
+      "additionalProperties": false,
+      "properties": {
+        "record_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sequence",
+        "record_sha256"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "claim_class": {
+      "enum": [
+        "runtime_verified",
+        "verification_failed",
+        "reference_only",
+        "machine_scoped_measurement",
+        "metadata_or_unverified",
+        "none"
+      ],
+      "type": "string"
+    },
+    "contract_version": {
+      "const": "2.0",
+      "type": "string"
+    },
+    "error": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "INVALID_INPUT",
+            "UNKNOWN_TOOL",
+            "RESOURCE_LIMIT",
+            "LICENSE_DENIED",
+            "BACKEND_UNAVAILABLE",
+            "DEPENDENCY_MISSING",
+            "VERIFICATION_FAILED",
+            "CONTRACT_VIOLATION",
+            "INTEGRITY_FAILED",
+            "IO_ERROR",
+            "NETWORK_DISABLED",
+            "NETWORK_REQUIRED",
+            "PERMISSION_DENIED",
+            "PROTOCOL_ERROR",
+            "RUNTIME_ERROR"
+          ],
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "type",
+        "message"
+      ],
+      "type": "object"
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "mcp_sdk": {
+          "type": "string"
+        },
+        "reference_manual": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "server": {
+          "type": "string"
+        },
+        "server_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "server",
+        "server_version",
+        "reference_manual",
+        "mcp_sdk"
+      ],
+      "type": "object"
+    },
+    "result": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "artifact": {
+              "additionalProperties": false,
+              "properties": {
+                "metadata": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "artifact": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "format": {
+                          "type": "string"
+                        },
+                        "path": {
+                          "type": "string"
+                        },
+                        "sha256": {
+                          "type": "string"
+                        },
+                        "sha256_sidecar": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "format"
+                      ],
+                      "type": "object"
+                    },
+                    "code_family": {
+                      "type": "string"
+                    },
+                    "decoder": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "batch": {
+                          "type": "boolean"
+                        },
+                        "class": {
+                          "type": "string"
+                        },
+                        "gpu": {
+                          "type": "boolean"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "weighted": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "class",
+                        "name",
+                        "weighted",
+                        "batch",
+                        "gpu"
+                      ],
+                      "type": "object"
+                    },
+                    "dem_settings": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "applicable": {
+                          "type": "boolean"
+                        },
+                        "decompose_errors": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        },
+                        "graphlike_collapse": {
+                          "type": [
+                            "boolean",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "decompose_errors",
+                        "graphlike_collapse",
+                        "applicable"
+                      ],
+                      "type": "object"
+                    },
+                    "distance_size": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "distance": {
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "effective_distance": {
+                            "additionalProperties": false,
+                            "description": "Minimum weight of an undetectable logical error (H e = 0, L e != 0), found by zero/duplicate-column checks and a bounded enumeration. exact=true means min_logical_weight is the true distance; otherwise only lower_bound is known. The wheel's nominal distance is reported alongside and never trusted.",
+                            "properties": {
+                              "exact": {
+                                "type": "boolean"
+                              },
+                              "lower_bound": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "method": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "min_logical_weight": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "nominal": {
+                                "minimum": 1,
+                                "type": "integer"
+                              },
+                              "searched_weight": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "supports_examined": {
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "witness": {
+                                "items": {
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "type": [
+                                  "array",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "nominal",
+                              "min_logical_weight",
+                              "lower_bound",
+                              "exact",
+                              "searched_weight",
+                              "supports_examined",
+                              "witness",
+                              "method"
+                            ],
+                            "type": "object"
+                          },
+                          "n_checks": {
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "n_qubits": {
+                            "minimum": 1,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "distance",
+                          "n_checks",
+                          "n_qubits"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "environment": {
+                      "additionalProperties": true,
+                      "properties": {
+                        "cpu": {
+                          "type": "string"
+                        },
+                        "git_commit": {
+                          "type": "string"
+                        },
+                        "mcp_sdk": {
+                          "type": "string"
+                        },
+                        "numpy": {
+                          "type": "string"
+                        },
+                        "os": {
+                          "type": "string"
+                        },
+                        "platform": {
+                          "type": "string"
+                        },
+                        "python": {
+                          "type": "string"
+                        },
+                        "qector_decoder_v3": {
+                          "type": "string"
+                        },
+                        "ram_bytes": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "os",
+                        "platform",
+                        "python",
+                        "numpy",
+                        "qector_decoder_v3",
+                        "mcp_sdk"
+                      ],
+                      "type": "object"
+                    },
+                    "metric": {
+                      "type": "string"
+                    },
+                    "noise_model": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "error_rate": {
+                          "maximum": 1.0,
+                          "minimum": 0.0,
+                          "type": "number"
+                        },
+                        "error_rates": {
+                          "items": {
+                            "maximum": 1.0,
+                            "minimum": 0.0,
+                            "type": "number"
+                          },
+                          "type": "array"
+                        },
+                        "source": {
+                          "type": "string"
+                        },
+                        "tag": {
+                          "enum": [
+                            "code_capacity"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "tag",
+                        "source"
+                      ],
+                      "type": "object"
+                    },
+                    "sample_count": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "seed": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "trials_per_point": {
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "trials_per_point",
+                        "seed"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "code_family",
+                    "distance_size",
+                    "noise_model",
+                    "dem_settings",
+                    "decoder",
+                    "sample_count",
+                    "metric",
+                    "environment",
+                    "artifact"
+                  ],
+                  "type": "object"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "warnings": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "path",
+                "sha256",
+                "metadata"
+              ],
+              "type": "object"
+            },
+            "caveat": {
+              "type": "string"
+            },
+            "decoder": {
+              "type": "string"
+            },
+            "family": {
+              "type": "string"
+            },
+            "harness": {
+              "additionalProperties": false,
+              "properties": {
+                "faithfulness_policy": {
+                  "type": "string"
+                },
+                "wall_clock_budget_seconds": {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "wall_clock_seconds": {
+                  "minimum": 0,
+                  "type": "number"
+                },
+                "warnings": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "faithfulness_policy",
+                "wall_clock_seconds",
+                "wall_clock_budget_seconds"
+              ],
+              "type": "object"
+            },
+            "methodology": {
+              "type": "string"
+            },
+            "qector_version": {
+              "type": "string"
+            },
+            "results": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "distance": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "effective_distance": {
+                    "additionalProperties": false,
+                    "description": "Minimum weight of an undetectable logical error (H e = 0, L e != 0), found by zero/duplicate-column checks and a bounded enumeration. exact=true means min_logical_weight is the true distance; otherwise only lower_bound is known. The wheel's nominal distance is reported alongside and never trusted.",
+                    "properties": {
+                      "exact": {
+                        "type": "boolean"
+                      },
+                      "lower_bound": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "method": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "min_logical_weight": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ]
+                      },
+                      "nominal": {
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "searched_weight": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "supports_examined": {
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "witness": {
+                        "items": {
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "type": [
+                          "array",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "nominal",
+                      "min_logical_weight",
+                      "lower_bound",
+                      "exact",
+                      "searched_weight",
+                      "supports_examined",
+                      "witness",
+                      "method"
+                    ],
+                    "type": "object"
+                  },
+                  "error_rate": {
+                    "maximum": 1.0,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  "logical_error_rate": {
+                    "maximum": 1.0,
+                    "minimum": 0.0,
+                    "type": "number"
+                  },
+                  "logical_errors": {
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "n_checks": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "n_qubits": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "trials": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "wilson_95": {
+                    "items": {
+                      "maximum": 1.0,
+                      "minimum": 0.0,
+                      "type": "number"
+                    },
+                    "maxItems": 2,
+                    "minItems": 2,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "distance",
+                  "effective_distance",
+                  "n_checks",
+                  "n_qubits",
+                  "error_rate",
+                  "logical_error_rate",
+                  "wilson_95",
+                  "logical_errors",
+                  "trials"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "warnings": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "family",
+            "decoder",
+            "qector_version",
+            "results",
+            "harness",
+            "artifact",
+            "methodology",
+            "caveat"
+          ],
+          "title": "ThresholdSweepResult",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Empty result carried by an error envelope.",
+          "maxProperties": 0,
+          "type": "object"
+        }
+      ]
+    },
+    "runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "elapsed_ms": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "qector_decoder_v3": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "scope": {
+      "additionalProperties": false,
+      "properties": {
+        "network": {
+          "enum": [
+            "local_only",
+            "opt_in_pypi_freshness",
+            "disabled_air_gapped",
+            "package_installation_after_explicit_confirmation",
+            "local_process_only"
+          ],
+          "type": "string"
+        },
+        "performance_claim": {
+          "enum": [
+            "none",
+            "machine_scoped"
+          ],
+          "type": "string"
+        },
+        "stability": {
+          "enum": [
+            "stable",
+            "provisional",
+            "admin",
+            "control"
+          ],
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "stability",
+        "network",
+        "performance_claim"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "reference_only",
+        "measured",
+        "not_checked",
+        "error"
+      ],
+      "type": "string"
+    },
+    "tool": {
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "type": "string"
+    },
+    "verification": {
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "verified",
+            "not_checked",
+            "failed",
+            "not_applicable",
+            "reference_only"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "checks"
+      ],
+      "type": "object"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "contract_version",
+    "tool",
+    "status",
+    "claim_class",
+    "provenance",
+    "runtime",
+    "scope",
+    "verification",
+    "artifact",
+    "warnings",
+    "result"
+  ],
+  "title": "QECTORToolResult<threshold_sweep>",
+  "type": "object"
+}

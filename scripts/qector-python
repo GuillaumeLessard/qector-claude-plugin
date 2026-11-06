@@ -1,29 +1,63 @@
 #!/bin/sh
 # QECTOR cross-platform Python resolver (POSIX sh).
-# Supported range: Python 3.9-3.13 (matches qector-decoder-v3 wheels).
-# Order: $QECTOR_PYTHON -> python3 -> python. Missing or unsupported
-# candidates are skipped, never fatal mid-loop; exhaustion fails closed.
+# Supported range: Python 3.10-3.13 (mcp SDK needs 3.10+; qector-decoder-v3 wheels stop at 3.13).
+# Order: $QECTOR_PYTHON -> versioned names on PATH (python3.13 .. python3.10)
+# -> python3 -> python -> well-known absolute locations that GUI-launched
+# processes (Claude Desktop on macOS gets the launchd PATH, not the shell
+# PATH) cannot see: Homebrew, python.org framework builds, pyenv shims,
+# ~/.local/bin. Missing or unsupported candidates are skipped, never fatal
+# mid-loop; exhaustion fails closed with exit 127.
 set -u
 
 supports() {
-  "$1" -c 'import sys; raise SystemExit(0 if (3,9) <= sys.version_info[:2] < (3,14) else 1)' >/dev/null 2>&1
+  "$1" -c 'import sys; raise SystemExit(0 if (3,10) <= sys.version_info[:2] < (3,14) else 1)' >/dev/null 2>&1
 }
 
+# Pass 1 prefers an interpreter that already has the runtime installed, so
+# a machine with several Pythons picks the right one; pass 2 accepts any
+# supported version (the server then reports the missing dependency itself).
+has_runtime() {
+  "$1" -c 'import qector_decoder_v3, mcp, jsonschema' >/dev/null 2>&1
+}
+
+home="${HOME:-}"
+# An explicit QECTOR_PYTHON is the operator's decision: use it whenever it is
+# a supported version, even if it lacks the runtime (the server then says so).
+if [ -n "${QECTOR_PYTHON:-}" ] && { command -v "$QECTOR_PYTHON" >/dev/null 2>&1 || [ -x "$QECTOR_PYTHON" ]; } && supports "$QECTOR_PYTHON"; then
+  exec "$QECTOR_PYTHON" ${1+"$@"}
+fi
+for pass in runtime version; do
 for candidate in \
-  "${QECTOR_PYTHON:-}" \
+  python3.13 python3.12 python3.11 python3.10 \
   python3 \
-  python
+  python \
+  /opt/homebrew/bin/python3.13 /opt/homebrew/bin/python3.12 /opt/homebrew/bin/python3.11 /opt/homebrew/bin/python3.10 \
+  /usr/local/bin/python3.13 /usr/local/bin/python3.12 /usr/local/bin/python3.11 /usr/local/bin/python3.10 \
+  /Library/Frameworks/Python.framework/Versions/3.13/bin/python3 \
+  /Library/Frameworks/Python.framework/Versions/3.12/bin/python3 \
+  /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 \
+  /Library/Frameworks/Python.framework/Versions/3.10/bin/python3 \
+  "$home/.pyenv/shims/python3" \
+  "$home/.local/bin/python3" \
+  /usr/bin/python3
 do
   [ -n "$candidate" ] || continue
+  case "$candidate" in
+    "$home/"*) [ -n "$home" ] || continue ;;
+  esac
   command -v "$candidate" >/dev/null 2>&1 || [ -x "$candidate" ] || continue
-  if supports "$candidate"; then
-    exec "$candidate" "$@"
+  supports "$candidate" || continue
+  if [ "$pass" = runtime ]; then
+    has_runtime "$candidate" || continue
   fi
+  exec "$candidate" ${1+"$@"}
+done
 done
 
-echo "QECTOR: no Python 3.9-3.13 interpreter found." >&2
-echo "qector-decoder-v3 ships wheels for Python 3.9-3.13 only;" >&2
+echo "QECTOR: no Python 3.10-3.13 interpreter found." >&2
+echo "qector-decoder-v3 ships wheels up to Python 3.13 and the MCP SDK needs 3.10+;" >&2
 echo "newer interpreters (3.14+) are rejected on purpose." >&2
 echo "Install a supported Python (https://www.python.org/downloads/) and retry," >&2
-echo "or point QECTOR_PYTHON at a supported interpreter." >&2
+echo "or point QECTOR_PYTHON (Claude Desktop: the 'Python interpreter' extension setting)" >&2
+echo "at a supported interpreter." >&2
 exit 127

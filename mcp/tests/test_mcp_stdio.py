@@ -37,7 +37,10 @@ SERVERS = {
     "qector-research": MCP_DIR / "mcp_server_qector_bench.py",
     "qector-desktop": MCP_DIR / "mcp_server_desktop.py",
     "qector-admin": MCP_DIR / "mcp_server_admin.py",
+    "qector-secure": MCP_DIR / "mcp_server_secure.py",
 }
+SERVER_ARGS = {"qector-secure": ["--profile", "safe", "--no-strict-integrity"]}
+CONTROL_TOOLS = {"airgap_status", "integrity_check", "schema_catalog", "audit_log_status"}
 
 EXPECTED_TOOLS = {
     "qector-library": {
@@ -83,7 +86,8 @@ EXPECTED_TOOLS = {
     },
 }
 
-EXPECTED_TOOLS["qector-desktop"] = EXPECTED_TOOLS["qector-library"]
+EXPECTED_TOOLS["qector-desktop"] = EXPECTED_TOOLS["qector-library"] | CONTROL_TOOLS
+EXPECTED_TOOLS["qector-secure"] = EXPECTED_TOOLS["qector-library"] | CONTROL_TOOLS
 EXPECTED_TOOLS["qector-admin"] = {
     "system_setup",
     "configure_claude_desktop",
@@ -97,33 +101,32 @@ def _send(proc, lines):
     proc.stdin.flush()
 
 
-def _read_one(proc, *, timeout: float):
-    """Read one line from the subprocess with a hard timeout.
+def _readline_with_timeout(proc, timeout: float) -> bytes:
+    """Read one line from the server's stdout, giving up after *timeout* seconds.
 
-    On Windows, msvcrt is used to poll. On Unix, select.
+    A reader thread makes this portable: ``select`` does not work on pipes
+    on Windows and a blocking ``readline`` would hang the suite if the
+    server stalled. On expiry the server is killed so the pipe closes and
+    the thread ends.
     """
-    import time
+    import threading
 
-    if sys.platform == "win32":
+    result: list[bytes] = []
+
+    def _read() -> None:
         try:
-            import msvcrt
-        except ImportError:
-            msvcrt = None
-        if msvcrt is not None:
-            start = time.monotonic()
-            while time.monotonic() - start < timeout:
-                if msvcrt.kbhit() if hasattr(msvcrt, "kbhit") else False:
-                    pass
-                # Use non-blocking readline
-                proc.stdout.flush() if hasattr(proc.stdout, "flush") else None
-                line = proc.stdout.readline()
-                if line:
-                    return line
-                # Sleep a bit to avoid busy loop
-                time.sleep(0.05)
-            return None
-    # Fallback: blocking readline with no timeout (use subprocess timeout)
-    return proc.stdout.readline()
+            result.append(proc.stdout.readline())
+        except (OSError, ValueError):
+            result.append(b"")
+
+    worker = threading.Thread(target=_read, daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
+        proc.kill()
+        worker.join(2.0)
+        return b""
+    return result[0] if result else b""
 
 
 def test_server(server_name: str, server_path: Path) -> dict:
@@ -132,7 +135,7 @@ def test_server(server_name: str, server_path: Path) -> dict:
         return {"ok": False, "error": f"server file missing: {server_path}"}
 
     proc = subprocess.Popen(
-        [sys.executable, str(server_path)],
+        [sys.executable, str(server_path), *SERVER_ARGS.get(server_name, [])],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
@@ -157,7 +160,7 @@ def test_server(server_name: str, server_path: Path) -> dict:
             "id": 1,
             "method": "initialize",
             "params": {
-                "protocolVersion": "2025-03-26",
+                "protocolVersion": "2025-06-18",
                 "capabilities": {},
                 "clientInfo": {"name": "qector-stdio-test", "version": "1.0"},
             },
@@ -167,7 +170,7 @@ def test_server(server_name: str, server_path: Path) -> dict:
         _send(proc, [json.dumps(init_msg), json.dumps(notif), json.dumps(list_msg)])
 
         # Read initialize response
-        line1 = proc.stdout.readline()
+        line1 = _readline_with_timeout(proc, 30.0)
         if not line1:
             result["error"] = "no initialize response"
             return result
@@ -177,7 +180,7 @@ def test_server(server_name: str, server_path: Path) -> dict:
         )
 
         # Read tools/list response
-        line2 = proc.stdout.readline()
+        line2 = _readline_with_timeout(proc, 30.0)
         if not line2:
             result["error"] = "no tools/list response"
             return result
@@ -196,7 +199,7 @@ def test_server(server_name: str, server_path: Path) -> dict:
                 result["contract_issues"].append(f"{name}: missing annotations")
 
         # Sample call
-        if server_name in {"qector-library", "qector-desktop"}:
+        if server_name in {"qector-library", "qector-desktop", "qector-secure"}:
             sample_name, sample_args = "list_decoders", {}
         elif server_name == "qector-research":
             sample_name, sample_args = "wilson_ci", {"k": 10, "n": 1000}
@@ -209,7 +212,7 @@ def test_server(server_name: str, server_path: Path) -> dict:
             "params": {"name": sample_name, "arguments": sample_args},
         }
         _send(proc, [json.dumps(call_msg)])
-        line3 = proc.stdout.readline()
+        line3 = _readline_with_timeout(proc, 30.0)
         if line3:
             call_resp = json.loads(line3)
             tool_result = call_resp.get("result", {})
@@ -223,6 +226,8 @@ def test_server(server_name: str, server_path: Path) -> dict:
                         content[0]["text"]
                     )
                     required_fields = {
+                        "contract_version",
+                        "tool",
                         "status",
                         "claim_class",
                         "provenance",
@@ -302,6 +307,8 @@ def test_server(server_name: str, server_path: Path) -> dict:
                 proc.wait(timeout=2)
             except Exception:
                 pass
+        if proc.stdout:
+            proc.stdout.close()
 
     print(f"  server: {result['server_name']}")
     print(f"  tools: {result['tool_count']} (expected {result['expected_count']})")
@@ -322,10 +329,22 @@ def main() -> int:
     parser.add_argument("--server", choices=tuple(SERVERS) + ("all",), default="all")
     args = parser.parse_args()
     targets = list(SERVERS.keys()) if args.server == "all" else [args.server]
+    # Preflight: the servers need the MCP SDK and the decoder wheel in THIS
+    # interpreter. Say so at once instead of timing out on five dead servers.
+    missing = []
+    for module in ("mcp.types", "qector_decoder_v3", "jsonschema", "numpy"):
+        try:
+            __import__(module)
+        except Exception:
+            missing.append(module)
+    if missing:
+        print(f"FAIL: runtime not installed in {sys.executable}: missing {missing}; install requirements.lock first")
+        return 2
     results = [test_server(name, SERVERS[name]) for name in targets]
     print()
     n_ok = sum(1 for r in results if r["ok"])
-    print(f"PASS: {n_ok}/{len(results)} servers validated")
+    verdict = "PASS" if n_ok == len(results) else "FAIL"
+    print(f"{verdict}: {n_ok}/{len(results)} servers validated")
     return 0 if n_ok == len(results) else 1
 
 

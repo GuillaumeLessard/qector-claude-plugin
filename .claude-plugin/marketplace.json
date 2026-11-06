@@ -1,32 +1,33 @@
 {
   "name": "qector-tools",
-  "version": "1.0.6",
+  "version": "2.0.1",
   "description": "QECTOR quantum error correction toolkit for Claude Code and Claude Desktop.",
   "owner": {
     "name": "Guillaume Lessard",
     "email": "admin@qector.store",
-    "url": "https://qector.com"
+    "url": "https://qector.store"
   },
   "plugins": [
     {
       "name": "qector",
-      "version": "1.0.6",
+      "version": "2.0.1",
       "source": "./",
-      "description": "Local QECTOR quantum error correction plugin for Claude Code and Claude Desktop with strict math skills, focused agents, and qector-decoder-v3 MCP servers.",
+      "description": "Air-gapped, schema-validated QECTOR quantum error correction plugin for Claude Code and Claude Desktop: qector-secure MCP server (12 tools), strict math skills and focused agents on qector-decoder-v3.",
       "author": {
         "name": "Guillaume Lessard",
         "email": "admin@qector.store"
       },
-      "homepage": "https://qector.com",
+      "homepage": "https://qector.store",
       "repository": "https://github.com/GuillaumeLessard/qector-claude-plugin",
       "keywords": [
         "quantum-error-correction",
         "qec",
         "stabilizer",
         "decoding",
-        "mcp"
+        "mcp",
+        "air-gapped",
+        "json-schema"
       ]
     }
   ]
 }
-

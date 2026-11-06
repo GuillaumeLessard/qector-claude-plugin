@@ -1,0 +1,83 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/artifact_metadata_check.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_path": {
+      "default": null,
+      "description": "A .json artifact inside QECTOR_ARTIFACT_DIR to check; omit for the template.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "decoder_name": {
+      "default": "blossom",
+      "enum": [
+        "ambiguity_cluster",
+        "auto",
+        "blossom",
+        "bposd",
+        "cuda_batch",
+        "cuda_bposd",
+        "fast_union_find",
+        "hybrid",
+        "hybrid_cascade",
+        "lookup_table",
+        "native_auto",
+        "opencl_batch",
+        "sliding_window",
+        "space_time",
+        "sparse_blossom",
+        "streaming",
+        "two_stage",
+        "union_find"
+      ],
+      "type": "string"
+    },
+    "error_rates": {
+      "default": [
+        0.01,
+        0.05,
+        0.1
+      ],
+      "items": {
+        "maximum": 1,
+        "minimum": 0,
+        "type": "number"
+      },
+      "type": "array"
+    },
+    "family": {
+      "default": "rotated_surface",
+      "enum": [
+        "color_code",
+        "heavy_hex",
+        "repetition",
+        "ring",
+        "rotated_surface",
+        "rotated_surface_corrected",
+        "toric",
+        "unrotated_surface"
+      ],
+      "type": "string"
+    },
+    "seed": {
+      "default": 42,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "size": {
+      "default": 5,
+      "minimum": 2,
+      "type": "integer"
+    },
+    "trials": {
+      "default": 100,
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "title": "artifact_metadata_check",
+  "type": "object"
+}

@@ -41,8 +41,9 @@ Its exact tools, version, license, and hardware status are
   controller (benchmark job queue, JSON/CSV/PDF export). Its
   docstring references a `run-qector` skill that is not part of
   this package.
-- The optional direct-wheel `qector_decoder_v3.workbench` module
-  is not shipped in 1.0.0.
+- `qector_decoder_v3.workbench` is present in the 1.0.0 wheel (the
+  headless controller above); the Workbench *application* and its
+  MCP server are a separate download, not part of the wheel.
 
 ## How to probe the Workbench
 
@@ -65,16 +66,13 @@ fresh for every call.
 
 ## What the Workbench tools are
 
-The exact list is **device-local**. Common patterns:
-
-- `mcp_status` - health / version / license probe.
-- `tools/list` - returns the actual tool names on the target.
-- `get_license_info` - same shape as the library tool.
-- `get_hardware_info` - returns CUDA / OpenCL / RAM / CPU.
-- `verify_license_token` - Ed25519 token validation.
-- `decode_single` / `decode_batch` - dev-friendly decode
-  wrappers.
-- `run_benchmark` - cancelable benchmark job.
+The exact list is **device-local** and no Workbench tool name is
+part of this package's contract. The only name this plugin's probe
+code calls is `mcp_status` (health / version / licence), and only
+after `tools/list` has shown it. Names you may *encounter* on a
+target (hardware info, licence token validation, dev-friendly decode
+wrappers, cancelable benchmark jobs) are illustrations of what such
+an app typically offers, not names to assume.
 
 Never assume any specific Workbench tool name. **Always** run
 `tools/list` on the target before using any name. The
@@ -100,9 +98,8 @@ Use the Workbench when:
 
 - The user has the desktop app installed locally.
 - The use case is dev / interactive benchmarking.
-- The required tools (e.g. `get_hardware_info`,
-  `run_benchmark`) are negotiated via `tools/list` and are
-  necessary.
+- The required tools (a hardware probe, a benchmark job runner)
+  appear in the target's `tools/list` and are necessary.
 
 Do not use the Workbench when:
 

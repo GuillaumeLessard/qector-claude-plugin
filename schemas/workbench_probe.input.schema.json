@@ -1,0 +1,42 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/workbench_probe.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "confirm": {
+      "default": false,
+      "type": "boolean"
+    },
+    "executable": {
+      "type": "string"
+    },
+    "expected_sha256": {
+      "pattern": "^[0-9a-fA-F]{64}$",
+      "type": "string"
+    },
+    "limit": {
+      "default": null,
+      "minimum": 1,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "list_tools": {
+      "default": true,
+      "type": "boolean"
+    },
+    "timeout": {
+      "default": 60.0,
+      "maximum": 300,
+      "minimum": 0.1,
+      "type": "number"
+    }
+  },
+  "required": [
+    "executable",
+    "expected_sha256"
+  ],
+  "title": "workbench_probe",
+  "type": "object"
+}

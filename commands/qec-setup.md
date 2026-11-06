@@ -1,5 +1,6 @@
 ---
 description: Run the guided first-time system setup and diagnostic audit with user approbation safety gate.
+argument-hint: "(no arguments; confirmation is asked interactively)"
 ---
 
 Perform a guided first-time setup and dependency audit of the QECTOR quantum error correction environment.
@@ -32,15 +33,15 @@ actually executed:
 ```bash
 python --version 2>/dev/null || python3 --version
 python -m pip --version 2>/dev/null || python3 -m pip --version
-python -c "import importlib.metadata as m; [print(p, getattr(m,'version',lambda x:'?')(p) if True else '') for p in ['qector-decoder-v3','mcp','numpy','cryptography']]" 2>/dev/null || echo "packages not installed"
-ls -la artifacts/ 2>/dev/null || echo "artifacts/ not found"
+python scripts/qector_runtime_check.py          # versions of qector-decoder-v3, mcp, numpy, cryptography and the Python window
+python scripts/qector_system_setup.py --check-only
 ```
 
 Inspect and present to the user:
 
-- Python interpreter path and version (Python >= 3.9, < 3.14 for the wheel).
+- Python interpreter path and version (Python >= 3.10, < 3.14: the MCP SDK needs 3.10+, the wheel stops at 3.13).
 - Pip availability.
-- Installed package versions (`qector-decoder-v3==1.0.0`, `mcp==1.26.0`,
+- Installed package versions (`qector-decoder-v3==1.0.1`, `mcp>=1.30,<3`,
   `numpy`, `cryptography`).
 - State of the `artifacts/` evidence directory.
 
@@ -51,12 +52,13 @@ unless `qector-admin` is enabled with `QECTOR_ADMIN_ENABLED=1`. Prefer the CLI.
 
 - If any dependencies are missing or unverified, ask the user for confirmation:
   "Would you like to install the required dependencies
-  (`pip install -r requirements.txt`) and configure the workspace?"
+  (`pip install -r requirements.lock`, or `--offline-wheelhouse <dir>` on an air-gapped host) and configure the workspace?"
 - **Local machine**: upon confirmation, run
   `python scripts/qector_system_setup.py --confirm`.
 - **Sandboxed/remote**: upon confirmation, install directly:
-  `pip install qector-decoder-v3==1.0.0 mcp==1.26.0 numpy cryptography`
-  then verify with a quick import test.
+  `python -m pip install --require-hashes -r requirements.lock` (the exact
+  tested closure; quote any ad-hoc specifier such as `"mcp>=1.30,<3"` because
+  `>` is a shell redirect), then verify with `scripts/qector_runtime_check.py`.
 - Verify the in-process decoding check asserting Theorem 1
   ($H c \equiv s \pmod 2$) if the decoder wheel is installed.
 - Report final ready-state status honestly, noting which path was used.

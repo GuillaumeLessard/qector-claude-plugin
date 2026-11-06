@@ -152,24 +152,55 @@ def theorem_2_obligation(
     error: Sequence[int],
     correction: Sequence[int],
     stabilizer_generators: Sequence[Sequence[int]] | None = None,
+    logical_observables: Sequence[Sequence[int]] | None = None,
 ) -> dict[str, Any]:
     """Check the logical-coset partition from Theorem 2.
 
-    For a sector represented by ``matrix``, the stabilizer generators default
-    to its rows, so ``im(H^T)`` is tested as the row space of H.
+    Theorem 1 guarantees ``c + e`` in ``ker(H)``. Whether that residual is a
+    logical failure depends on the sector's *stabilizers* and *logical
+    observables*, which are not the rows of ``matrix``: ``H`` lists the
+    checks that detect this error type, while the operators that act
+    trivially on it are the other sector's generators (``im(H_dual^T)`` for a
+    CSS code). The two coincide only for self-dual codes such as Steane, so
+    there is deliberately no default. Pass either
+
+    * ``logical_observables`` (rows of the sector's logical matrix ``L``):
+      failure iff ``L (c + e) != 0`` — the criterion every QECTOR tool
+      scores; or
+    * ``stabilizer_generators``: failure iff ``c + e`` is outside their span.
+
+    When both are given they must agree, and the result reports both.
     """
     theorem_1 = theorem_1_obligation(matrix, error, correction)
     if not theorem_1["faithful"]:
         raise ValueError("Theorem 2 requires H c = H e")
+    if stabilizer_generators is None and logical_observables is None:
+        raise ValueError(
+            "theorem_2_obligation needs stabilizer_generators or logical_observables; "
+            "the rows of H are checks, not stabilizers of the same sector"
+        )
     residual = theorem_1["residual"]
-    generators = matrix if stabilizer_generators is None else stabilizer_generators
-    stabilizer = row_space_contains(generators, residual)
-    return {
+    result: dict[str, Any] = {
         "faithful": True,
         "residual_in_kernel": theorem_1["residual_in_kernel"],
-        "residual_in_stabilizer_span": stabilizer,
-        "logical_failure": not stabilizer,
+        "residual_in_stabilizer_span": None,
+        "logical_syndrome": None,
+        "logical_failure": None,
     }
+    if stabilizer_generators is not None:
+        in_span = row_space_contains(stabilizer_generators, residual)
+        result["residual_in_stabilizer_span"] = in_span
+        result["logical_failure"] = not in_span
+    if logical_observables is not None:
+        logical_syndrome = f2_mat_vec(logical_observables, residual)
+        result["logical_syndrome"] = logical_syndrome
+        by_logicals = any(logical_syndrome)
+        if result["logical_failure"] is not None and result["logical_failure"] != by_logicals:
+            raise ValueError(
+                "stabilizer_generators and logical_observables disagree; they do not describe the same code"
+            )
+        result["logical_failure"] = by_logicals
+    return result
 
 
 def wilson_ci(k: int, n: int, z: float = Z95) -> tuple[float, float]:

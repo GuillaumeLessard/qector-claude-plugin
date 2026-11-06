@@ -2,7 +2,7 @@
 name: qector-testing-strategy
 description: >-
   The QECTOR testing and validation strategy (manual 23). Covers
-  the eight validation layers (syndrome faithfulness, property-
+  the ten validation layers (syndrome faithfulness, property-
   based, exhaustive oracle, cross-decoder equivalence, DEM
   pipeline, LER parity, qLDPC correctness, memory behaviour, API
   stability, GPU kernels), the stale test-count policy, the
@@ -14,9 +14,18 @@ description: >-
 
 # QECTOR Testing and Validation Strategy
 
+> **Scope note (plugin 2.0.0).** File names such as `tests/test_*_faithfulness.py`,
+> `scripts/competitive_*.py`, `docs/CORRECTNESS_AUDIT.md`, `docs/API_STABILITY.md`
+> and `docs/RELEASING.md` cited below belong to the **upstream qector-decoder-v3
+> source tree**, not to this plugin. The plugin's own executable gates are
+> `tests/` (unittest), `scripts/release_validate.py`, `scripts/export_schemas.py
+> --check`, `scripts/generate_integrity_manifest.py --check` and
+> `mcp/tests/test_mcp_stdio.py`. Never claim a file exists here that this note
+> attributes to the upstream tree.
+
 Source of authority: v1.0.0 reference manual, chapter 23.
 
-## The eight validation layers (Table 23.1)
+## The ten validation layers (Table 23.1)
 
 | Layer                      | What it locks                                                              | Representative evidence                                                       |
 | -------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |

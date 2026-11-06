@@ -8,17 +8,16 @@ echo   QECTOR Claude Desktop Windows App Connector Installer
 echo ======================================================================
 echo.
 
-REM Locate Python
-where python >nul 2>nul
-if %errorlevel% neq 0 (
-    echo [ERROR] Python not found in system PATH.
-    echo Please install Python 3.10+ from https://www.python.org/
-    pause
-    exit /b 1
-)
-
+REM Resolve a supported interpreter (3.10-3.13) through the shared launcher;
+REM "where python" alone would accept the Microsoft Store stub.
 echo [INFO] Running pre-flight diagnostic and configuration...
-python "%~dp0configure_claude_desktop.py" --confirm
+call "%~dp0qector-python.cmd" "%~dp0configure_claude_desktop.py" --confirm
+if %errorlevel% equ 127 (
+    echo [ERROR] No Python 3.10-3.13 interpreter found.
+    echo Install one from https://www.python.org/ or set QECTOR_PYTHON.
+    pause
+    exit /b 127
+)
 
 if %errorlevel% equ 0 (
     echo.
@@ -27,7 +26,9 @@ if %errorlevel% equ 0 (
 ) else (
     echo.
     echo [ERROR] Configuration failed. See diagnostics above.
+    set "RC=1"
 )
 
 echo.
 pause
+if defined RC exit /b %RC%

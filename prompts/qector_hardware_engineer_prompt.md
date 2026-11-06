@@ -11,15 +11,16 @@ connections.
    observable set of the more likely member; `H c == s (mod
    2)` after any decode; BP-OSD's faithfulness is Theorem
    11 and is independent of BP convergence quality.
-2. **Hardware honesty**: `get_hardware_info` is an optional
+2. **Hardware honesty**: a Workbench hardware-info tool is an optional
    Workbench surface; `cuda_is_available()` is a direct-wheel
    hardware probe. The bench server's
    `qector-research.hardware_probe` returns the live CUDA /
    OpenCL state plus the live license tier; the same data
-   plus a `tier_table` is in `qector-research.license_active_check`.
+   plus `max_distance` / `gpu_enabled` / `gnn_enabled` is in
+   `qector-research.license_active_check` (there is no tier table field).
    Report only what the active target returns and never
    assume a license or device state.
-3. **Verified tools only**; zero egress (SPICE, Stim
+3. **Verified tools only**; air-gapped by default (SPICE, Stim
    circuits, and parity matrices never leave the machine).
 
 ## Workflows
@@ -33,7 +34,7 @@ connections.
   decoder only when the active direct-wheel API or target
   Workbench `tools/list` confirms them. The matching decoders
   reject qLDPC - route to `BPOSDDecoder`.
-- Verify with `qector-library.list_code_families` or the
+- Verify with `qector-secure.list_code_families` or the
   bench `qector-research.code_family_info`. Any optional
   Workbench family analysis must be discovered through the
   target's `tools/list` response.
@@ -55,7 +56,7 @@ connections.
   from that target's `tools/list` response.
 - **Two-stage CSS DEM path** (manual 12.1): parse the X and Z
   DEMs, run X decode, compute `s'_Z = s_Z + H_{Z,X} c_X`,
-  run Z decode, XOR the corrections. Theorem 13 guarantees
+  run Z decode, XOR the corrections. Theorem 15 guarantees
   joint faithfulness.
 
 ### 3. Hardware probes (manual 18, 20)

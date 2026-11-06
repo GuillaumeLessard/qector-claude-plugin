@@ -14,6 +14,15 @@ description: >-
 
 # QECTOR Math Foundations - Strict Ground Truth Rules
 
+> **Scope note (plugin 2.0.0).** File names such as `tests/test_*_faithfulness.py`,
+> `scripts/competitive_*.py`, `docs/CORRECTNESS_AUDIT.md`, `docs/API_STABILITY.md`
+> and `docs/RELEASING.md` cited below belong to the **upstream qector-decoder-v3
+> source tree**, not to this plugin. The plugin's own executable gates are
+> `tests/` (unittest), `scripts/release_validate.py`, `scripts/export_schemas.py
+> --check`, `scripts/generate_integrity_manifest.py --check` and
+> `mcp/tests/test_mcp_stdio.py`. Never claim a file exists here that this note
+> attributes to the upstream tree.
+
 Source of authority: QECTOR Decoder v3 reference manual v1.0.0 (DOI
 `10.5281/zenodo.21941046`), chapters 2, 3, 4-13, 15, 19, 20, 22.
 The source document is not redistributed here. These rules are
@@ -49,8 +58,14 @@ them.
   iff `c + e` in `im(H^T)`; a logical error occurs iff
   `c + e` in `ker(H) \ im(H^T)`. Score on the logical coset,
   never on raw correction equality (degeneracy is respected).
-  For arbitrary input matrices, use the code-provided stabilizer
-  / logical matrices instead.
+  The `im(H^T)` form holds only when the rows of `H` are the
+  sector's own stabilizers (self-dual codes such as Steane). For
+  the wheel's graphlike families (`rotated_surface`, `toric`,
+  `heavy_hex`, ...) the stabilizers acting on the decoded sector
+  are the *other* sector's checks, so the tools score the
+  equivalent logical-matrix form `L (c + e) != 0 (mod 2)` with
+  the wheel's `logicals_matrix()`; `tests/test_reference_manual_math.py`
+  checks on `rotated_surface(3)` that the two forms differ there.
 - **Theorem 3 (path-flipping faithfulness of MWPM)**. For
   non-empty defect set `D` and `M` a minimum-weight perfect
   matching on the decoding graph, the correction is faithful:
@@ -88,9 +103,8 @@ them.
 12. **Theorem 12 (manual 9.2)**: ambiguity-cluster parity
     decomposition; `H c = s (mod 2)` for the combined
     correction, independent of the threshold `tau`.
-13. **Theorem 13 (manual 10.2 / 12.1)**: space-time lifting
-    faithfulness; joint X / Z sector faithfulness under two-
-    stage CSS.
+13. **Theorem 13 (manual 10.2)**: space-time lifting
+    faithfulness (detector differencing and telescoping).
 14. **Theorem 14 (manual 11.1)**: AutoDecoder dispatch
     faithfulness; `H c = s` whenever any eligible backend can
     satisfy it.
@@ -174,7 +188,7 @@ scaling); environment (OS, CPU, RAM, package versions, git
 commit); artifact (raw JSON / CSV path plus SHA-256 sidecar).
 A benchmark without these fields is a smoke test, not public
 evidence. `qector-research.artifact_metadata_check` generates the
-block; `qector-library.threshold_sweep` already emits the
+block; `qector-secure.threshold_sweep` already emits the
 block plus the SHA-256 sidecar.
 
 ## Rule M6 - Safe wording (chapter 22.5)
@@ -249,7 +263,7 @@ block plus the SHA-256 sidecar.
 | e            | True physical error vector                    |
 | c            | Decoder correction vector                     |
 | ker(H)       | Right kernel of H                              |
-| im(H^T)      | Row space of H (stabilizer span)              |
+| im(H^T)      | Row space of H; the stabilizer span only when `H H^T = 0` |
 | L            | Logical-observable matrix                     |
 | gamma_q      | Posterior LLR of qubit q                       |
 | phi(x)       | Box-plus kernel -ln(tanh(x/2))                |

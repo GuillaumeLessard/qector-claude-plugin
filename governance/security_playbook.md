@@ -20,7 +20,7 @@ This public policy defines the safe default for the QECTOR Claude plugin.
 
 ## Supply Chain
 
-- Install only from the pinned `requirements.txt` or an independently reviewed
+- Install only from the hashed `requirements.lock` (`pip install --require-hashes`) or an independently reviewed
   dependency source.
 - Confirm package name, version, maintainer metadata, and the reference manual
   DOI before execution.

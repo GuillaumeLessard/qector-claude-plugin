@@ -1,0 +1,52 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/decode_single.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "decoder_name": {
+      "default": "blossom",
+      "enum": [
+        "blossom",
+        "fast_union_find",
+        "native_auto",
+        "sparse_blossom",
+        "union_find"
+      ],
+      "type": "string"
+    },
+    "distance": {
+      "default": 5,
+      "maximum": 63,
+      "minimum": 2,
+      "type": "integer"
+    },
+    "error_rate": {
+      "default": 0.05,
+      "maximum": 1,
+      "minimum": 0,
+      "type": "number"
+    },
+    "family": {
+      "default": "rotated_surface_corrected",
+      "enum": [
+        "repetition",
+        "ring",
+        "rotated_surface",
+        "unrotated_surface",
+        "toric",
+        "heavy_hex",
+        "color_code",
+        "rotated_surface_corrected"
+      ],
+      "type": "string"
+    },
+    "seed": {
+      "default": 42,
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "title": "decode_single",
+  "type": "object"
+}

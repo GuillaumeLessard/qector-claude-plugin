@@ -1,6 +1,24 @@
-# QECTOR MCP Cheat Sheet (plugin v1.0.6)
+# QECTOR MCP Cheat Sheet (plugin v2.0.1)
 
-## 1. Default Library Surface (`qector-library` — 8 Frozen Stable Tools)
+## 0. Default Server (`qector-secure` — 12 tools, air-gapped)
+
+`qector-secure` is what Claude Code and Claude Desktop register in 2.0.0. It
+serves the 8 stable tools of section 1 behind a control plane (JSON Schema
+2020-12 validation in and out, air-gap guard, INTEGRITY.json check, optional
+hash-chained audit) and adds four read-only tools:
+
+| Tool | Use it to |
+| --- | --- |
+| `airgap_status` | Prove the process is air-gapped and see the decoder wheel's native network surface (honestly reported) |
+| `integrity_check` | Re-verify every runtime file against `INTEGRITY.json` |
+| `schema_catalog` | Fetch every tool's input/output schema with SHA-256 digests |
+| `audit_log_status` | Check the hash chain of the audit log when `QECTOR_AUDIT_DIR` is set |
+
+`--profile research` adds the 29 research tools (section 2); the research
+`compat_report` is named `research_compat_report` there. Tool names in Claude
+Code are `mcp__plugin_qector_qector-secure__<tool>`.
+
+## 1. Stable Surface (`qector-library` — 8 Frozen Stable Tools, also served by `qector-secure`)
 
 The frozen `qector-library` server is the authoritative local MCP surface:
 

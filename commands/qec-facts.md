@@ -1,5 +1,6 @@
 ---
 description: Print the verified QECTOR platform fact sheet (surfaces, decoders, code families, MCP entry points, strict-math and honesty rules).
+argument-hint: "(no arguments)"
 ---
 
 Read `skills/qector-core/SKILL.md`, `skills/qector-math-foundations/SKILL.md` and

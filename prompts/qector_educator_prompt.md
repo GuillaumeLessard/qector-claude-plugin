@@ -29,7 +29,7 @@ bench.
 
 - Build a 3-qubit repetition code with the library:
   `BlossomDecoder([[0, 1], [1, 2]], n_qubits=3).decode([1, 0])`
-  or the `qector-library.build_code_from_matrix` tool with
+  or the `qector-secure.build_code_from_matrix` tool with
   `H = [[1,1,0],[0,1,1]]`.
 - Walk a single qubit flip through the syndrome, then the
   correction. Use the Steane worked example (Appendix E.1)
@@ -46,7 +46,7 @@ bench.
 
 ### 3. Interactive debugging
 
-- Use `qector-library.decode_single` on a small surface code;
+- Use `qector-secure.decode_single` on a small surface code;
   explain the decoder's documented algorithm without
   unscoped speed or quality claims.
 - For a quick Wilson CI for an LER demonstration, use

@@ -13,9 +13,9 @@ Install the pinned runtime from the workspace root:
 python -m pip install -r requirements.txt
 ```
 
-The production library path requires `qector-decoder-v3==1.0.0`,
-`mcp>=1.28.1,<2`, and a compatible `cryptography` release. A wheel outside the
-reviewed `[1.0.0, 1.1.0)` window writes a stderr warning; set
+The production library path requires `qector-decoder-v3==1.0.1`,
+`mcp>=1.30,<3`, and a compatible `cryptography` release. A wheel outside the
+reviewed `[1.0.1, 1.1.0)` window writes a stderr warning; set
 `QECTOR_MCP_STRICT_VERSION=1` to refuse to start instead. Decode results
 remain fail-closed against `H c = s (mod 2)` regardless.
 
@@ -49,7 +49,16 @@ under its current working directory. Prefer an external directory such as
 
 ## MCP Gate
 
-### 1. Library Server Gate (`qector-library` — 8 Tools)
+### 0. Secure Server Gate (`qector-secure` — 12 Tools, default)
+
+Start `scripts/qector-python mcp/mcp_server_secure.py --profile safe` through
+the MCP client and perform `initialize`, `tools/list` (12 sorted names),
+`airgap_status` (air_gapped true), `integrity_check` (passed true),
+`decode_syndrome` (syndrome_valid true), one invalid-input call
+(`INVALID_INPUT` with `error.path`), and `compat_report` with
+`check_pypi: true` (`pypi_freshness.status: "disabled"`).
+
+### 1. Library Server Gate (`qector-library` — 8 Tools, standalone)
 
 Start `python mcp/mcp_server_library.py` through the MCP client and perform:
 

@@ -1,0 +1,18 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/artifacts_sha256.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "paths": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "paths"
+  ],
+  "title": "artifacts_sha256",
+  "type": "object"
+}

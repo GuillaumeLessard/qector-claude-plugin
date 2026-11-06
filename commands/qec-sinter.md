@@ -1,20 +1,18 @@
 ---
-description: Generate Sinter task templates and configure community benchmark harnesses for QECTOR decoders.
+description: Generate a Sinter task template for a QECTOR decoder and report which Sinter shims this build exposes.
+argument-hint: "--family rotated_surface --size 5 --decoder blossom --shots 100000"
 ---
 
-Generate configuration templates and runner scripts for benchmarking QECTOR against standard QEC tools via Sinter (Chapter 17.2).
+Generate a Sinter task template for benchmarking QECTOR against community harnesses (Reference Manual chapter 17.2).
 
-Arguments: `$ARGUMENTS` (e.g. `--circuit circuit.stim --decoder qector_blossom --max_shots 100_000`).
+Arguments: `$ARGUMENTS` (e.g. `--family rotated_surface --size 5 --decoder blossom --shots 100000`).
 
-1. **Step 1 - Sinter Discovery**:
-   - Call MCP tool `sinter_decoder_list()` on `qector-research` to inspect available registered Sinter decoder shims:
-     - `qector_blossom`: Exact MWPM Blossom decoder.
-     - `qector_unionfind`: Fast Union-Find decoder with weighted clustering.
-     - `qector_bposd`: BP-OSD combination decoder.
-     - `qector_unionfind_unweighted`: Unweighted graph traversal decoder.
-     - `qector_belief`: Belief propagation standalone decoder.
+Both tools are on the research profile (`qector-secure --profile research`).
 
-2. **Step 2 - Generate Task Configuration**:
-   - Call `sinter_task_template(circuit_path=..., decoder=..., max_shots=...)`.
-   - Output runnable Python script importing `sinter` and `qector_sinter_decoders()`.
-   - Ensure resulting LER samples are tagged with exact noise models and Wilson 95% intervals.
+1. **Sinter discovery**
+   - Call `sinter_decoder_list()` and report exactly what it returns: `sinter_exposed` and `sinter_decoders`. On `qector-decoder-v3 1.0.0` without the `sinter` package installed the answer is `sinter_exposed: false` with an empty list and a note; say that, and do not list shim names that the tool did not return. Installing `sinter` is a network action and is outside the air-gapped default.
+
+2. **Generate the task configuration**
+   - Call `sinter_task_template(family=..., size=..., decoder_name=..., shots=..., error_rate=..., seed=...)`. Only `family` is required; argument names are exactly these (there is no `circuit_path`, `decoder` or `max_shots`).
+   - Present the returned `task_template` and the runner notes verbatim; the template names a QECTOR decoder shim only if step 1 exposed it.
+   - Remind the user that logical-error-rate samples must be reported with the noise model and a Wilson 95 % interval (`/qec-wilson`).

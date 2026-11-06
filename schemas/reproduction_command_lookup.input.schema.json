@@ -1,0 +1,29 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/reproduction_command_lookup.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "section": {
+      "default": "all",
+      "description": "Appendix D section name or 'all'.",
+      "enum": [
+        "all",
+        "smoke",
+        "validation",
+        "correctness",
+        "ler",
+        "gpu",
+        "hash",
+        "d1_build_smoke",
+        "d2_validation_suite",
+        "d3_focused_correctness",
+        "d4_ler_parity",
+        "d5_gpu_bit_identity",
+        "d6_artifact_hashing"
+      ],
+      "type": "string"
+    }
+  },
+  "title": "reproduction_command_lookup",
+  "type": "object"
+}

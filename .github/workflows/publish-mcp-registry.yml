@@ -1,6 +1,6 @@
 name: Publish to MCP Registry
 
-# Triggers on version tags, e.g. v1.0.6 (must match the version in
+# Triggers on version tags, e.g. v2.0.0 (must match the version in
 # .claude-desktop-extension/manifest.json and .claude-plugin/plugin.json).
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to (re-)publish, e.g. v1.0.6"
+        description: "Tag to (re-)publish, e.g. v2.0.0"
         required: true
 
 permissions:
@@ -51,10 +51,27 @@ jobs:
           python-version: "3.12"
 
       - name: Install runtime
-        run: python -m pip install -r requirements.txt
+        run: python -m pip install -r requirements.lock
 
-      - name: Build canonical release artifacts
-        run: python scripts/build_release.py --all
+      - name: Restore the release signing key from the repository secret
+        run: |
+          umask 077
+          printf '%s' "${{ secrets.QECTOR_RELEASE_SIGNING_KEY }}" > "$RUNNER_TEMP/release-signing.pem"
+          test -s "$RUNNER_TEMP/release-signing.pem" || { echo "::error::QECTOR_RELEASE_SIGNING_KEY secret is not set"; exit 1; }
+
+      - name: Build canonical, signed release artifacts
+        run: python scripts/build_release.py --all --patch-server-json --signing-key "$RUNNER_TEMP/release-signing.pem"
+
+      - name: Verify signatures and bundle contents
+        run: |
+          python scripts/sign_release.py --verify dist
+          python scripts/validate_plugin_bundle.py
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sigstore keyless signature over SHA256SUMS (transparency log)
+        run: cosign sign-blob --yes --bundle dist/SHA256SUMS.sigstore.json dist/SHA256SUMS
 
       - name: Compute SHA-256 of the Desktop MCPB
         id: hash
@@ -77,9 +94,16 @@ jobs:
           fi
           gh release upload "$TAG" \
             "dist/qector-claude-desktop-${VERSION}.mcpb" \
+            "dist/qector-claude-desktop-${VERSION}.mcpb.sha256" \
             "dist/qector-claude-plugin-${VERSION}.zip" \
+            "dist/qector-claude-plugin-${VERSION}.zip.sha256" \
             "dist/qector-claude-plugin-source-${VERSION}.zip" \
+            "dist/qector-claude-plugin-source-${VERSION}.zip.sha256" \
+            "dist/qector-claude-plugin-${VERSION}.sbom.json" \
+            dist/provenance.json \
             dist/SHA256SUMS \
+            dist/SHA256SUMS.sig \
+            dist/SHA256SUMS.sigstore.json \
             --clobber
 
       - name: Patch server.json with the real version and hash

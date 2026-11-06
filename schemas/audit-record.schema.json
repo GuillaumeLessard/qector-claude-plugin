@@ -1,0 +1,69 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/audit-record.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "arguments_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "elapsed_ms": {
+      "minimum": 0,
+      "type": "number"
+    },
+    "envelope_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "error_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "previous_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "record_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "sequence": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "server": {
+      "type": "string"
+    },
+    "server_version": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "timestamp_ns": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "tool": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "sequence",
+    "timestamp_ns",
+    "server",
+    "server_version",
+    "tool",
+    "arguments_sha256",
+    "status",
+    "error_code",
+    "envelope_sha256",
+    "elapsed_ms",
+    "previous_sha256",
+    "record_sha256"
+  ],
+  "title": "QECTORAuditRecord",
+  "type": "object"
+}

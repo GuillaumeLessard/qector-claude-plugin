@@ -6,7 +6,7 @@ Run with:
 
 The tests are intentionally independent of the PDF text at runtime. Their
 inputs and assertions are transcribed from the manual's stated definitions and
-worked examples, then checked against the live qector-decoder-v3==1.0.0 wheel.
+worked examples, then checked against the live qector-decoder-v3==1.0.1 wheel.
 """
 
 from __future__ import annotations
@@ -26,8 +26,12 @@ if str(_PYTHON_DIR) not in sys.path:
     sys.path.insert(0, str(_PYTHON_DIR))
 
 import numpy as np  # noqa: E402
-import qector_decoder_v3 as qector  # noqa: E402
-from qector_decoder_v3 import BlossomDecoder, codes  # noqa: E402
+
+try:
+    import qector_decoder_v3 as qector  # noqa: E402
+    from qector_decoder_v3 import BlossomDecoder, codes  # noqa: E402
+except ImportError as exc:  # pragma: no cover - exercised only without the wheel
+    raise unittest.SkipTest(f"qector-decoder-v3 is not installed: {exc}") from exc
 from qector_math_ground_truth import (  # noqa: E402
     all_binary_vectors,
     ambiguity_component_sum,
@@ -135,14 +139,52 @@ class TheoremObligationTests(unittest.TestCase):
         error = [0, 0, 0, 0, 0, 1, 0]
         stabilizer_shift = matrix[0]
         stabilizer_correction = tuple(a ^ b for a, b in zip(error, stabilizer_shift))
-        stable = theorem_2_obligation(matrix, error, stabilizer_correction)
+        # Steane is self-dual: its X-stabilizers are the rows of H, so the
+        # generators can be passed explicitly. There is no implicit default.
+        stable = theorem_2_obligation(matrix, error, stabilizer_correction, stabilizer_generators=matrix)
         self.assertFalse(stable["logical_failure"])
         logical_shift = (1, 1, 1, 1, 1, 1, 1)
         self.assertTrue(not any(f2_mat_vec(matrix, logical_shift)))
         self.assertFalse(row_space_contains(matrix, logical_shift))
         logical_correction = tuple(a ^ b for a, b in zip(error, logical_shift))
-        failed = theorem_2_obligation(matrix, error, logical_correction)
+        failed = theorem_2_obligation(matrix, error, logical_correction, stabilizer_generators=matrix)
         self.assertTrue(failed["logical_failure"])
+        with self.assertRaises(ValueError):
+            theorem_2_obligation(matrix, error, logical_correction)
+
+    def test_theorem_2_logical_matrix_form_matches_the_tools_on_a_non_self_dual_code(self) -> None:
+        """rotated_surface(3) is not self-dual: ker(H) \\ im(H^T) is the wrong criterion there.
+
+        The ground truth in logical-observable form must agree with the
+        library's scoring on every kernel vector, and must disagree with the
+        row-space form on at least one, which is why the latter is not a default.
+        """
+        import itertools
+
+        import numpy as np
+
+        server = load_library_server()
+        code = server._code_for_family("rotated_surface", 3)
+        H = server._code_matrix(code)
+        L = server._logical_matrix(code)
+        self.assertIsNotNone(L)
+        n = H.shape[1]
+        zero = [0] * n
+        disagreements = 0
+        kernel_vectors = 0
+        for bits in itertools.product((0, 1), repeat=n):
+            residual = np.array(bits, dtype=np.uint8)
+            if ((H.astype(int) @ residual) % 2).any():
+                continue
+            kernel_vectors += 1
+            # error = 0, correction = residual: Theorem 1 holds trivially.
+            truth = theorem_2_obligation(H.tolist(), zero, bits, logical_observables=L.tolist())
+            tool_failure = bool(((L.astype(int) @ residual) % 2).any())
+            self.assertEqual(truth["logical_failure"], tool_failure)
+            if row_space_contains(H.tolist(), bits) == tool_failure:
+                disagreements += 1
+        self.assertGreater(kernel_vectors, 1)
+        self.assertGreater(disagreements, 0, "row-space criterion coincides with the logical form here; test is vacuous")
 
     def test_theorem_3_ring_paths_are_both_syndrome_faithful(self) -> None:
         checks = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0]]
@@ -266,14 +308,14 @@ class LiveQECTORTests(unittest.TestCase):
         for path in config_paths:
             document = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(set(document), {"mcpServers"}, str(path))
-            server = document["mcpServers"]["qector-library"]
+            server = document["mcpServers"]["qector-secure"]
             self.assertEqual(set(server), {"command", "args", "env"}, str(path))
             if path.parent.name == "mcp":
                 # Template: installer rewrites the placeholders.
                 self.assertEqual(server["command"], "<PYTHON_EXECUTABLE>", str(path))
                 self.assertEqual(
                     server["args"],
-                    ["<PLUGIN_ROOT>/mcp/mcp_server_library.py"],
+                    ["<PLUGIN_ROOT>/mcp/mcp_server_secure.py", "--profile", "safe"],
                     str(path),
                 )
             else:
@@ -288,10 +330,11 @@ class LiveQECTORTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     server["args"],
-                    ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_library.py"],
+                    ["${CLAUDE_PLUGIN_ROOT}/mcp/mcp_server_secure.py", "--profile", "safe"],
                     str(path),
                 )
             self.assertEqual(server["env"]["QECTOR_SILENT"], "1", str(path))
+            self.assertEqual(server["env"]["QECTOR_AIR_GAPPED"], "1", str(path))
 
     def test_marketplace_manifest_points_to_this_plugin_without_path_traversal(
         self,
@@ -313,8 +356,8 @@ class LiveQECTORTests(unittest.TestCase):
         self.assertEqual(entry["version"], plugin["version"])
         self.assertNotIn("..", entry["source"])
 
-    def test_stable_public_api_is_present_in_live_1_0_0_wheel(self) -> None:
-        self.assertEqual(qector.__version__, "1.0.0")
+    def test_stable_public_api_is_present_in_live_1_0_1_wheel(self) -> None:
+        self.assertEqual(qector.__version__, "1.0.1")
         stable_symbols = [
             "UnionFindDecoder",
             "FastUnionFindDecoder",
@@ -347,8 +390,11 @@ class LiveQECTORTests(unittest.TestCase):
             "unrotated_surface": codes.unrotated_surface_code(3),
             "toric": codes.toric_code(3),
             "heavy_hex": codes.heavy_hex_code(3),
-            "color_code": codes.color_code(3),
         }
+        # 1.0.1's color_code(3) is the real 6.6.6 code (qubits in up to three
+        # faces), so it is not a matching graph and Blossom refuses it; its
+        # faithfulness is covered by the wheel's own colour-code decoders.
+        self.assertFalse(codes.color_code(3).is_matching_graph())
         for name, code in families.items():
             self.assertTrue(code.is_matching_graph(), name)
             matrix = np.asarray(code.parity_check_matrix(), dtype=np.uint8)
@@ -386,10 +432,10 @@ class LiveQECTORTests(unittest.TestCase):
                 decoder_type.__name__,
             )
 
-    def test_wrapper_is_strict_and_uses_live_v1_0_0(self) -> None:
+    def test_wrapper_is_strict_and_uses_live_v1_0_1(self) -> None:
         server = load_library_server()
         result = server.dispatch_tool("decode_syndrome", {"syndrome": [0, 1, 0, 0]})
-        self.assertEqual(result["qector_version"], "1.0.0")
+        self.assertEqual(result["qector_version"], "1.0.1")
         self.assertTrue(result["syndrome_valid"])
         with self.assertRaises(server.QECTORInputError):
             server.dispatch_tool("decode_syndrome", {"syndrome": [0, 2, 0, 0]})
@@ -405,11 +451,28 @@ class LiveQECTORTests(unittest.TestCase):
             )
 
     def test_wrapper_reports_missing_logical_observables_honestly(self) -> None:
+        # Every built-in family carries logicals since qector-decoder-v3 1.0.1
+        # (1.0.0's unrotated_surface had none), so register a logical-free
+        # repetition-type fixture on this server instance only.
         server = load_library_server()
-        result = server.dispatch_tool(
-            "decode_single",
-            {"family": "unrotated_surface", "distance": 3, "seed": 42},
-        )
+        import qector_codes
+
+        def fixture_no_logicals(d: int):
+            return qector_codes.PluginCode(
+                name=f"fixture_no_logicals_d{d}", description="test fixture",
+                check_to_qubits=[[i, i + 1] for i in range(d - 1)], n_qubits=d, logicals=[], distance=d,
+            )
+
+        qector_codes.fixture_no_logicals = fixture_no_logicals
+        server.FAMILY_REGISTRY["fixture_no_logicals"] = {
+            "generator": "fixture_no_logicals", "code_factory": "fixture_no_logicals",
+            "kind": "size_code", "source": "plugin", "description": "test fixture",
+        }
+        try:
+            result = server.decode_single("fixture_no_logicals", 3, seed=42)
+        finally:
+            server.FAMILY_REGISTRY.pop("fixture_no_logicals", None)
+            del qector_codes.fixture_no_logicals
         self.assertTrue(result["syndrome_valid"])
         self.assertIsNone(result["logical_failure"])
         self.assertIn("unavailable", result["logical_scoring"])
@@ -450,7 +513,8 @@ class LiveQECTORTests(unittest.TestCase):
             self.assertEqual(
                 document["required_metadata"]["noise_model"]["tag"], "code_capacity"
             )
-            self.assertEqual(document["harness"]["theorem1_violations"], 0)
+            self.assertIn("fail closed", document["harness"]["faithfulness_policy"])
+            self.assertIn("effective_distance", document["results"][0])
 
 
 class MCPProtocolTests(unittest.TestCase):
@@ -459,7 +523,7 @@ class MCPProtocolTests(unittest.TestCase):
         self.assertEqual(server_module.SERVER_NAME, "qector-decoder-v3-mcp")
         # SERVER_VERSION is the *plugin* version, not the *decoder wheel*
         # version. The decoder wheel version is pinned in requirements.txt
-        # (``qector-decoder-v3==1.0.0``) and verified by the runtime check.
+        # (``qector-decoder-v3==1.0.1``) and verified by the runtime check.
         # The plugin version is independent of the decoder wheel pin.
         # Compare against release-manifest.json so the two stay in sync.
         release_manifest = json.loads(

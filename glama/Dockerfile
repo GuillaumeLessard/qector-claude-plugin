@@ -10,11 +10,11 @@
 #
 # Build
 # -----
-#   docker build -f glama/Dockerfile -t qector-claude-plugin:1.0.6 .
+#   docker build -f glama/Dockerfile -t qector-claude-plugin:2.0.1 .
 #
 # Run
 # ---
-#   docker run --rm -p 8080:8080 qector-claude-plugin:1.0.6
+#   docker run --rm -p 8080:8080 qector-claude-plugin:2.0.1
 #
 # Then Glama can probe:
 #   - initialize at POST http://<host>:8080/mcp
@@ -26,7 +26,7 @@
 # ----------------------------------------
 # QECTOR is intentionally a local, fail-closed stdio plugin. The
 # `mcp_server_library.py` runs the same code that ships in the
-# `qector-claude-plugin-1.0.6.zip` plugin archive. Wrapping it in
+# `qector-claude-plugin-2.0.1.zip` plugin archive. Wrapping it in
 # `mcp-proxy` keeps the entire trust zone (8 stable tools, per-tool
 # call budgets, fail-closed `H c = s (mod 2)` verification) intact
 # while satisfying Glama's HTTP introspection requirement.
@@ -34,9 +34,9 @@
 # What's in the image
 # -------------------
 #   - python:3.12-slim base
-#   - qector-decoder-v3==1.0.0 (the QEC backend wheel; the strict-math
+#   - qector-decoder-v3==1.0.1 (the QEC backend wheel; the strict-math
 #     engine that every decode call runs against)
-#   - mcp==1.26.0 (the MCP SDK the QECTOR servers are written against)
+#   - mcp>=1.30,<3 (the MCP SDK the QECTOR servers are written against)
 #   - mcp-proxy (streamable-HTTP wrapper from sparfenyuk/mcp-proxy)
 #   - The two files Glama needs to start the server:
 #       mcp/mcp_server_library.py
@@ -59,11 +59,11 @@ RUN apt-get update \
 # against. mcp-proxy is installed from GitHub for the latest
 # streamable-HTTP support; pin to a known-good tag.
 ARG QECTOR_DECODER_VERSION=1.0.0
-ARG MCP_VERSION=1.26.0
+ARG MCP_VERSION=1.30.0
 ARG MCP_PROXY_REF=v0.12.0
 
 RUN pip install --no-cache-dir \
-        "mcp==${MCP_VERSION}" \
+        "mcp==${MCP_VERSION}" "jsonschema>=4.18,<5" \
         "qector-decoder-v3[stim]==${QECTOR_DECODER_VERSION}" \
         "numpy>=1.26,<2.3" \
         "cryptography>=48.0.1,<50" \
@@ -76,6 +76,9 @@ RUN pip install --no-cache-dir \
 WORKDIR /app
 COPY mcp/mcp_server_library.py /app/mcp/mcp_server_library.py
 COPY mcp/qector_mcp_contract.py /app/mcp/qector_mcp_contract.py
+COPY mcp/qector_mcp_compat.py /app/mcp/qector_mcp_compat.py
+COPY mcp/qector_schemas.py /app/mcp/qector_schemas.py
+COPY mcp/qector_airgap.py /app/mcp/qector_airgap.py
 
 # Healthcheck. `mcp-proxy` exposes a Streamable HTTP endpoint at
 # /mcp on the bound port. A TCP probe on 8080 is enough to confirm

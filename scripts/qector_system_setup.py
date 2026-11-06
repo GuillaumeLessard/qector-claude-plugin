@@ -26,7 +26,26 @@ from typing import Any
 
 REF_DOI = "10.5281/zenodo.21941046"
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "mcp"))
 REQUIREMENTS_FILE = ROOT / "requirements.txt"
+LOCK_FILE = ROOT / "requirements.lock"
+
+
+def _artifact_root() -> Path:
+    configured = os.environ.get("QECTOR_ARTIFACT_DIR", "")
+    if configured and not configured.startswith("${"):
+        return Path(configured).expanduser().resolve()
+    try:
+        from mcp_server_library import default_data_dir  # noqa: PLC0415
+
+        return (default_data_dir() / "artifacts").resolve()
+    except Exception:
+        home = Path.home()
+        if platform.system() == "Windows":
+            return Path(os.environ.get("LOCALAPPDATA") or home / "AppData" / "Local") / "QectorClaudePlugin" / "artifacts"
+        if platform.system() == "Darwin":
+            return home / "Library" / "Application Support" / "QectorClaudePlugin" / "artifacts"
+        return Path(os.environ.get("XDG_DATA_HOME") or home / ".local" / "share") / "qector-claude-plugin" / "artifacts"
 
 
 def _installed_version(distribution: str) -> str:
@@ -50,7 +69,9 @@ def audit_environment() -> dict[str, Any]:
         "cryptography": _installed_version("cryptography"),
     }
 
-    artifact_dir = Path(os.environ.get("QECTOR_ARTIFACT_DIR", ROOT / "artifacts"))
+    # Same per-user root every tool uses (never the install directory);
+    # QECTOR_ARTIFACT_DIR overrides, unexpanded ${...} placeholders ignored.
+    artifact_dir = _artifact_root()
 
     return {
         "python_executable": py_exe,
@@ -70,16 +91,22 @@ def audit_environment() -> dict[str, Any]:
     }
 
 
-def run_setup(confirm: bool = False, install_deps: bool = True) -> dict[str, Any]:
-    """Execute setup with safety gate."""
+def run_setup(
+    confirm: bool = False,
+    install_deps: bool = True,
+    offline_wheelhouse: str | None = None,
+) -> dict[str, Any]:
+    """Execute setup with safety gate.
+
+    ``offline_wheelhouse`` installs from a pre-downloaded wheel directory with
+    ``--no-index`` (see scripts/build_wheelhouse.py); it is the only way to
+    install on an air-gapped host.
+    """
     audit = audit_environment()
+    source = f"offline wheelhouse {offline_wheelhouse}" if offline_wheelhouse else "the configured package index"
 
     actions_planned = [
-        (
-            "Install / verify production requirements: "
-            "numpy>=1.26,<2.3, qector-decoder-v3==1.0.0, "
-            "mcp>=1.28.1,<2, cryptography>=48.0.1,<50"
-        ),
+        f"Install / verify the locked runtime closure (requirements.lock) from {source}",
         "Create artifacts/ evidence directory",
         "Run live decoder syndrome faithfulness test (H c = s mod 2)",
     ]
@@ -92,9 +119,8 @@ def run_setup(confirm: bool = False, install_deps: bool = True) -> dict[str, Any
             "actions_planned": actions_planned,
             "diagnostics": audit,
             "message": (
-                "SAFETY GATE: Read-only inspection complete. "
-                "No changes were made. Re-run with --confirm "
-                "(or set confirm=True in MCP) to grant user approbation."
+                "SAFETY GATE: Read-only inspection complete. No changes were made. "
+                "Re-run with --confirm (or set confirm=True in MCP) to grant user approbation."
             ),
         }
 
@@ -103,7 +129,10 @@ def run_setup(confirm: bool = False, install_deps: bool = True) -> dict[str, Any
 
     # 1. Install dependencies
     if install_deps and audit["pip_available"]:
-        cmd = [sys.executable, "-m", "pip", "install", "-r", str(REQUIREMENTS_FILE)]
+        cmd = [sys.executable, "-m", "pip", "install"]
+        if offline_wheelhouse:
+            cmd.extend(["--no-index", "--find-links", offline_wheelhouse])
+        cmd.extend(["-r", str(LOCK_FILE if LOCK_FILE.is_file() else REQUIREMENTS_FILE)])
         try:
             p = subprocess.run(
                 cmd, capture_output=True, text=True, timeout=180, cwd=str(ROOT)
@@ -191,7 +220,7 @@ def run_setup(confirm: bool = False, install_deps: bool = True) -> dict[str, Any
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="QECTOR System Setup & Verification Tool (28th Tool)"
+        description="QECTOR System Setup & Verification Tool"
     )
     parser.add_argument(
         "--confirm",
@@ -203,10 +232,15 @@ def main() -> int:
         action="store_true",
         help="Run read-only inspection without making changes.",
     )
+    parser.add_argument(
+        "--offline-wheelhouse",
+        default=None,
+        help="Directory of pre-downloaded wheels; pip runs with --no-index (air-gapped install).",
+    )
     args = parser.parse_args()
 
     confirm = args.confirm and not args.check_only
-    result = run_setup(confirm=confirm)
+    result = run_setup(confirm=confirm, offline_wheelhouse=args.offline_wheelhouse)
     print(json.dumps(result, indent=2))
     return 0 if result["status"] in ("ready", "dry_run_pending_approval") else 1
 

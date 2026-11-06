@@ -1,0 +1,24 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/wilson_ci.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "k": {
+      "default": 10,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "n": {
+      "default": 1000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "z": {
+      "default": 1.959963985,
+      "exclusiveMinimum": 0,
+      "type": "number"
+    }
+  },
+  "title": "wilson_ci",
+  "type": "object"
+}

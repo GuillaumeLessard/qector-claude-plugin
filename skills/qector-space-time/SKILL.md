@@ -115,7 +115,7 @@ claimed without a surviving artifact.
   `SpaceTimeDecoder` for (2+1)D.
 - **Picking `lambda` close to 1** -> the truncation bound explodes;
   a value of `0.95` over `W = 100` rounds leaves a tail of order
-  `0.95^100 / 0.05 ~ 5.9e-3 * ||s||_inf`.
+  `0.95^100 / (1 - 0.95) = 5.92e-3 / 0.05 ~ 0.12 * ||s||_inf`.
 - **Claiming "streaming beats single-shot" without an artifact** ->
   per-machine, per-workload only (manual 22.5).
 

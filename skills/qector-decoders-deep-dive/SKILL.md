@@ -2,7 +2,7 @@
 name: qector-decoders-deep-dive
 description: >-
   Per-decoder internals from the v1.0.0 reference manual. For each of the
-  fifteen specialised backends, gives the algorithm, the theorem(s) it
+  the Provisional backends, gives the algorithm, the theorem(s) it
   inherits, its claim boundary, and a one-line code snippet. Load when a
   question asks "how does X work", "which decoder is right for Y", or
   "what is the difference between A and B" at the algorithmic level
@@ -33,10 +33,10 @@ Every decoder shares the same input/output contract (manual 4):
 | union_find    | `UnionFindDecoder`     | graphlike     | cluster growth + spanning-forest peel    | faithful on matching graphs; not minimum-weight       |
 | fast_union_find | `FastUnionFindDecoder` | graphlike   | lower-overhead path; bit-identical       | same as `union_find`                                   |
 | blossom       | `BlossomDecoder`       | graphlike     | exact weighted MWPM (Edmonds primal-dual)| exact on audited small matching codes                 |
-| sparse_blossom| `SparseBlossomDecoder` | graphlike     | event-driven region growth on radix heap | faithful; near-optimal (>= 99% of exact on small)     |
+| sparse_blossom| `SparseBlossomDecoder` | graphlike     | event-driven region growth on radix heap | faithful (Theorem 7); optimality gap is a measured property, not a contract |
 | native_auto   | `NativeAutoDecoder`    | any           | native routing with license enforcement  | routes; contract inherited from the target backend    |
 
-## Provisional decoders (manual 16.2 — labelled, never quoted as contract)
+## Provisional decoders (manual 16.2 - labelled, never quoted as contract)
 
 | Name             | Class                       | Notes                                                     |
 | ---------------- | --------------------------- | --------------------------------------------------------- |
@@ -45,13 +45,13 @@ Every decoder shares the same input/output contract (manual 4):
 | cuda_batch       | `CUDABatchDecoder`          | per-thread port of UF; bit-identity tested                |
 | opencl_batch     | `OpenCLBatchDecoder`        | source build only; bit-identity tested                    |
 | cuda_bposd       | `CUDABpOsdDecoder`          | batched BP+OSD; single-shot CPU preferred                 |
-| lookup_table     | `LookupTableDecoder`        | exhaustive for n_qubits <= 20; UF fallback                |
+| lookup_table     | `LookupTableDecoder`        | exhaustive on small codes (size cap is backend-defined); UF fallback |
 | ambiguity_cluster| `AmbiguityClusterDecoder`   | BP + exact enumeration on clusters <= 12                  |
 | two_stage        | `TwoStageDecoder`           | X/Z sector coupling for depolarising noise                 |
 | space_time       | `SpaceTimeDecoder`          | (2+1)D detector-lattice matching                          |
 | streaming        | `StreamingDecoder`          | OR-accumulated history (simulation workflow)              |
 | sliding_window   | `SlidingWindowDecoder`      | exponentially decayed window; bounded tail                |
-| auto             | `AutoDecoder`               | 7-tier self-debugging fallback (behaviour, not contract)  |
+| auto             | `AutoDecoder`               | multi-tier self-debugging fallback (behaviour, not contract)  |
 | hybrid_cascade   | `HybridCascadeDecoder`      | UF pre-filter with exact fallback                         |
 | hybrid           | `HybridDecoder`             | GNN-weighted sparse blossom (research-grade)              |
 
@@ -66,10 +66,10 @@ Every decoder shares the same input/output contract (manual 4):
   (peeling correctness, manual 7.3), and Theorem 10
   (`O(n alpha(n))` time, zero-allocation hot path, manual 7.3 / 7.4).
 - **BP-OSD** adds Theorem 11 (residual-solve faithfulness, manual 8.2)
-  — the algebraic guarantee is independent of BP convergence quality.
+  - the algebraic guarantee is independent of BP convergence quality.
 - **Ambiguity Cluster** adds Theorem 12 (component-wise partition,
   manual 9.2).
-- **Two-Stage** adds Theorem 13 (CSS sector faithfulness, manual 12.1).
+- **Two-Stage** adds Theorem 15 (CSS sector faithfulness, manual 12.1).
 - **Space-Time** adds Theorem 13 (lifting faithfulness, manual 10.2).
 - **AutoDecoder** adds Theorem 14 (dispatch faithfulness, manual 11.1).
 - **GPU batch** adds Theorem 16 (bit-identity, manual 13.2) for
@@ -87,10 +87,10 @@ Every decoder shares the same input/output contract (manual 4):
    - **speed**: `fast_union_find` (single-shot) or `cuda_batch` (large
      batches on hardware-gated platforms).
    - **balanced**: interpolate by batch size and code size; the Python
-     `AutoDecoder` controller does this with a 7-tier self-debugging
+     `AutoDecoder` controller does this with a multi-tier self-debugging
      chain.
 4. The `native_auto` Rust class is the routing primitive; the Python
-   `AutoDecoder` is the 7-tier self-debugging controller (manual 11.2).
+   `AutoDecoder` is the multi-tier self-debugging controller (manual 11.2).
    `native_auto` enforces the license tier at construction time.
 
 ## Worked examples (manual 5.4, 7.5, 8.4)

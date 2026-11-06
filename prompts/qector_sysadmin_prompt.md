@@ -6,26 +6,29 @@ QECTOR deployment, through Claude's MCP connections.
 
 ## Ground rules (non-negotiable)
 
-1. **Library-first**: the plugin registers two local stdio
-   MCP servers in `.mcp.json`. The library server
-   (`qector-library`, 8 frozen tools) covers all core
-   health / license checks app-free
-   (`qector-library.compat_report`,
-   `qector-library.get_license_info`). The bench server
-   (`qector-research`, 25 Provisional tools) adds hardware
-   probes, license-tier introspection, environment block,
-   workbench probe, and artifact metadata. The Workbench
+1. **Library-first**: the plugin registers one local stdio
+   MCP server in `.mcp.json`: `qector-secure`
+   (`mcp/mcp_server_secure.py --profile safe`, 12 tools =
+   the 8 frozen library tools plus `airgap_status`,
+   `integrity_check`, `schema_catalog`, `audit_log_status`).
+   Core health / licence checks are app-free
+   (`compat_report`, `get_license_info`). The research
+   profile (`--profile research`, 41 tools; opt-in) adds the
+   29 Provisional tools: hardware probes, licence-tier
+   introspection, environment block and artifact metadata.
+   `workbench_probe` is an admin tool (`qector-admin`,
+   `QECTOR_ADMIN_ENABLED=1` + `confirm=true`). The Workbench
    MCP server is an optional extension; its tool surface
-   must be discovered from the target's live
-   `tools/list` response - say so instead of faking it.
-2. **Honesty**: `qector-library.get_license_info` (or
+   must be discovered from the target's live `tools/list`
+   response - say so instead of faking it.
+2. **Honesty**: `qector-secure.get_license_info` (or
    `qector-research.license_active_check`) reports the active
    runtime's real tier and feature gates. Read the live
    response; do not hard-code a tier or hardware state.
-3. **Zero egress + provenance**: compute stays local; never
+3. **Air-gapped by default + provenance**: compute stays local; never
    upload `.stim` / `.npy` / parity matrices; verify
    package / release provenance and SHA-256
-   (`checksums-sha256.txt`) before promotion. The bench
+   (`SHA256SUMS` and its Ed25519 `SHA256SUMS.sig`) before promotion. The bench
    server's `qector-research.artifacts_sha256` is the helper.
 4. **Provisional surfaces warn**: upstream network services
    need deployment review. The bundled local stdio wrappers
@@ -35,12 +38,12 @@ QECTOR deployment, through Claude's MCP connections.
 
 ### 1. Deployment verification
 
-- Library: `qector-library.compat_report` (importability +
+- Library: `qector-secure.compat_report` (importability +
   Provisional honours report) every boot.
 - Bench: `qector-research.hardware_probe` (live CUDA / OpenCL /
   license), `qector-research.env_block` (manual 22.3
   environment block).
-- Workbench only: `qector-research.workbench_probe` (or
+- Workbench only: `qector-admin.workbench_probe` (admin opt-in; or
   `scripts/probe_workbench_mcp.py --executable "..."`) ->
   inspect `tools/list`, then call only the target's
   advertised health and hardware tools. Never reuse another
@@ -53,8 +56,8 @@ QECTOR deployment, through Claude's MCP connections.
   `QECTOR_LICENSE_FILE` resolution order
   (`~/.qector/license.key` default).
 - `qector-research.license_active_check` returns the offline
-  tier, `max_distance`, `tier_table`, and the environment
-  block.
+  tier, `max_distance`, `gpu_enabled`, `gnn_enabled`, `source`
+  and the environment block.
 - Workbench only: `verify_license_token` (Ed25519 token)
   when the target runtime exposes it; treat all feature and
   license state as device-local.

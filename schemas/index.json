@@ -1,0 +1,536 @@
+{
+  "audit_record_sha256": "ad957e21add46a95c22857a17f3f7f4652233fc22faac4bbe0d8f436e86a92fb",
+  "contract_version": "2.0",
+  "dialect": "https://json-schema.org/draft/2020-12/schema",
+  "envelope_sha256": "de7f340fa5cd6a9a4b4e5b8d31b279d52a15d8641bfc9f4ba8c51cd222cf4fd5",
+  "tools": {
+    "airgap_status": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "5d0b9a3e7df8f3b0d5e6cbd985da318e208b4677af10839d9464b3aa3cd0cbe4",
+      "output_sha256": "8e96cea43bea5d32828e123b7669f7a70494f2cf5cd33806707b10abb6a4e628",
+      "server": "qector-secure",
+      "stability": "control"
+    },
+    "artifact_metadata_check": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "adf4bf486db8488439251fda53b088c090baca0249ac813ab289baa1dca8fb03",
+      "output_sha256": "590f73bc117df6a7636c9fab3ff218e7bfdf94aaa0fe5cf0782d868757619155",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "artifacts_sha256": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "34b810be110b65df39a4d53baf5db85f4f25a555539e38cb61627db3262561d2",
+      "output_sha256": "f695df0887e4b60159f36785a555d007ce3f416725ab56f7d9a2220b5d714766",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "audit_log_status": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "c94272fc73e4f060af8e9ac312734bcc7d67f278666d48324c57e02fc6239349",
+      "output_sha256": "60b7dc6cc4dcbf7ed3e7f59d40867dc1a695620d9b1f12b06bcf94fb3dfff258",
+      "server": "qector-secure",
+      "stability": "control"
+    },
+    "build_code_from_matrix": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "7b8eea0d2b0846f1b0554463589ea4ce1374d7ea487e8d51c6993ffb9041bdf3",
+      "output_sha256": "b33be241cd7911e5f9331ff5560db3341c29d7a1a8b3c260d2db51728d5a9129",
+      "server": "qector-secure",
+      "stability": "stable"
+    },
+    "code_distance_check": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "490acf32b8a5dd472c90f0394bd34a6ec637c0a227e4c3be61ceacc127289d55",
+      "output_sha256": "c2b301b352e61ddd60f6446ba4ca0b8d259a47fb3c4d69fb8527274d9f2b3bfa",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "code_export_matrices": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "fca3dbc646dd3a80a657a67c785813a0ed0a13d65a926fa18cf0b11b8506bf8a",
+      "output_sha256": "ba156a0190cdac053300e03b936d120f2fc1b6490f12401449cf1cafa536a84f",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "code_family_info": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "cef9aecf2c4ac06146491ba575c34c05f1e5520c38aba31e16dfc268ac9bd88e",
+      "output_sha256": "c7ec786886f90e3602577a407a10e80f4561b0593f0dbaf23112aa27780dfcbc",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "code_logicals_inspect": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "206e91e0712714d9d2bac283534bfe9f6a83d4e2cf8194d29c86ac692965e891",
+      "output_sha256": "faded5c1148544fea15bf777175a4ee55633db3e99121748f7b26ddd206ccb7d",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "compat_report": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "input_sha256": "4e2dd9658faef3328e6fe8209a0014026b8548a93ded12d56787263b8080047a",
+      "output_sha256": "b28c43cd67e505823ee63689870f39913e61b93bd88a9b44600b18553ef4f196",
+      "server": "qector-secure",
+      "stability": "stable"
+    },
+    "configure_claude_desktop": {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "input_sha256": "43b17e819ab3fc6abaa096633cff9ad5b054ab77876f6aea451ae332d893895b",
+      "output_sha256": "1310809a9554d6e9f0888e21bf5732d75f323479890d2fb2c6e8597892170133",
+      "server": "qector-admin",
+      "stability": "admin"
+    },
+    "decode_faithfulness_check": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "89286041b2e3df4370a4e188d98eae6a50ccac75894373e8f44d8d6b2539eb09",
+      "output_sha256": "6f20b68dc680df5740b83239545b65be0ed605a01249b0d6aa3f4467358200a6",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "decode_single": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "75c79c1e5605104b3366cb5a5d1860fb4c57eecbfd0adab6378f2775a7030600",
+      "output_sha256": "5900192b635b864803df5a8dc942ab68867e50e0d4d805c08bdf5cbb992fc9d7",
+      "server": "qector-secure",
+      "stability": "stable"
+    },
+    "decode_syndrome": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "a88a4734fc070eb0f85256edc059d14de79ccce646af0d09335b1b2b995cb5d3",
+      "output_sha256": "4a460e12a1ab01a84018bac86fa35ce3543848c45a07a9f670317f4e5608476f",
+      "server": "qector-secure",
+      "stability": "stable"
+    },
+    "dem_collapse_parallel": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "1c6e43762b3a268f4918a868d82b0267306fbe44d7e59ada4372b811ef6fa947",
+      "output_sha256": "bd640bff62f69d5b5b8a8a5d1a9eb247b32d33f3f37c21e04eb54990dae2eba7",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "dem_inspect": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "04abacd9a7b755c3fe9363f898e566b63161fa8c9d06900f75cc249b4d356b1f",
+      "output_sha256": "5792fcecacd497c908537b509e561959d79ffd37da60f2ca9e589095c3433568",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "env_block": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "input_sha256": "a522ff5c0bbc0c1ae366d47fe12c2e7a5bfe236a7b2330c1f538a62ac7697df8",
+      "output_sha256": "94bce0156bd4bffd97c8bf9c4f148f9b030628542023beb17d9f8c5d944109ad",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "get_capability_matrix": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "d36fc227465d1f7795e5c72a7e14a4fc513b6137e4b875f461b1be356a04c3d0",
+      "output_sha256": "28d0a023197fe5e6da2c60a3ce5073822159771ead46a9132254c1b7e4d36cb6",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "get_evidence_policy": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "921e2986384868ed1599fc09bdc3848a5f1267ed3355bf347e0aae1373595938",
+      "output_sha256": "532541329511d4cfac3f8ea1a00ada558fce65d4b42cb8d7af4bc45ebd4f5541",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "get_license_info": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "a7840f86634b6e3aa33d7d650df5e4c77c4ee2ef6834cf1da5a59de7d149f9a7",
+      "output_sha256": "009f5defbe84f23536e872cbf6c0635de7d7674c5875d4b22279c9e69ca2398c",
+      "server": "qector-secure",
+      "stability": "stable"
+    },
+    "get_runtime_provenance": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "input_sha256": "8b9ded15b46755257678d0b9a4aa2d06f1a330d22c087c2f8bcbc4623cc3ca11",
+      "output_sha256": "67e4cebd08db180d67dab418ccf0a1532b397b0fc8f0a4a314231823abfb0e5a",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "glossary_lookup": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "54860f10c83325a9b9828db158a51a63586af0ada461d6fcd280f8ca5cdc80b0",
+      "output_sha256": "a1910afe82575768eaf5e1a3dddd06e47a0a65670ddd39009095542cada07b85",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "hardware_probe": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "da237f9a22236a126621963dcca4de397cdf7e219e0a14512c949e8653d78988",
+      "output_sha256": "95a160d412b7dbecc9357a4b44d2e3d9071d9563bc7565e0ecb0b85cf18a06a4",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "hot_path_microbench": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "74b49da72f9fd74de0edd6d6f9f25b0829db6c590a719018f6f506c6b0db4e43",
+      "output_sha256": "ac9dbad36d4466f356f6aca53d8be1b43f0bb0e5150923e65c388eb9536ecffa",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "integrity_check": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "7e44ad5c63e0890b84bcee37cf24016c9489069a4237a6cdcd36ce3e2e36f9bd",
+      "output_sha256": "5cbd708e73b2fa7cdbb21c61830718696d066b806e3e5d349cfdd6879ba6daf1",
+      "server": "qector-secure",
+      "stability": "control"
+    },
+    "license_active_check": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "1421d9788a7a92995e2ce6a8e0fb2bce44e8a20e7dadc7441d708e45092dba85",
+      "output_sha256": "e740c3180eda25f215111c359bd6580962d1a4727b83150acc228bb29bc3a557",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "list_code_families": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "2a31137328cb15f7f213194117b69b71b5df9caae488166dc7e0c3ac81100408",
+      "output_sha256": "75dffb0e9f9333ed3984bb6a0fa62cbf6c70e414a938230da251d0274a62944c",
+      "server": "qector-secure",
+      "stability": "stable"
+    },
+    "list_decoders": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "0657e005c0e812aedfe51b3155f21cdcb2c3311d5f99b7c5f22dc826d44e1bd8",
+      "output_sha256": "d3aef2b9555b60e047e59da07018805b0f628f732792ea187c39b04fffd33e9f",
+      "server": "qector-secure",
+      "stability": "stable"
+    },
+    "logical_coset_score": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "cf672a4c6f77de65faa50fe277019dc990162cdfd0b115364684a9eb02894b85",
+      "output_sha256": "5a861f16b15f425fc76eb60a9e309ccb9c6e346ab5c4223f8697405c58709259",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "pymatching_compat_check": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "403bf3bb6706d5a2cd9b7b65fa8e264cf3b19c01a0a6e0501025cbdc49e9cd9b",
+      "output_sha256": "96d1dc52f3c0cdbf86df017a362a9a1689275fcb02d7a9269386831ffcaa245c",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "qiskit_plugin_check": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "bc32156f1a00615cc6af0017416c784a41cc5ac74c382b5e0188352ebc2b2bf8",
+      "output_sha256": "040ab5dc542fd15a958e88ae0b90a432e15036847e46a5de0b9e63b21d7e66e1",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "reproduction_command_lookup": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "be65615c7a556b7fb5ffa4f0131a8e9428d7924ca1855b17ceb9507f5f08da61",
+      "output_sha256": "6d2341d31f0759a8a30ccd7ba2d966d8a977e23024501070d5d098de33d89c07",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "research_compat_report": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true,
+        "readOnlyHint": true
+      },
+      "input_sha256": "15bdc712293a99c9e24fb71902a3b999cca6c7fde9d2ab12f7e4fe48450ce112",
+      "output_sha256": "79f902b135b6ba36781f2aa5631324f86a54651325c138c6dc5b239ba4271631",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "schema_catalog": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "14a92a234baa46e259d4dc409578fd79fee9224374255420dfb3bd7fcb4380fa",
+      "output_sha256": "434e80873377145c1e82cb9fd3aaa4d473dc59043d8d7b661a093556392e64ba",
+      "server": "qector-secure",
+      "stability": "control"
+    },
+    "sinter_decoder_list": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "e8933aec494b32785f060b51fd5fd9229ef8f69f5f0fcba7f16d4cf535f1c630",
+      "output_sha256": "87bd3dfcb9425b4da645ab307c84b0a857f97e0ff9a62b802ef0428063e971ba",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "sinter_task_template": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "39d1063380570a7b455759b18789f24e3ab6f521564a60b6304d789e8a2304f0",
+      "output_sha256": "9bb5d582002530d49ea77fc2df98ed9ec09a9c769d525bc7fe433b17958b87db",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "stim_circuit_probe": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "af77cedf0789f2bfb8140900ba51ce51ef67342b9b99997b31e81b6997cdb893",
+      "output_sha256": "169d05671232289d2d41a762f5e511786fe06273eae1e1bf7dc700ba2288d7f5",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "system_setup": {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "input_sha256": "77c103c669ef7d6f1d17150ebcfcf0171bd590dd98cfbada170c591591882837",
+      "output_sha256": "defd6c337ee2d5cd039c9f6075956630adea7e92db681b0be317629fae46467c",
+      "server": "qector-admin",
+      "stability": "admin"
+    },
+    "theorem_lookup": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "494094a1e97fdc3e9e04247216ea769e5508619d034c9a032cefa357e1ea5301",
+      "output_sha256": "71002cfd0d4f035f88e64819c12790d77b4883485e6f4cb0cb5d80061219e595",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "threshold_sweep": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": false,
+        "openWorldHint": false,
+        "readOnlyHint": false
+      },
+      "input_sha256": "4afb70f8ebe99810b67fdbd6da687d2f8d5597c91740c888961d7581f7231da5",
+      "output_sha256": "a56e620b426f2b662ddcfe05a33cb7e4ef80eab5063513f8ec4197b36d1b0dd9",
+      "server": "qector-secure",
+      "stability": "stable"
+    },
+    "wilson_ci": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "2aa7d617508385198aac14eee30853623531c9c428caef2f823ffbd967b49489",
+      "output_sha256": "8c1920e124dfc7894248d46d6e5e651d396b21f923955f13d576266eba148fbb",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "wilson_table": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "d9f6068e666a1ac6b22ad65e2bec252c81903033dc40c55285efcf6393824cfd",
+      "output_sha256": "462c193bc08d4aa83fb6a8749561d04e29c893753f8bcce5267d49ffc7e5af9d",
+      "server": "qector-secure",
+      "stability": "provisional"
+    },
+    "workbench_probe": {
+      "annotations": {
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true,
+        "readOnlyHint": false
+      },
+      "input_sha256": "50b1e5a146a2b6311dbeb09162eb6dc70795993377a58d09013fb956428066c1",
+      "output_sha256": "8d2dcc81db91e717e134bcf5d2736f7abc1e36beb7c115223081ae9746756396",
+      "server": "qector-admin",
+      "stability": "admin"
+    },
+    "workload_hash": {
+      "annotations": {
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false,
+        "readOnlyHint": true
+      },
+      "input_sha256": "5d0f886f4d4e78d083cd3f5f5dbc9dec9f9a278d3e70742a87d861513c13639e",
+      "output_sha256": "72e324bb01dc3d5b1dcc0f652c9b31fffa2466f99c5aa80fece68e0b9b489a21",
+      "server": "qector-secure",
+      "stability": "provisional"
+    }
+  }
+}

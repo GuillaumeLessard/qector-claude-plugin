@@ -2,8 +2,9 @@
 name: qector-core
 description: >-
   Core domain knowledge and verified facts for the QECTOR quantum
-  error correction platform (plugin v1.0.6, decoder wheel 1.0.0).
-  Covers the app-free library MCP server (8 stable tools), the
+  error correction platform (plugin v2.0.1, decoder wheel 1.0.1).
+  Covers the default qector-secure MCP server (12 tools: 8 stable + 4
+  control-plane, air-gapped, schema-validated), the library server, the
   opt-in research server (29 provisional tools including the
   evidence layer), the privileged admin server (3 tools), 11
   slash commands, 5 specialized agents, and mathematical grounding
@@ -13,7 +14,7 @@ description: >-
   and local-by-default operation with an opt-in PyPI freshness check.
 ---
 
-# QECTOR Core - Verified Platform Facts (plugin v1.0.6)
+# QECTOR Core - Verified Platform Facts (plugin v2.0.1)
 
 Ground every answer in the verified facts below. If a request references a tool,
 decoder, command, or API that is not listed here or in
@@ -28,17 +29,54 @@ For first-time environment installation with explicit user safety approbation:
 
 - **CLI Interface** (preferred):
   - `python scripts/qector_system_setup.py --check-only` (read-only diagnostic audit).
-  - `python scripts/qector_system_setup.py --confirm` (installs the fixed production profile, creates `artifacts/`, and runs live in-process Theorem 1 verification).
+  - `python scripts/qector_system_setup.py --confirm` (installs the fixed production profile, creates the per-user artifact directory, and runs live in-process Theorem 1 verification).
 - **MCP Tool Interface** (`qector-admin` only):
   - Disabled unless `QECTOR_ADMIN_ENABLED=1` is set in the server environment.
   - `system_setup(confirm=false)` is rejected; every admin call requires `confirm=true`.
   - `system_setup(confirm=true, profile=production|developer|optional-stim|optional-qiskit)` installs a fixed package profile. Arbitrary package specifications are not accepted.
   - Per-process call budget: 2. See `SECURITY.md`.
 
+## 1b. Secure MCP Server (default since 2.0.0)
+
+`mcp/mcp_server_secure.py` is registered as `qector-secure` by Claude Code
+(`.mcp.json`, `plugin.json`) and by the Claude Desktop bundle. Facts:
+
+- Safe profile = the 8 stable tools of section 2 + `airgap_status`,
+  `integrity_check`, `schema_catalog`, `audit_log_status` (12 tools).
+  `--profile research` adds the 29 tools of section 3 (41 tools; the research
+  `compat_report` is exposed as `research_compat_report`).
+- Air-gapped by default (`QECTOR_AIR_GAPPED` unset or `1`): non-loopback
+  sockets, `urllib`, `subprocess` fail closed inside the process; the PyPI
+  freshness check returns `pypi_freshness.status: "disabled"` with no
+  connection attempted. Only `QECTOR_AIR_GAPPED=0` / `--allow-network` lifts it.
+- Every request is validated against the tool's JSON Schema 2020-12
+  `inputSchema` (error code `INVALID_INPUT`, `error.path` is a JSON path);
+  every response is validated against the tool's `outputSchema`
+  (`CONTRACT_VIOLATION` if the server itself produced a malformed result).
+- `INTEGRITY.json` (SHA-256 of all runtime files) is verified at startup;
+  strict mode (the default, including when the manifest is missing: exit 3) refuses to serve a modified
+  tree (exit code 3).
+- Optional hash-chained audit log when `QECTOR_AUDIT_DIR` is set; arguments
+  are stored only as SHA-256 digests. The envelope then carries
+  `audit.sequence` / `audit.record_sha256`.
+- Transport: local stdio only. Supported SDK: `mcp>=1.30,<3`; Python 3.10-3.13.
+- Envelope contract 2.0: required keys `contract_version`, `tool`, `status`,
+  `claim_class`, `provenance`, `runtime`, `scope`, `verification`, `artifact`,
+  `warnings`, `result`; closed error-code set listed in `MCP_API.md`.
+- The decoder wheel's native core contains a TLS client and a Stripe metering
+  endpoint that the plugin never calls; `airgap_status` reports this under
+  `backend_network_surface` and labs must add a host egress rule (AIRGAP.md).
+- Family health: `list_code_families` reports `health.status` per family
+  (`ok`, `unscored`, `weak`, `degenerate`). With wheel 1.0.1 every built-in
+  family reports `ok` at its labelled distance; `color_code` is listed but not
+  offered to the matching decoders (not graphlike). `rotated_surface_corrected`
+  (`source: "plugin"`) is kept from 2.0.0 for compatibility; the wheel's
+  `rotated_surface` is equivalent since 1.0.1.
+
 ## 2. Library MCP Server (The 8-Tool Frozen Surface)
 
 `mcp/mcp_server_library.py` exposes exactly **8 frozen tools**, verified on the
-shipped `qector-decoder-v3==1.0.0` wheel:
+shipped `qector-decoder-v3==1.0.1` wheel:
 
 | Tool | Purpose |
 | :--- | :--- |
@@ -74,8 +112,8 @@ inspection, reproducibility, and the evidence layer. Administrative tools
 | `dem_collapse_parallel` | Chapter 14.1 (Parallel fault mechanism collapse rule) |
 | `code_family_info` | Chapter 4 (Table 4.1 code family parameters) |
 | `code_export_matrices` | Chapter 16.1 (Stable parity-check and logical matrix export) |
-| `code_logicals_inspect` | Chapters 3.2, 16.1 (Transversal logical operator inspection) |
-| `code_distance_check` | Chapter 16.1 (Distance and check weight verification) |
+| `code_logicals_inspect` | Chapters 3.2, 16.1 (Logical-observable matrix and k) |
+| `code_distance_check` | Chapter 16.1 (Checked effective distance versus the wheel's nominal label) |
 | `pymatching_compat_check` | Chapter 17.1 (PyMatching drop-in shim compatibility) |
 | `sinter_decoder_list` | Chapter 17.2 (Sinter community benchmark entry points) |
 | `qiskit_plugin_check` | Chapter 17.3 (Qiskit plugin interface check) |
@@ -107,7 +145,7 @@ Every research tool returns `reference_manual: 10.5281/zenodo.21941046` in its p
 | `/qec-threshold-sweep` | Local LER sweeps with Wilson 95% intervals and sidecars |
 | `/qec-wilson` | Analytical Wilson 95% score confidence intervals ($z=1.95996$) |
 | `/qec-dem` | Detector Error Model parsing, parallel collapse, and Stim circuits |
-| `/qec-code-inspect` | Code parameters $[[n,k,d]]$, transversals, and check matrices |
+| `/qec-code-inspect` | Code parameters $[[n,k,d]]$ with the checked effective distance, logicals, and check matrices |
 | `/qec-benchmark` | Decoder latency and throughput microbenchmarks |
 | `/qec-sinter` | Sinter task template generation and configuration |
 | `/qec-validate-mcp` | MCP tool and schema validation across library and research servers |
@@ -124,7 +162,7 @@ admin tool `configure_claude_desktop` after `QECTOR_ADMIN_ENABLED=1`.
 - `qec-sysadmin.md`: Fleet health triage, environment management, license audits, deployment hygiene.
 - `qec-hardware-engineer.md`: Physical qubit characterization, Stim/DEM pipelines, cryogenic constraints.
 
-## 6. Code Families and Decoders (`qector-decoder-v3==1.0.0`)
+## 6. Code Families and Decoders (`qector-decoder-v3==1.0.1`)
 
 ### Library Code Factories
 - `codes.repetition_code(d)`: Repetition code, distance $d$.
@@ -133,7 +171,7 @@ admin tool `configure_claude_desktop` after `QECTOR_ADMIN_ENABLED=1`.
 - `codes.unrotated_surface_code(d)`: Graphlike unrotated surface code ($k=0$).
 - `codes.toric_code(L)`: Toric code on $L \times L$ torus ($k=2$).
 - `codes.heavy_hex_code(d)`: Graphlike heavy-hex code.
-- `codes.color_code(d)`: Triangular color code ($k=1$).
+- `codes.color_code(d)`: Color-code family as shipped by the wheel ($k=0$, no `logicals_matrix()`; d=3 has a single check and is refused as degenerate).
 - `codes.hypergraph_product(A, B)` / `codes.bicycle_code(...)`: qLDPC codes.
 - `codes.from_parity_check_matrix(H, name=..., distance=...)`: Custom matrix code.
 
@@ -151,11 +189,11 @@ admin tool `configure_claude_desktop` after `QECTOR_ADMIN_ENABLED=1`.
 ## 7. Strict Math Ground Rules (M0–M8)
 
 1. **Theorem 1 (Syndrome Faithfulness)**: Every returned correction $c$ must satisfy $H c \equiv s \pmod 2$.
-2. **Theorem 2 (Logical Coset Scoring)**: Score logical errors on the coset $c \oplus e \in \ker H \setminus \mathrm{im} H^T$ for self-orthogonal checks ($H H^T = 0$). For arbitrary matrices, score using code-provided logical/stabilizer spaces.
+2. **Theorem 2 (Logical Coset Scoring)**: A logical error is a residual $c \oplus e \in \ker H$ with $L (c \oplus e) \neq 0$ for the sector's logical-observable matrix $L$ (what every QECTOR tool scores). The $\ker H \setminus \mathrm{im} H^T$ form is equivalent only for self-dual checks ($H H^T = 0$, e.g. Steane), not for the wheel's graphlike families.
 3. **Statistical Integrity**: All LER estimates require Wilson 95% score confidence intervals ($z=1.959963985$).
 4. **Noise Model Separation**: `code_capacity` and `circuit_level` results are never comparable.
 5. **No Speed Superlatives**: Throughput and latency figures are machine-, workload-, and environment-specific.
-6. **Local by default**: Decoding and artifact generation remain device-local. The only outbound network operation is the explicit opt-in PyPI freshness check (`compat_report(check_pypi=true)` / `env_block(check_pypi=true)`). Do not call it in an air-gapped environment.
+6. **Local by default**: Decoding and artifact generation remain device-local. The only outbound network operation the plugin's own code can perform is the explicit opt-in PyPI freshness check (`compat_report(check_pypi=true)` / `env_block(check_pypi=true)`), refused while `QECTOR_AIR_GAPPED=1` (the default). The in-process guard is defence in depth, not a sandbox: the decoder wheel's native core carries a TLS client and a billing endpoint the plugin never calls; read `airgap_status.backend_network_surface` and SECURITY.md before making an egress claim.
 
 ## 8. References & Cross-Skill Navigation
 

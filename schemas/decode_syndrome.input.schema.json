@@ -1,0 +1,67 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/decode_syndrome.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "decoder_name": {
+      "default": "blossom",
+      "enum": [
+        "blossom",
+        "fast_union_find",
+        "native_auto",
+        "sparse_blossom",
+        "union_find"
+      ],
+      "type": "string"
+    },
+    "family": {
+      "default": "repetition",
+      "description": "Registered code family.",
+      "enum": [
+        "repetition",
+        "ring",
+        "surface_legacy",
+        "rotated_surface",
+        "unrotated_surface",
+        "toric",
+        "heavy_hex",
+        "color_code",
+        "rotated_surface_corrected"
+      ],
+      "type": "string"
+    },
+    "n_qubits": {
+      "default": null,
+      "maximum": 100000,
+      "minimum": 1,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "size": {
+      "default": 5,
+      "maximum": 63,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "syndrome": {
+      "description": "Binary syndrome of length n_checks.",
+      "items": {
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer"
+      },
+      "maxItems": 10000,
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "syndrome"
+  ],
+  "title": "decode_syndrome",
+  "type": "object"
+}

@@ -11,12 +11,21 @@ import json
 import os
 import sys
 
-LOG_DIR = os.environ.get(
-    "QECTOR_DATA_DIR",
-    os.path.join(
-        os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "QectorClaudePlugin"
-    ),
-)
+def _default_data_dir() -> str:
+    """Same per-user data root the MCP servers use for artifacts."""
+    import platform
+
+    system = platform.system()
+    if system == "Windows":
+        base = os.environ.get("LOCALAPPDATA") or os.path.join(os.path.expanduser("~"), "AppData", "Local")
+        return os.path.join(base, "QectorClaudePlugin")
+    if system == "Darwin":
+        return os.path.join(os.path.expanduser("~"), "Library", "Application Support", "QectorClaudePlugin")
+    base = os.environ.get("XDG_DATA_HOME") or os.path.join(os.path.expanduser("~"), ".local", "share")
+    return os.path.join(base, "qector-claude-plugin")
+
+
+LOG_DIR = os.environ.get("QECTOR_DATA_DIR") or _default_data_dir()
 
 
 def main():
@@ -38,7 +47,7 @@ def main():
         with open(
             os.path.join(LOG_DIR, "claude_plugin_usage.log"), "a", encoding="utf-8"
         ) as fh:
-            fh.write(f"{datetime.datetime.now().isoformat()} tool={name}\n")
+            fh.write(f"{datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')} tool={name}\n")
     except Exception:
         pass
     return 0

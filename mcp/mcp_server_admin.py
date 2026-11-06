@@ -9,27 +9,31 @@ the tool call.
 from __future__ import annotations
 
 import argparse
-import asyncio
 import hashlib
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any, Mapping, Sequence
-
-from mcp.types import CallToolResult, ServerCapabilities, Tool, ToolsCapability
 
 _MCP_DIR = Path(__file__).resolve().parent
 if str(_MCP_DIR) not in sys.path:
     sys.path.insert(0, str(_MCP_DIR))
 
+from qector_mcp_compat import build_server, make_annotations, make_tool, run_stdio  # noqa: E402
 from qector_mcp_contract import (  # noqa: E402
+    QECTORUnknownToolError,
     apply_tool_contract,
     call_tool_result,
     consume_call_budget,
     error_envelope,
+    refund_call_budget,
     result_envelope,
+    validate_arguments,
+    validate_envelope,
 )
+import qector_airgap  # noqa: E402
 
 import mcp_server_qector_bench as research  # noqa: E402
 
@@ -101,6 +105,7 @@ def system_setup(
     install_requirements: bool = True,
     create_artifact_dir: bool = True,
     run_validation_test: bool = True,
+    offline_wheelhouse: str | None = None,
 ) -> dict[str, Any]:
     _require_admin_enabled(confirm)
     return research.tool_system_setup(
@@ -109,6 +114,7 @@ def system_setup(
         install_requirements=install_requirements,
         create_artifact_dir=create_artifact_dir,
         run_validation_test=run_validation_test,
+        offline_wheelhouse=offline_wheelhouse,
     )
 
 
@@ -158,6 +164,7 @@ TOOL_DEFAULTS = {
         "install_requirements": True,
         "create_artifact_dir": True,
         "run_validation_test": True,
+        "offline_wheelhouse": None,
     },
     "configure_claude_desktop": {
         "confirm": False,
@@ -183,24 +190,28 @@ def dispatch_tool(name: str, arguments: Mapping[str, Any] | None = None) -> dict
     if arguments:
         merged.update(dict(arguments))
     consume_call_budget(name)
-    return function(**merged)
+    try:
+        return function(**merged)
+    except (QECTORAdminPermissionError, research.QECTORInputError, TypeError):
+        # A refused call (admin disabled, confirm missing, bad arguments)
+        # performed no action and must not spend the per-process budget
+        # that a later, properly confirmed call needs.
+        refund_call_budget(name)
+        raise
 
 
-def _tool_schema() -> list[Tool]:
-    admin_annotations = {
-        "readOnlyHint": False,
-        "destructiveHint": True,
-        "idempotentHint": False,
-        "openWorldHint": False,
-    }
+def _tool_schema() -> list[Any]:
+    admin_annotations = make_annotations(read_only=False, destructive=True, idempotent=False, open_world=False)
+    admin_open_world = make_annotations(read_only=False, destructive=True, idempotent=False, open_world=True)
     return [
-        Tool(
+        make_tool(
             name="system_setup",
             description=(
                 "Privileged local setup using a fixed package profile. Disabled "
-                "unless QECTOR_ADMIN_ENABLED=1 and confirm=true."
+                "unless QECTOR_ADMIN_ENABLED=1 and confirm=true. In air-gapped mode "
+                "(default) package installation requires offline_wheelhouse."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "confirm": {"type": "boolean", "default": False},
@@ -212,18 +223,27 @@ def _tool_schema() -> list[Tool]:
                     "install_requirements": {"type": "boolean", "default": True},
                     "create_artifact_dir": {"type": "boolean", "default": True},
                     "run_validation_test": {"type": "boolean", "default": True},
+                    "offline_wheelhouse": {
+                        "type": ["string", "null"],
+                        "maxLength": 4096,
+                        "default": None,
+                        "description": (
+                            "Directory of pre-downloaded wheels (scripts/build_wheelhouse.py). "
+                            "Required for installs in air-gapped mode; pip then runs with --no-index."
+                        ),
+                    },
                 },
                 "additionalProperties": False,
             },
             annotations=admin_annotations,
         ),
-        Tool(
+        make_tool(
             name="configure_claude_desktop",
             description=(
                 "Privileged local Claude Desktop configuration. Disabled unless "
                 "QECTOR_ADMIN_ENABLED=1 and confirm=true."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "confirm": {"type": "boolean", "default": False},
@@ -234,13 +254,13 @@ def _tool_schema() -> list[Tool]:
             },
             annotations=admin_annotations,
         ),
-        Tool(
+        make_tool(
             name="workbench_probe",
             description=(
                 "Privileged local Workbench probe. Requires an approved directory, "
                 "an expected SHA-256 digest, and confirm=true."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "executable": {"type": "string"},
@@ -256,97 +276,76 @@ def _tool_schema() -> list[Tool]:
                 "required": ["executable", "expected_sha256"],
                 "additionalProperties": False,
             },
-            annotations={**admin_annotations, "openWorldHint": True},
+            annotations=admin_open_world,
         ),
     ]
 
 
-TOOLS = apply_tool_contract(_tool_schema())
+TOOLS = apply_tool_contract(_tool_schema(), surface="admin")
+TOOL_BY_NAME = {tool.name: tool for tool in TOOLS}
 
 
-def _error_payload(exc: Exception) -> dict[str, Any]:
-    return {
-        "error": {
-            "type": exc.__class__.__name__,
-            "message": str(exc),
-            "verified": False,
-        }
-    }
-
-
-async def _dispatch_mcp_call(
-    name: str, arguments: Mapping[str, Any] | None
-) -> CallToolResult:
+async def _dispatch_mcp_call(name: str, arguments: Mapping[str, Any] | None):
+    started = time.perf_counter()
     try:
-        result = dispatch_tool(name, arguments)
-        return call_tool_result(
-            result_envelope(
-                result,
-                tool_name=name,
-                server_name=SERVER_NAME,
-                server_version=SERVER_VERSION,
-                stability="admin",
-            )
+        tool = TOOL_BY_NAME.get(name)
+        if tool is None:
+            raise QECTORUnknownToolError(f"Unknown tool {name!r}; choose one of {sorted(TOOL_BY_NAME)}")
+        validated = validate_arguments(tool, arguments)
+        result = dispatch_tool(name, validated)
+        envelope = result_envelope(
+            result,
+            tool_name=name,
+            server_name=SERVER_NAME,
+            server_version=SERVER_VERSION,
+            stability="admin",
+            elapsed_ms=(time.perf_counter() - started) * 1e3,
         )
+        validate_envelope(tool, envelope)
+        return call_tool_result(envelope)
     except Exception as exc:
         return call_tool_result(
             error_envelope(
                 exc,
-                tool_name=name,
+                tool_name=name if name in TOOL_BY_NAME else "unknown_tool",
                 server_name=SERVER_NAME,
                 server_version=SERVER_VERSION,
                 stability="admin",
+                elapsed_ms=(time.perf_counter() - started) * 1e3,
             ),
             is_error=True,
         )
 
 
-def _build_low_level_server() -> Any:
-    if research._LowLevelServer is None:
-        raise RuntimeError("No supported low-level MCP server implementation is installed")
-    server = research._LowLevelServer(
-        SERVER_NAME,
-        version=SERVER_VERSION,
-        instructions=(
-            "Explicitly enabled QECTOR administrative tools. Every call requires "
-            "QECTOR_ADMIN_ENABLED=1 and confirm=true."
-        ),
-    )
+INSTRUCTIONS = (
+    "Explicitly enabled QECTOR administrative tools. Every call requires "
+    "QECTOR_ADMIN_ENABLED=1 and confirm=true. Package installation is refused "
+    "in air-gapped mode unless an offline wheelhouse is supplied."
+)
 
-    @server.list_tools()
-    async def _list_tools() -> list[Tool]:
+
+def _build_low_level_server() -> Any:
+    async def _list_tools():
         return TOOLS
 
-    @server.call_tool()
-    async def _call_tool(
-        name: str, arguments: dict[str, Any]
-    ) -> CallToolResult:
-        return await _dispatch_mcp_call(name, arguments)
-
-    return server
+    return build_server(
+        name=SERVER_NAME,
+        version=SERVER_VERSION,
+        instructions=INSTRUCTIONS,
+        list_tools=_list_tools,
+        call_tool=_dispatch_mcp_call,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Explicitly enabled QECTOR administrative MCP server"
-    )
+    parser = argparse.ArgumentParser(description="Explicitly enabled QECTOR administrative MCP server")
     parser.add_argument("--transport", choices=("stdio",), default="stdio")
     parser.parse_args(argv)
+    # The admin server legitimately launches pip and the approved Workbench
+    # binary, so the subprocess guard is not installed; the network guard is.
+    qector_airgap.install(allow_subprocess=True)
     server = _build_low_level_server()
-    from mcp.server.models import InitializationOptions
-    from mcp.server.stdio import stdio_server
-
-    initialization_options = InitializationOptions(
-        server_name=SERVER_NAME,
-        server_version=SERVER_VERSION,
-        capabilities=ServerCapabilities(tools=ToolsCapability(listChanged=False)),
-    )
-
-    async def run_server() -> None:
-        async with stdio_server() as (read, write):
-            await server.run(read, write, initialization_options)
-
-    asyncio.run(run_server())
+    run_stdio(server, name=SERVER_NAME, version=SERVER_VERSION, instructions=INSTRUCTIONS)
     return 0
 
 

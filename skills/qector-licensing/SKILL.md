@@ -24,11 +24,14 @@ section 18.1.
 | Tier        | Max distance | GPU batch | Notes                                 |
 | ----------- | ------------ | --------- | ------------------------------------- |
 | Community   | d <= 7       | No        | Free, source-available wheel          |
-| Pro         | d <= 19      | No        | Ed25519-signed token                  |
-| Enterprise  | d <= 63      | Yes       | Ed25519-signed token; GPU / GNN paths |
+| Pro         | d <= 19      | Yes (1.0.1+) | Ed25519-signed token (trial, Pro, Pro Perpetual, Team, Pilot) |
+| Enterprise  | d <= 63      | Yes       | Ed25519-signed token (Lab, Enterprise) |
 
-Tiers are **enforced by the Rust core** at construction and decode
-time. Tokens are verified **offline in the Rust core** with
+The GPU gate is **always enforced by the Rust core**: CUDA/OpenCL batch
+decoders refuse to construct without a paid token (Pro or Enterprise from
+1.0.1; Enterprise only in 1.0.0). Distance caps are advisory unless
+`QECTOR_ENFORCE=1`, in which case they become hard errors; CPU decoding is
+never blocked. Tokens are verified **offline in the Rust core** with
 Ed25519, covering the v2 format and the `QECT-PRO-` / `QECT-ENT-`
 prefixed formats, with expiry and an offline revocation list.
 
@@ -67,7 +70,7 @@ PowerShell redirection activates unmodified.
 
 ## How to activate a key (library MCP)
 
-- `qector-library.get_license_info` returns the live tier, customer
+- `qector-secure.get_license_info` returns the live tier, customer
   id, max distance, key status, expiry, and enforce mode.
 - `qector_decoder_v3.set_license_key(key)` activates a key in
   process. The native verifier rejects invalid keys with
@@ -86,7 +89,8 @@ PowerShell redirection activates unmodified.
   - `license_active` (bool)
   - `tier` (string: Community / Pro / Enterprise)
   - `max_distance` (int)
-  - `tier_table` (the documented per-tier limits)
+  - `gpu_enabled`, `gnn_enabled` (bool) and `source` (where the
+    key was found)
   - the live `info` dict
   - the environment block (manual 22.3)
 
@@ -107,8 +111,9 @@ PowerShell redirection activates unmodified.
   silent Community downgrade. Activate via `set_license_key_file`
   or `set_license_key` instead.
 - **Reusing a key on a different machine** -> the offline verifier
-  still validates the Ed25519 signature; expiry and the offline
-  revocation list are the only reasons a key can be rejected.
+  still validates the Ed25519 signature; a valid key is rejected
+  only for expiry or the offline revocation list (a malformed or
+  wrongly signed key raises `ValueError` as described above).
 - **Hard-coding tier limits in delivered code** -> the limits live
   in the Rust core and may change in a 1.x release. Always read
   `get_license_info()` at runtime.
@@ -128,5 +133,5 @@ calling any Workbench tool name.
   interactive REPLs that have already loaded the library).
 - Commercial use requires a license:
   `https://qector.store/pricing`.
-- A 60-day commercial evaluation is creditable toward any annual
-  license.
+- A free 14-day commercial trial (Pro token by e-mail) is available on
+  the pricing page; paid plans start at Pro ($79/month).

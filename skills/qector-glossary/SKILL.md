@@ -9,6 +9,15 @@ description: >-
 
 # QECTOR Glossary and Notation
 
+> **Scope note (plugin 2.0.0).** File names such as `tests/test_*_faithfulness.py`,
+> `scripts/competitive_*.py`, `docs/CORRECTNESS_AUDIT.md`, `docs/API_STABILITY.md`
+> and `docs/RELEASING.md` cited below belong to the **upstream qector-decoder-v3
+> source tree**, not to this plugin. The plugin's own executable gates are
+> `tests/` (unittest), `scripts/release_validate.py`, `scripts/export_schemas.py
+> --check`, `scripts/generate_integrity_manifest.py --check` and
+> `mcp/tests/test_mcp_stdio.py`. Never claim a file exists here that this note
+> attributes to the upstream tree.
+
 Source of authority: v1.0.0 reference manual, Appendices A and B.
 
 ## Notation (Appendix A)
@@ -22,7 +31,7 @@ Source of authority: v1.0.0 reference manual, Appendices A and B.
 | e            | True physical error vector                                                             |
 | c            | Decoder correction vector                                                              |
 | ker(H)       | Right kernel of H                                                                       |
-| im(H^T)      | Row space of H (stabilizer span)                                                       |
+| im(H^T)      | Row space of H; equals the stabilizer span of the sector only when `H H^T = 0` (self-dual) |
 | L            | Logical-observable matrix                                                              |
 | gamma_q      | Posterior LLR of qubit q                                                                |
 | phi(x)       | Box-plus kernel -ln(tanh(x/2))                                                         |
@@ -66,8 +75,12 @@ decoding problem.
 **Collapse to graph.** Merging parallel mechanisms between the
 same detector pair into one edge.
 
-**Logical operator.** An element of `ker(H) \ im(H^T)`; flipping
-it changes the logical state undetectably.
+**Logical operator.** An undetectable error (in `ker(H)`) outside
+the stabilizer span of its sector, i.e. one with `L e != 0` for the
+sector's logical-observable matrix `L`; flipping it changes the
+logical state undetectably. `ker(H) \ im(H^T)` is the same set only
+for self-dual CSS codes (Steane), not for the graphlike `codes`
+families, which is why every QECTOR tool scores with `L`.
 
 **Wilson interval.** A binomial confidence interval with correct
 coverage at small k.
@@ -95,7 +108,11 @@ canonical reference example.
 **Rotated surface code.** A 2D surface code on a d x d grid with
 weight-4 plaquette checks plus weight-2 boundary checks so that
 each interior qubit is shared by two checks; one logical qubit
-(the horizontal top-row string). Graphlike.
+(the horizontal top-row string). Graphlike. Wheel defect (1.0.0):
+`codes.rotated_surface_code(d)` has duplicate parity-check columns at
+every d, so a weight-2 error is undetectable and the effective
+distance is 2; the plugin marks the family `weak` and reports
+`effective_distance` on every result.
 
 **Unrotated surface code.** A 2D surface code on a d x d vertex
 lattice; the canonical Z-stabilizer construction. The single-
@@ -109,24 +126,30 @@ on the edges and L^2 vertex checks; two logical qubits.
 flag qubits on a brick-wall pattern; the v1.0.0 helper builds the
 graphlike Z-sector.
 
-**Color code.** Triangular 6.6.6 (C2) color code with k = 2
-logicals (planar) or k = 4 (toric).
+**Color code.** A 2D colour code (textbook: triangular 6.6.6 with
+k = 1 planar, 4.8.8 variants). Since wheel 1.0.1,
+`codes.color_code(d)` is the triangular 6.6.6 code: odd d,
+n = (3d²+1)/4, k = 1, distance d, not graphlike (1.0.0 exposed no
+logical observables and was degenerate at d = 3). The plugin lists
+it but does not offer it to its matching decoders.
 
 **Hamming weight.** The number of 1s in a binary vector.
 
-**Logical coset.** The equivalence class of a correction in
-`ker(H) / im(H^T)`. Two corrections in the same coset produce
-the same logical outcome.
+**Logical coset.** The equivalence class of a correction modulo the
+sector's stabilizer span (`ker(H) / im(H^T)` for a self-dual code).
+Two corrections in the same coset produce the same logical outcome;
+QECTOR tests this as `L (c + e) = 0 (mod 2)`.
 
 **Logical failure.** A non-trivial logical operator applied to
 the state; the decoder returned a correction whose residual with
-the true error lies in `ker(H) \ im(H^T)`.
+the true error satisfies `L (c + e) != 0 (mod 2)` (`decode_single`
+and `threshold_sweep` report it as `logical_failure`).
 
-**AutoDecoder.** The 7-tier self-debugging fallback chain in the
+**AutoDecoder.** The multi-tier self-debugging fallback chain in the
 Python layer; `native_auto` is the Rust routing primitive.
 
 **NativeAutoDecoder.** The Rust class for native routing with
-license enforcement. The Python `AutoDecoder` is the 7-tier
+license enforcement. The Python `AutoDecoder` is the multi-tier
 self-debugging controller.
 
 **Planted error.** A known error used in correctness tests; the
@@ -159,5 +182,5 @@ Rust core.
 unreadable `QECTOR_LICENSE_FILE` is invalid, not a silent
 Community downgrade.
 
-**Zero egress.** All compute stays local via the MCP server. No
+**Air-gapped by default.** All compute stays local via the MCP server (in-process guards, host egress rule for a hard guarantee). No
 `.stim` / `.npy` / parity matrices leave the machine.

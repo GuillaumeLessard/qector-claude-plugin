@@ -19,18 +19,22 @@ def main():
         except importlib.metadata.PackageNotFoundError:
             library_version = "not installed"
         print(
-            "QECTOR plugin active: skills=qector-math-foundations,qector-core,researcher,developer,"
-            "hardware-engineer,sysadmin,educator; agents=qec-researcher,"
-            "qec-developer,qec-validator,qec-hardware-engineer,qec-sysadmin"
+            "QECTOR plugin 2.0.1 active: 28 skills (start with qector-core and "
+            "qector-math-foundations); agents=qec-researcher,qec-developer,"
+            "qec-validator,qec-hardware-engineer,qec-sysadmin"
         )
         print(f"Workbench MCP executable configured: {tool}; optional and device-local")
-        print(f"Library wheel: qector-decoder-v3=={library_version}; target=1.0.0")
+        print(f"Library wheel: qector-decoder-v3=={library_version}; target=1.0.1")
+        print(
+            "Default MCP server: qector-secure (air-gapped, JSON Schema 2020-12 "
+            "validated in and out, INTEGRITY.json verified, optional hash-chained audit)."
+        )
         print(
             "Device-local validation required: run the library math gate and "
             "negotiate any Workbench surface with initialize/tools/list."
         )
         print(
-            "Zero-egress rule active: decode locally via MCP; never upload "
+            "Air-gapped by default: decode locally via qector-secure; never upload "
             ".stim/.npy/parity matrices to web APIs."
         )
     except Exception as exc:  # never break startup

@@ -38,7 +38,6 @@ Routes (from the verified wheel inspection):
 
 | Method | Path                          | Notes                |
 | ------ | ----------------------------- | -------------------- |
-| GET    | `/`                           | root / health        |
 | POST   | `/decode`                     | decode a syndrome    |
 | GET    | `/health`                     | liveness probe       |
 | GET    | `/version`                    | package version      |
@@ -65,18 +64,20 @@ length.
 
 The bundled local stdio wrapper is the **supported service
 surface in this package** (manual 17.4). It is what
-`qector-library` and `qector-research` (the two MCP servers this
-plugin registers) implement.
+`qector-secure` (the MCP server this plugin registers; its safe
+and research profiles wrap `qector-library` and `qector-research`)
+implements.
 
-Frame cap: `QECTOR_MCP_BENCH_MAX_DEM_BYTES` for the bench server
-and the library server's frame cap by default. The strict
-decoder-type enum rejects unknown names with a clear
-`QECTORInputError`.
+Request cap: `QECTOR_MCP_MAX_REQUEST_BYTES` (2 MiB) on every
+server; `QECTOR_MCP_BENCH_MAX_DEM_BYTES` additionally bounds
+`dem_text`. Unknown decoder names fail the input schema's enum and
+return `INVALID_INPUT` with the JSON path.
 
 ## Prometheus metrics exporter (Provisional)
 
-`qector_decoder_v3.start_metrics_server(port=...)` is the entry
-point on the verified wheel. Verify the exact metric names on the
+`qector_decoder_v3.start_metrics_server(addr="127.0.0.1:9090")` is
+the entry point on the verified wheel (one `addr` argument, loopback
+by default; there is no `port=` keyword). Verify the exact metric names on the
 target device; do not hard-code. Metrics include accumulated
 shot count, decode latency quantiles (`get_latency_quantiles()`),
 and license state.
@@ -130,9 +131,10 @@ benchmarking **require a written commercial license**.
   service is demo / local; put it behind TLS and a reverse proxy.
 - **Skipping the production checklist** -> manual 24.1 lists 10
   items; every one of them is a release blocker.
-- **Hard-coding service endpoints** -> endpoints, ports, and
-  config live in `QECTOR_DATA_DIR` and the runtime config; verify
-  with the live probe.
+- **Hard-coding service endpoints** -> endpoints and ports are
+  arguments of the service entry points (`start_metrics_server(addr)`,
+  `run_grpc_server`, the REST app); in this plugin `QECTOR_DATA_DIR`
+  only relocates the hook usage log. Verify with the live probe.
 - **Mixing service-tier claims with hardware-tier claims** -> the
   service tier (Community / Pro / Enterprise) is the
   license tier; the hardware probe is separate.

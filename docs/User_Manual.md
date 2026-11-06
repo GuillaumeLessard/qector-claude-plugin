@@ -1,4 +1,4 @@
-# QECTOR Claude Plugin User Manual (v1.0.6)
+# QECTOR Claude Plugin User Manual (v2.0.1)
 
 This public plugin provides local Claude skills, agents, commands, and app-free
 MCP servers for the QECTOR quantum-error-correction decoding engine. The
@@ -21,13 +21,30 @@ The MCP `system_setup` tool is on `qector-admin`, not the research server. It
 is disabled unless `QECTOR_ADMIN_ENABLED=1` is set and every call includes
 `confirm=true`. Prefer the CLI above.
 
+## What Is New in 2.0.0
+
+- The default MCP server is **`qector-secure`** (`mcp/mcp_server_secure.py
+  --profile safe`): the 8 stable tools plus `airgap_status`, `integrity_check`,
+  `schema_catalog` and `audit_log_status`.
+- **Air-gapped by default.** Nothing in the process can open a non-loopback
+  socket or launch a subprocess; `check_pypi=true` is refused unless the
+  operator sets `QECTOR_AIR_GAPPED=0`.
+- **Schema-validated both ways.** Every request is checked against the tool's
+  JSON Schema 2020-12 input schema and every response against its output
+  schema (`schemas/`).
+- **Integrity and audit.** `INTEGRITY.json` is verified at startup; set
+  `QECTOR_AUDIT_DIR` for a hash-chained audit log.
+- **Laboratory install.** `requirements.lock`, `scripts/build_wheelhouse.py`,
+  `scripts/install_offline.sh|.ps1`; see `AIRGAP.md`.
+- Python 3.10-3.13; `mcp>=1.30,<3` (1.x and 2.x SDK lines).
+
 ## Standard Installation
 
-Use Python 3.9 or newer (tested on Python 3.12). The app-free library and bench
+Use Python 3.10 to 3.13 (tested on 3.13 with mcp 1.30 and 2.3). The app-free library and bench
 servers support both system Python and virtual environments.
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.lock
 python scripts/qector_runtime_check.py
 ```
 
@@ -36,11 +53,11 @@ Windows virtual environment:
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.lock
 python scripts/qector_runtime_check.py
 ```
 
-The production runtime pins `qector-decoder-v3==1.0.0` and `mcp==1.26.0`.
+The production runtime pins `qector-decoder-v3==1.0.1` and `mcp>=1.30,<3`.
 The servers run locally against the published wheel without QECTOR Workbench.
 
 Stim/DEM workflows are optional. Install the published extra only when needed:
@@ -51,8 +68,10 @@ python -m pip install "qector-decoder-v3[stim]==1.0.0"
 
 ## MCP Server Architecture
 
-The plugin provides three local stdio MCP servers. Only the library server is
-enabled by default.
+The plugin ships five local stdio MCP server modules: `qector-secure` (the
+only one registered by default; `--profile safe` = 12 tools, `--profile
+research` = 41), the standalone `qector-library` (8), `qector-research` (29),
+`qector-admin` (3, opt-in) and the Desktop shim `mcp_server_desktop.py`.
 
 ### 1. Library Server (`mcp/mcp_server_library.py` — 8 Frozen Stable Tools)
 
@@ -89,7 +108,7 @@ For Claude Code, use the root `.mcp.json` and validate/launch with
 `claude plugin validate "<PLUGIN_ROOT>" --strict` and
 `claude --plugin-dir "<PLUGIN_ROOT>"`. For Claude Desktop or another MCP
 client, copy `mcp/claude_desktop_config.json`, replace its
-`<PLUGIN_ROOT>` path, and run `initialize` followed by `tools/list` before any
+`<PYTHON_EXECUTABLE>` and `<PLUGIN_ROOT>` placeholders, and run `initialize` followed by `tools/list` before any
 tool call. The optional Workbench configuration is a separate example and
 must be probed on the target device before use.
 
@@ -107,9 +126,9 @@ For the public GitHub source, use
 ### Prebuilt archives
 
 Canonical release archives are generated from `scripts/build_release.py`:
-`dist/qector-claude-plugin-1.0.6.zip` (Claude Code),
-`dist/qector-claude-plugin-source-1.0.6.zip` (source), and
-`dist/qector-claude-desktop-1.0.6.mcpb` (Claude Desktop), each with a
+`dist/qector-claude-plugin-2.0.1.zip` (Claude Code),
+`dist/qector-claude-plugin-source-2.0.1.zip` (source), and
+`dist/qector-claude-desktop-2.0.1.mcpb` (Claude Desktop), each with a
 `.sha256` sidecar. An optional single-skill ZIP for the claude.ai custom-skill
 uploader is still produced by `scripts/pro_pack.py --skill qector-core`.
 
@@ -127,17 +146,16 @@ its device-local obligations are in `tests/test_reference_manual_math.py`.
 
 ```text
 python scripts/run_manual_math_validation.py
-python -m pytest tests/ -q
+QECTOR_SILENT=1 python -m unittest discover -s tests -v
 ```
 
-`pytest` reads `conftest.py` automatically and resolves the module above. If
-you use `unittest discover` instead, set `PYTHONPATH=python` first, since
-`unittest` does not read `conftest.py`.
+`tests/__init__.py` puts `python/` on the path, so no `PYTHONPATH` is needed;
+`pytest` (not a dependency of this package) works too through `conftest.py`.
 
 Threshold work is also device-local:
 
 ```text
-python scripts/run_threshold_sweep.py --family rotated_surface --distances 3 5 --error-rates 0.05 --trials 100 --seed 42 --out ..\qector-artifacts\device_sweep.json
+python scripts/run_threshold_sweep.py --family rotated_surface --distances 3 5 --error-rates 0.05 --trials 100 --seed 42 --out ../qector-artifacts/device_sweep.json
 ```
 
 Keep generated artifacts outside the distributed plugin. A low-trial sweep is

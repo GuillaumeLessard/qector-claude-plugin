@@ -1,0 +1,40 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/build_code_from_matrix.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "H_matrix": {
+      "items": {
+        "items": {
+          "enum": [
+            0,
+            1
+          ],
+          "type": "integer"
+        },
+        "maxItems": 100000,
+        "minItems": 1,
+        "type": "array"
+      },
+      "maxItems": 10000,
+      "minItems": 1,
+      "type": "array"
+    },
+    "distance": {
+      "default": 3,
+      "maximum": 63,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "family": {
+      "default": "custom",
+      "pattern": "^[A-Za-z0-9_.-]{1,64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "H_matrix"
+  ],
+  "title": "build_code_from_matrix",
+  "type": "object"
+}

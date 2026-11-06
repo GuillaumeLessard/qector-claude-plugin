@@ -1,22 +1,21 @@
 # QECTOR for Claude Desktop
 
-This extension is the safe, local QECTOR Desktop surface. It runs
-`mcp/mcp_server_desktop.py --profile safe` and exposes eight stable tools for
-code discovery, decoder discovery, license inspection, verified decoding,
-threshold sweeps, matrix validation, and compatibility reporting.
+This extension runs the QECTOR secure server (`mcp/mcp_server_secure.py
+--profile safe`): eight stable tools for code discovery, decoder discovery,
+licence inspection, verified decoding, threshold sweeps, matrix validation and
+compatibility reporting, plus four control-plane tools (`airgap_status`,
+`integrity_check`, `schema_catalog`, `audit_log_status`).
 
 Decoded corrections are fail-closed: QECTOR returns them only after verifying
-`H c = s (mod 2)`. Threshold results include Wilson 95% intervals and artifact
-metadata.
+`H c = s (mod 2)`. Threshold results include Wilson 95% intervals and hashed
+artifact metadata. Every request and response is validated against JSON
+Schema 2020-12.
 
-The default transport is local stdio and makes no network request. The optional
-PyPI compatibility freshness check is explicitly requested by a tool argument;
-it does not send QEC workloads.
+The server is air-gapped by default and uses local stdio only: non-loopback
+sockets, subprocess launches and the opt-in PyPI check are refused inside the
+process, and the bundled `INTEGRITY.json` is verified at every start. Set the
+optional audit-log directory to keep a hash-chained record of tool calls.
 
-The 29-tool research profile and 3-tool administrative profile are intentionally
-not included in this extension. Configure them as separate Developer MCP
-servers only after reviewing `SECURITY.md` and `MCP_API.md`.
-
-Claude web and mobile do not load this local extension directly. Use Claude Code
-Remote Control for a local session, or deploy a separately reviewed hosted MCP
-service.
+The 29-tool research profile and 3-tool administrative profile are not
+included in this extension. Configure them as separate Developer MCP servers
+only after reviewing `SECURITY.md` and `MCP_API.md`.

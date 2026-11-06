@@ -1,0 +1,44 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/system_setup.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "confirm": {
+      "default": false,
+      "type": "boolean"
+    },
+    "create_artifact_dir": {
+      "default": true,
+      "type": "boolean"
+    },
+    "install_requirements": {
+      "default": true,
+      "type": "boolean"
+    },
+    "offline_wheelhouse": {
+      "default": null,
+      "description": "Directory of pre-downloaded wheels (scripts/build_wheelhouse.py). Required for installs in air-gapped mode; pip then runs with --no-index.",
+      "maxLength": 4096,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "profile": {
+      "default": "production",
+      "enum": [
+        "developer",
+        "optional-qiskit",
+        "optional-stim",
+        "production"
+      ],
+      "type": "string"
+    },
+    "run_validation_test": {
+      "default": true,
+      "type": "boolean"
+    }
+  },
+  "title": "system_setup",
+  "type": "object"
+}

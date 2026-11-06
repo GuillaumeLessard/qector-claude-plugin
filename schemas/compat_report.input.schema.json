@@ -1,0 +1,14 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/compat_report.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "check_pypi": {
+      "default": false,
+      "description": "Opt in to a one-time PyPI freshness check. Never automatic; refused when air-gapped.",
+      "type": "boolean"
+    }
+  },
+  "title": "compat_report",
+  "type": "object"
+}

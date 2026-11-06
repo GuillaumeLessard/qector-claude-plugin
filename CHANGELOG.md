@@ -1,8 +1,312 @@
 # Changelog
 
-## 1.0.6 - 2026-08-23
+## 2.0.1 - 2026-11-05
 
-**QECTOR v1.0.6 post-release validation**: CI/validate pipelines confirmed passing (release metadata 15/15, source structure 832/832, unit tests 74/74, bundle checksums 41/41, deterministic rebuild SHA-256 synced across mcpb/zip/sbom/provenance.json/server.json). MCP pinned to >=1.28.1,<2 resolving 3 CVEs (GHSA-hvrp-rf83-w775 / GHSA-jpw9-pfvf-9f58 / GHSA-vj7q-gjh5-988w); Claude Desktop extension fix for `${__dirname}` path-with-spaces disconnect; `C:\qector` junction for no-space alias; `QECTOR_PYTHON` env var pin.
+Re-pin to `qector-decoder-v3==1.0.1`, which fixes upstream the wheel defects
+2.0.0 detected and worked around. No tool was added, removed or renamed; the
+only schema change is one new boolean in `airgap_status`.
+
+### Changed
+
+- **Licensing skill matches 1.0.1 entitlements.** `qector-licensing` now
+  states that Pro tokens (trial, Pro, Pro Perpetual, Team, Pilot) unlock the
+  GPU batch decoders and Enterprise tokens (Lab, Enterprise) raise the
+  distance tier to 63; distance caps are advisory unless `QECTOR_ENFORCE=1`.
+- **Lock pinned to the published PyPI 1.0.1 wheels.** `requirements.lock`
+  carries the SHA-256 digests of all 18 wheels as published by the release
+  workflow (Trusted Publishing, with provenance), and the bundled
+  wheelhouse uses the PyPI cp313 manylinux wheel byte for byte.
+- **Backend pinned to `qector-decoder-v3==1.0.1`** (`requirements.txt`,
+  `requirements.lock`, `release-manifest.json`, runtime checks, the library
+  server's reviewed window `[1.0.1, 1.1.0)`). The lock pins the exact SHA-256
+  of the six Linux x86_64 wheels (CPython 3.9-3.14) from the 1.0.1 release
+  build; re-run `scripts/update_lock.py` once all 18 wheels are on PyPI to add
+  the Windows and macOS digests.
+- **Code families now verify upstream.** With 1.0.1 the live distance probe
+  reports `ok` at the labelled distance for `rotated_surface`,
+  `unrotated_surface`, `heavy_hex`, `toric`, `repetition`, `ring` and
+  `color_code` (1.0.0: rotated distance 2, unrotated and colour k = 0,
+  heavy_hex 2d - 1). `rotated_surface_corrected` stays for request
+  compatibility. Descriptions, skills and `docs/UPSTREAM_ISSUE_*` updated;
+  the issue is marked fixed.
+- **`color_code` is no longer offered to `decode_single`.** In 1.0.1 it is the
+  real 6.6.6 code, which is not graphlike; `list_code_families` now sets
+  `single_decode: false` for any non-graphlike family and says why, instead of
+  advertising a decode the matching decoders refuse.
+- **Sinter skill** reflects the 1.0.1 factory (five presets, distinct entry
+  points).
+
+### Added
+
+- **Native-core offline flag.** In air-gapped mode the plugin sets
+  `QECTOR_OFFLINE=1` before any decoder call; qector-decoder-v3 1.0.1 then
+  refuses every billing call inside its Rust core before a socket is opened,
+  the layer the Python socket guard cannot reach. Reported as
+  `airgap_status.guards.wheel_offline_flag`.
+- **Test fixtures for defective families.** The weak / degenerate /
+  contradicted verdict paths were covered by the broken 1.0.0 families; they
+  are now covered by explicit test-only fixtures (duplicate column, unchecked
+  qubit, single check), so the coverage survives the upstream fix.
+
+## 2.0.0 - 2026-11-02
+
+Major release. Full audit of the 1.0.6 archives, every gap found closed, no
+placeholders. Breaking changes are marked **[breaking]**.
+
+### Audit findings that drove the release
+
+- The four 1.0.6 artifacts were not one release: the source zip and the
+  Desktop MCPB pinned `mcp>=1.28.1,<2` while the repository and plugin zips
+  pinned `mcp==1.26.0` (CVE-2026-52869/52870/59950); README and
+  `server.json` published hashes that matched none of the delivered files.
+- All four servers failed to import on `mcp` 2.x (`Tool.inputSchema` →
+  `input_schema`), eight weeks after 2.0.0 shipped.
+- `sinter_task_template` raised `TypeError` on every call;
+  `dem_collapse_parallel` combined only the first two of n parallel
+  mechanisms; `decode_faithfulness_check.residual_weight` was a constant;
+  `license_active_check` hard-coded a tier table while claiming "no
+  hard-coded tier"; `importlib.metadata` was used without being imported.
+- "Zero egress" was documentation, not enforcement: `check_pypi=true`
+  opened a connection from the default server, `NETWORK_DISABLED` was never
+  raised, and the decoder wheel's native core (Rust `rustls`/`ureq`,
+  `https://api.stripe.com/v1/billing/meter_events`, REST/gRPC/metrics
+  servers) was never disclosed.
+- Python 3.9 was advertised but impossible (`mcp` requires 3.10+); the MCPB
+  `python` server type requires bundled dependencies, which the bundle did
+  not carry.
+- The wheel's `color_code` family builds a one-check, six-qubit, no-logical
+  code at d=3 and leaves one qubit unchecked at d=5; `heavy_hex` leaves one
+  qubit unchecked at every size. Both were exposed as ordinary decodable
+  families.
+- Artifacts were written inside the plugin install directory; `SECURITY.md`
+  carried a duplicated section; the Desktop manifest claimed
+  `manifest_version` 0.3 fields correctly but shipped different content than
+  the repository copy.
+
+### Added
+
+- **`qector-secure`** (`mcp/mcp_server_secure.py`): single hardened entry
+  point for Claude Code and Claude Desktop. Air-gap guard installed before
+  the first MCP frame, JSON Schema 2020-12 validation of every request and
+  every response, `INTEGRITY.json` verification at startup (strict by
+  default), optional hash-chained audit log, request-size cap, per-minute
+  rate limit, deterministic sorted `tools/list`, stdio only. Profiles `safe`
+  (12 tools) and `research` (41 tools).
+- Control-plane tools `airgap_status`, `integrity_check`, `schema_catalog`,
+  `audit_log_status`.
+- `mcp/qector_mcp_compat.py`: one code base for `mcp>=1.30,<2` and
+  `mcp>=2,<3`; CI runs both.
+- `mcp/qector_schemas.py` + `schemas/` (91 files): typed result schema for
+  all 44 tools, envelope schema, audit-record schema, digests index;
+  `scripts/export_schemas.py --check` prevents drift.
+- `mcp/qector_airgap.py`: loopback-only socket subclass, guarded
+  `getaddrinfo` / `create_connection` / `urlopen`, subprocess guard,
+  scrubbing of `STRIPE_*`, `QECTOR_STRIPE_CUSTOMER_ID`,
+  `QECTOR_LICENSE_PRIVATE_KEY_B64`; honest status including the wheel's
+  native surface.
+- `mcp/qector_audit.py`: append-only JSONL with SHA-256 chain; arguments
+  stored only as digests; `verify_chain` names the first invalid record.
+- `mcp/qector_integrity.py` + `scripts/generate_integrity_manifest.py`.
+- `mcp/qector_signing.py` + `scripts/sign_release.py`: Ed25519 signatures over
+  every archive's `INTEGRITY.json` and over `dist/SHA256SUMS`; pinned-key
+  verification in `qector-secure` (`QECTOR_INTEGRITY_PUBKEY`); Sigstore
+  keyless signature of `SHA256SUMS` in the publish workflow; `RELEASE_COMMIT`
+  in every archive; hashed `requirements.lock`; SBOM package checksums.
+- Offline laboratory path: `requirements.lock` (exact closure),
+  `scripts/build_wheelhouse.py` (cross-platform download with
+  `SHA256SUMS`), `scripts/install_offline.sh` / `.ps1`,
+  `scripts/update_lock.py`, `system_setup(offline_wheelhouse=...)`.
+- Family health probe (`ok` / `unscored` / `weak` / `degenerate`) in
+  `list_code_families` and `code_family_info`; degenerate constructions
+  are refused, weak ones decode with a warning carried in the envelope.
+- `THREAT_MODEL.md`, `AIRGAP.md`, `ANTHROPIC_COLLABORATION_PROPOSAL.md`,
+  rewritten `SECURITY.md`, `MCP_API.md`, `README.md`.
+- 57 new tests (`tests/test_secure_server.py`, `tests/test_airgap.py`,
+  `tests/test_contract_v2.py`, secure-server stdio conformance).
+
+### Changed
+
+- **[breaking]** Default MCP server is `qector-secure` (12 tools) instead of
+  `qector-library` (8). The Desktop bundle runs the secure server;
+  `mcp_server_desktop.py` is a compatibility shim.
+- **[breaking]** Air-gapped mode is the default. `check_pypi=true` now
+  returns `pypi_freshness.status: "disabled"` unless `QECTOR_AIR_GAPPED=0`.
+- **[breaking]** Envelope contract 2.0: new required keys
+  `contract_version` and `tool`; `provenance.mcp_sdk`; optional
+  `runtime.elapsed_ms` and `audit`; new error codes `UNKNOWN_TOOL`,
+  `CONTRACT_VIOLATION`, `INTEGRITY_FAILED`; `scope.network` may be
+  `disabled_air_gapped`.
+- **[breaking]** Supported Python is 3.10–3.13; launchers reject 3.9.
+- **[breaking]** `requirements.txt` pins `mcp>=1.30,<3` and adds
+  `jsonschema>=4.18,<5`.
+- Default artifact root is the per-user data directory, not the install
+  directory.
+- `list_decoders` reports `graphlike_only`; `decode_faithfulness_check`
+  reports `computed_syndrome` and `syndrome_mismatch_indices`;
+  `dem_collapse_parallel` reports `combination_rule`;
+  `license_active_check` reports `source: live_wheel` and no tier table;
+  `hot_path_microbench` accepts only check-list-constructor decoders and
+  warns on faithfulness violations instead of hiding them.
+- `scripts/build_release.py` assembles archives in memory, writes a
+  per-archive `INTEGRITY.json`, generates an SPDX SBOM over the full
+  locked closure, and can vendor the runtime into `server/lib`
+  (`--bundle-lib`). The source archive now ships `tests/` and `.github/`.
+- MCP Registry descriptor and workflows updated for 2.0.0; CI matrix
+  Python 3.10–3.13 × `mcp` 1.x / 2.x.
+- Final adversarial pass (pre-release hardening, all with regression
+  tests): `INTEGRITY.json` entries are validated before any file is opened
+  (relative, traversal-free runtime paths with hex digests only; a
+  non-object `files` member is a manifest mismatch), so an unsigned
+  manifest can no longer make the verifier hash files outside the install
+  root; a malformed `QECTOR_INTEGRITY_PUBKEY` is reported as a
+  configuration error instead of a traceback; a tool result carrying
+  NaN/Infinity is returned as `CONTRACT_VIOLATION` rather than escaping
+  the envelope as a serialisation exception; an audit-log write failure
+  fails closed (`IO_ERROR`, result withheld) instead of propagating out of
+  the dispatcher; `integrity_check` reports the manifest path relative to
+  the install root (no home directory in envelopes); CI installs the
+  hashed lock in `--require-hashes` mode with lint tooling on a separate
+  line and keeps the 1.x leg on the locked `mcp==1.30.0`; test processes
+  and sockets are closed deterministically (suite runs clean under
+  `-W error::ResourceWarning`).
+
+- Fourth review pass (tool logic and Claude-facing content, all with
+  regression tests):
+  - **Effective distance is checked, never trusted.** The wheel's
+    `rotated_surface_code(d)` has duplicate parity-check columns at every
+    d, so a weight-2 error is undetectable and flips the logical: the
+    family is reported `weak` with the witness, `code_distance_check`
+    returns `verdict: contradicted`, and `decode_single` /
+    `threshold_sweep` rows carry `effective_distance` from a bounded
+    search (`mcp_server_library.effective_distance`). `toric` and
+    `repetition` verify as labelled; `heavy_hex` is at least d+1.
+  - `hot_path_microbench` times `decoder.decode()` alone after untimed
+    warm-up shots (the old window included the verification matmul and
+    the cold first call: 6x too slow at d=5); `ci95_mean` is null below
+    30 shots and never negative.
+  - Research `wilson_ci` no longer applies a floor that inflated the
+    interval 5x at n=10^7; `z` must be positive; `k>n` is `INVALID_INPUT`.
+  - `verified` is emitted only by tools that run a check;
+    `build_code_from_matrix` and `system_setup` are `not_checked`;
+    `decode_faithfulness_check` answers are verified results; a failed
+    `integrity_check` is `INTEGRITY_FAILED` with its diagnostic payload.
+  - Unreachable syndromes (outside `im(H)`) are `INVALID_INPUT`, not a
+    `VERIFICATION_FAILED` blaming the decoder; code objects are cached;
+    `toric` is capped at size 20 (super-linear constructor);
+    `threshold_sweep` has a wall-clock budget with early projection.
+  - DEM parser: probabilities validated, Stim `^` decomposition and
+    detector cancellation, boundary-edge collapse, `weight_log` null at
+    p in {0,1}, `repeat` refused with guidance, unknown targets refused.
+  - `artifact_metadata_check` checks a real artifact (fields and
+    `.sha256` sidecar) or returns a labelled template; `workload_hash`
+    accepts partial workloads; `sinter_decoder_list` finds the factory in
+    `qector_decoder_v3.sinter_compat` and distinguishes "sinter not
+    installed"; admin refusals refund the budget; `system_setup` uses the
+    shared artifact root.
+  - Theorem 2 ground truth takes `stabilizer_generators` or
+    `logical_observables` explicitly (the rows of H are checks, not the
+    sector's stabilizers); `theorem_lookup`, the glossary and the math
+    skills say so; a test on `rotated_surface(3)` proves the two forms
+    differ there.
+  - Commands `/qec-benchmark`, `/qec-code-inspect`, `/qec-sinter`,
+    `/qec-wilson` called real tools with argument names the schemas
+    reject (every call was `INVALID_INPUT`); rewritten against the
+    schemas, with `argument-hint`s. `/qec-theorem` uses the tool's
+    theorem titles. Prompts, skills and agents no longer describe a
+    two-server `.mcp.json`, place `workbench_probe` on the research
+    server, give `color_code` k=2, cite `checksums-sha256.txt`, or claim
+    the PyPI check is the only network path; agent tool patterns name
+    only registered servers; `mcp/CLAUDE_DESKTOP.md` rewritten; plugin
+    icon added (`claude plugin validate` clean apart from the
+    repository-only CLAUDE.md note); `CLAUDE.md` left out of the plugin
+    archive; hook log location and `QECTOR_EXE` documented in PRIVACY.md.
+
+- Fifth review pass (skills prose; Windows/macOS portability):
+  - Skills: `qector-sinter` imported a non-existent top-level symbol and
+    listed a fifth shim the wheel's source does not define; `sinter.collect`
+    usage corrected (`custom_decoders=` + names); `TwoStageDecoder` signature
+    corrected; two-stage CSS is Theorem 15 (seven places said 13);
+    `color_code` is non-graphlike at d>=5 and k=0 (glossary, hardware
+    engineer, codes builder, verified API); BP-OSD kwargs (`max_bp_iters`,
+    `tau`, `plausibility_guard`, module `bp_osd`) that do not exist replaced
+    by the verified signatures; `tier_table` result key removed; Workbench
+    tool names no longer asserted; `start_metrics_server(addr=)`; REST
+    route table; space-time tail arithmetic (0.12, not 5.9e-3); counts
+    (ten validation layers, multi-tier chain, no "fifteen backends");
+    benchmark-outcome sentence turned into a placeholder template;
+    `num_logical_qubits` attribute name; `DemModel` method paths; house
+    rule on dashes applied; `qector_system_setup.py` uses the per-user
+    artifact root.
+  - Portability: `.gitattributes` (`* -text`) so Windows checkouts keep the
+    bytes `INTEGRITY.json` hashes; `scripts/qector-python` tries versioned
+    interpreters and the Homebrew / python.org / pyenv locations invisible
+    to GUI-launched processes on macOS; `qector-python.cmd` rewritten flat
+    (no delayed expansion, errors to stderr, `py -3.13`..`-3.10`);
+    new `qector-python.ps1`; the MCPB runs `sh` + launcher on POSIX and
+    `powershell.exe -File` on win32 (a real executable; `.cmd` files
+    cannot be spawned without a shell); the README states the native
+    Windows constraint of the Claude Code plugin and the `claude mcp add`
+    fallback; installers propagate exit codes and route through the
+    launcher; audit log written with `\n` on every platform; the test
+    stdio readers have real timeouts on every platform; air-gap guard
+    refuses `bind(("", port))` (was treated as loopback, is INADDR_ANY).
+  - `docs/UPSTREAM_ISSUE_rotated_surface_distance.md` and
+    `scripts/probe_wheel_distance.py` (plugin-free reproducer) document
+    the wheel's rotated-surface defect and its fix for the upstream
+    maintainers.
+
+- Sixth pass (closing the last gaps that can be closed without a new
+  wheel):
+  - `rotated_surface_corrected`: the rotated surface code built by the
+    plugin (`mcp/qector_codes.py`) with same-type boundary checks, verified
+    at construction and refused if the check fails; `source: "plugin"` in
+    `list_code_families`; default family of `decode_single`,
+    `threshold_sweep` and `scripts/run_threshold_sweep.py`. Sweeps on it
+    show distance scaling; the wheel's family stays available and `weak`.
+  - `effective_distance` is exact for every graphlike code: the minimum
+    logical weight is the shortest odd-parity cycle of the matching graph
+    (checks + boundary node, qubits as edges), found by BFS over
+    (node, parity) states in milliseconds up to d≈63; enumeration remains
+    the fallback. `heavy_hex` is thereby known to have distance 2d−1.
+  - Launchers resolve in two passes (interpreter with the runtime first,
+    any supported version second; an explicit `QECTOR_PYTHON` always wins).
+  - `scripts/boot_from_manifest.py`: extracts a Desktop bundle and spawns
+    the exact `command`/`args`/`env` its manifest names for the current
+    platform in exec form, then checks tools, integrity (pinned), air gap
+    and a verified decode; verified on the Linux bundle with and without
+    a configured interpreter.
+  - CI `native` job on `windows-latest` and `macos-latest`: autocrlf
+    checkout + integrity check, `.cmd`/`.ps1`/POSIX launchers (success and
+    fail-closed exit 127), full suite, archive build, bundle validation,
+    manifest boot with and without a configured interpreter, offline
+    installers (`.sh` with `shasum`, `.ps1`), bundled Desktop artifact boot.
+    RELEASE_VALIDATION.md makes a green run on the release commit a
+    precondition for publication.
+
+- Reviewer-environment hardening (from two independent reviews of the
+  release archive run without the wheel): test discovery skips cleanly
+  (`OK (skipped=108)`) instead of erroring when `mcp` or the wheel is
+  absent (the SDK detector was fooled by the repository's own `mcp/`
+  directory); `mcp/tests/test_mcp_stdio.py` fails fast with the missing
+  modules instead of timing out and never prints `PASS` for a partial
+  result; `validate_plugin_bundle.py` exits 2 with "nothing to validate"
+  when `dist/` is absent; the reviewer guide explains the 29/30
+  release-check difference between the source archive and a checkout.
+
+- Third independent review (bundled runtime, sandbox with per-command time
+  limits): `scripts/run_test_suite.py` runs the modules one at a time with
+  timings; `scripts/probe_wheel_distance.py` is exact for graphlike codes
+  (heavy_hex d=5 → 9) and cross-checks against brute force; the reviewer
+  guide states that no `[all]`/`[stim]` extra is required and how to run
+  everything from the bundled MCPB runtime without PyPI access.
+
+### Removed
+
+- Stale submission drafts (`ANTHROPIC_MARKETPLACE_SUBMISSION.md`,
+  `GLAMA_SUBMISSION.md`, `PULSEMCP_SUBMISSION.md`, `SUBMISSIONS.md`) and
+  1.0.x release notes carrying hashes that never matched the artifacts.
+
+## 1.0.6 - 2026-08-23
 
 Claude.ai marketplace compliance and environment-agnostic setup release.
 
@@ -26,13 +330,6 @@ Claude.ai marketplace compliance and environment-agnostic setup release.
   Bash diagnostics instead of dead-ending on the missing
   `scripts/qector_system_setup.py`. It never claims the script ran when it
   used the fallback path.
-- **Brand refresh**: the Desktop extension icon (`.claude-desktop-extension/icon.png`)
-  and the `brand/qector_icon.png` / `brand/qector_icon_512.png` marketing
-  assets now use the updated QECTOR mark. `manifest.json`'s `platform_overrides`
-  key was also relocated from the manifest root into `server.mcp_config`
-  (its correct location per the MCPB manifest spec), fixing an "Invalid
-  manifest: Unrecognized key(s) in object: 'platform_overrides'" preview
-  failure in Claude Desktop.
 
 ## 1.0.5 - 2026-08-23
 

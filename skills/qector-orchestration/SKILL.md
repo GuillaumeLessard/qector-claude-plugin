@@ -4,7 +4,7 @@ description: >-
   Routing, dispatch, and orchestration in QECTOR (manual chapter 11).
   Covers the structural validity predicate (max qubit degree), the
   recommend_decoder policy, Theorem 14 (AutoDecoder dispatch
-  faithfulness), the 7-tier self-debugging fallback chain (native
+  faithfulness), the multi-tier self-debugging fallback chain (native
   auto, CUDA, OpenCL, Rayon batch, CPU batch, single-thread,
   Blossom, lookup table, BP-OSD), the syndrome-verification
   between tiers, the GPU-permanent-disable rule, and the hybrid
@@ -60,8 +60,11 @@ labels.
 
 ## The AutoDecoder fallback chain (manual 11.2)
 
-The Python `AutoDecoder` adds a **seven-tier self-debugging
-fallback chain** with syndrome verification after every tier:
+The Python `AutoDecoder` adds a **multi-tier self-debugging
+fallback chain** (the manual calls it seven-tier; the wheel's
+docstring says "multi-tier" and the chain as implemented has the
+eight backends below plus two terminal fallbacks) with syndrome
+verification after every tier:
 
 1. native auto
 2. CUDA
@@ -98,12 +101,12 @@ without a surviving artifact.
 ## The Rust native_auto primitive
 
 The Rust class is `NativeAutoDecoder` (manual 16.1); the Python
-`AutoDecoder` is the 7-tier controller (manual 11.2). The naming
+`AutoDecoder` is the multi-tier controller (manual 11.2). The naming
 distinction matters:
 
 - `NativeAutoDecoder` is the routing primitive; it enforces the
   license tier at construction time.
-- `AutoDecoder` is the 7-tier self-debugging controller imported
+- `AutoDecoder` is the multi-tier self-debugging controller imported
   from the Python `backend` module.
 
 A class is also bound as `SpaceTimeDecoder` (manual 16.2 - this

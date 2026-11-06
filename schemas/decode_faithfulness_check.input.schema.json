@@ -1,0 +1,47 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/decode_faithfulness_check.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "H_matrix": {
+      "items": {
+        "items": {
+          "enum": [
+            0,
+            1
+          ],
+          "type": "integer"
+        },
+        "type": "array"
+      },
+      "type": "array"
+    },
+    "correction": {
+      "items": {
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer"
+      },
+      "type": "array"
+    },
+    "syndrome": {
+      "items": {
+        "enum": [
+          0,
+          1
+        ],
+        "type": "integer"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "H_matrix",
+    "syndrome",
+    "correction"
+  ],
+  "title": "decode_faithfulness_check",
+  "type": "object"
+}

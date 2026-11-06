@@ -1,22 +1,46 @@
 #!/usr/bin/env python3
-"""Build distinct source, Claude Code, and Claude Desktop release artifacts."""
+"""Build the source, Claude Code plugin and Claude Desktop release artifacts.
+
+Every archive is assembled in memory first so that:
+
+* a per-archive ``INTEGRITY.json`` (SHA-256 of every runtime file *in that
+  archive*) can be written next to the files it covers, and the secure
+  server can verify it at startup from any of the three layouts;
+* zip entries get a fixed timestamp and fixed permissions, so a rebuild of
+  the same tree is byte-identical and the published SHA-256 values never
+  drift from the artifacts (the 1.0.6 release shipped three different
+  "1.0.6" trees under one version number; this builder makes that
+  impossible by construction);
+* ``server.json`` is patched with the real Desktop bundle digest.
+
+``--bundle-lib WHEELHOUSE`` vendors the pinned runtime into ``server/lib``
+of the Desktop bundle (what the MCPB ``python`` server type expects) using
+``pip install --no-index --target``; the result is platform specific and
+is named accordingly. Without it the bundle is the portable
+bring-your-own-interpreter layout and the manifest's ``user_config``
+Python path applies.
+"""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import platform
 import subprocess
+import sys
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "mcp"))
+import qector_integrity  # noqa: E402
+import qector_signing  # noqa: E402
+
 DIST = ROOT / "dist"
 RELEASE_MANIFEST_PATH = ROOT / "release-manifest.json"
-# The MCP Registry server descriptor. The build patches this file in
-# place whenever a Desktop MCPB is produced, so local publishes and the
-# CI publish workflow stay in sync with the on-disk artifact hash.
 SERVER_JSON_PATH = ROOT / "server.json"
 
 IGNORED_PARTS = {
@@ -30,6 +54,7 @@ IGNORED_PARTS = {
     "node_modules",
     "artifacts",
     "dist",
+    "wheelhouse",
 }
 IGNORED_SUFFIXES = {".pyc", ".pyo", ".log", ".tmp", ".bak"}
 PLUGIN_ROOTS = {
@@ -43,38 +68,22 @@ PLUGIN_ROOTS = {
     "mcp",
     "python",
     "scripts",
+    "schemas",
     "docs",
     "governance",
     "cheat_sheets",
     "examples",
 }
-# The source archive is the canonical public QECTOR source release.
-# Unlike the plugin archive, it must NOT ship development-only material
-# (test suite, CI workflows, internal onboarding decks, scratch probes)
-# that lives in the working tree. The whitelist below mirrors how
-# PLUGIN_ROOTS / PLUGIN_FILES work for the Claude Code plugin archive
-# and is the single source of truth for what the source zip may
-# contain. Dev-internal directories (tests/, .github/, presentations/,
-# conftest.py, scratch_probe_*.py) are excluded by omission, and
-# SOURCE_EXCLUDE_PREFIXES adds explicit "everything below this path is
-# internal" carve-outs even when the root is otherwise whitelisted.
-SOURCE_ROOTS = {
-    ".claude-plugin",
-    ".claude-desktop-extension",
-    "mcp",
-    "python",
-    "scripts",
-    "docs",
-    "governance",
-    "cheat_sheets",
-    "examples",
-    "brand",
-}
-SOURCE_EXCLUDE_PREFIXES = (
-    "mcp/tests/",
-)
-SOURCE_FILES = {
+# The source archive is the complete reviewable tree: everything the plugin
+# archive ships plus the Desktop extension sources, brand assets, tests and
+# CI definitions. Every verification recipe in the documentation runs from
+# it unchanged.
+SOURCE_ROOTS = PLUGIN_ROOTS | {".claude-desktop-extension", "brand", "tests", ".github"}
+SOURCE_EXCLUDE_PREFIXES: tuple[str, ...] = ()
+ROOT_DOCS = {
     "AGENTS.md",
+    "AIRGAP.md",
+    "ANTHROPIC_COLLABORATION_PROPOSAL.md",
     "ARCHITECTURE.md",
     "CHANGELOG.md",
     "CLAUDE.md",
@@ -87,49 +96,30 @@ SOURCE_FILES = {
     "PRIVACY.md",
     "PROVENANCE.md",
     "README.md",
+    "RELEASE_NOTES_v2.0.0.md",
+    "RELEASE_NOTES_v2.0.1.md",
     "RELEASE_VALIDATION.md",
+    "REVIEWER_GUIDE.md",
     "SECURITY.md",
+    "THREAT_MODEL.md",
     "TOOL_STABILITY.md",
-    "release-manifest.json",
-    "server.json",
-    "requirements.txt",
-    "ruff.toml",
-    ".mcp.json",
 }
-PLUGIN_FILES = {
-    ".mcp.json",
-    "README.md",
-    "CHANGELOG.md",
-    "CLAUDE.md",
-    "CLAUDE_DESKTOP.md",
-    "AGENTS.md",
-    "LICENSE.md",
-    "PRIVACY.md",
-    "DISCLAIMER.md",
-    "requirements.txt",
-    "release-manifest.json",
-    "TOOL_STABILITY.md",
-    "SECURITY.md",
-    "MCP_API.md",
-    "ARCHITECTURE.md",
-    "FIRST_BOOT.md",
-    "DESKTOP_EXTENSION.md",
-    "PROVENANCE.md",
-    "RELEASE_VALIDATION.md",
-}
-
-# Root-level files that are NEVER part of any packaged bundle. The
-# build_release builder is the only release path that picks files by
-# explicit name, so this set is the authoritative allowlist for the
-# archive root. Anything not listed here must live under PLUGIN_ROOTS.
-# Root-level scratch probes (one-off diagnostics left by interactive
-# sessions) are also excluded by the SCRATCH_PREFIX below.
-EXCLUDED_ROOT_FILES = frozenset(
-    {
-        "scratch_probe_library.py",
-        "scratch_probe_servers.py",
-    }
-)
+ROOT_RUNTIME = {"release-manifest.json", "requirements.txt", "requirements.lock", ".mcp.json", ".gitattributes"}
+# Written into every archive so a rebuild from an extracted archive (no .git)
+# still records the commit it came from and reproduces the MCPB byte for byte.
+COMMIT_FILE = "RELEASE_COMMIT"
+PROVENANCE_FILE = "provenance.json"
+# server.json is MCP Registry metadata derived from the built MCPB digest; it
+# is published by the release workflow and deliberately kept out of the
+# archives so a build from a committed tree is a fixed point (no file in the
+# archive depends on the archive's own hash).
+SOURCE_FILES = ROOT_DOCS | ROOT_RUNTIME | {"ruff.toml", "conftest.py"}
+# CLAUDE.md is repository context for people working on this tree; Claude
+# Code does not load it from an installed plugin (the plugin validator
+# warns), and the same guidance ships as skills, so it stays out of the
+# plugin archive and in the source archive.
+PLUGIN_FILES = (ROOT_DOCS | ROOT_RUNTIME) - {"CLAUDE.md"}
+EXCLUDED_ROOT_FILES = frozenset({"scratch_probe_library.py", "scratch_probe_servers.py", "INTEGRITY.json", "INTEGRITY.json.sig", "RELEASE_COMMIT"})
 SCRATCH_PREFIX = "scratch_"
 DESKTOP_FILES = {
     ".claude-desktop-extension/manifest.json",
@@ -137,25 +127,38 @@ DESKTOP_FILES = {
     ".claude-desktop-extension/README.md",
     "scripts/qector-python",
     "scripts/qector-python.cmd",
+    "scripts/qector-python.ps1",
+    "scripts/generate_integrity_manifest.py",
+    "scripts/qector_runtime_check.py",
     "mcp/mcp_server_desktop.py",
+    "mcp/mcp_server_secure.py",
     "mcp/mcp_server_library.py",
     "mcp/qector_mcp_contract.py",
+    "mcp/qector_mcp_compat.py",
+    "mcp/qector_schemas.py",
+    "mcp/qector_airgap.py",
+    "mcp/qector_audit.py",
+    "mcp/qector_integrity.py",
+    "mcp/qector_signing.py",
+    "mcp/qector_codes.py",
     "requirements.txt",
+    "requirements.lock",
     "LICENSE.md",
     "PRIVACY.md",
     "SECURITY.md",
+    "AIRGAP.md",
     "release-manifest.json",
     "DESKTOP_EXTENSION.md",
     "MCP_API.md",
 }
-# MCPB layout: Claude Desktop reads icon.png and README.md from the bundle
-# root, while the source tree keeps those files under
-# .claude-desktop-extension/. None means "omit; written separately".
 DESKTOP_ARCHIVE_RENAMES = {
     ".claude-desktop-extension/manifest.json": None,
     ".claude-desktop-extension/icon.png": "icon.png",
     ".claude-desktop-extension/README.md": "README.md",
 }
+EXECUTABLE_ENTRIES = {"scripts/qector-python", "scripts/qector-python.cmd", "scripts/install_offline.sh"}
+# Fixed DOS timestamp so SHA-256 sidecars are rebuild-stable.
+ZIP_TIMESTAMP = (2026, 11, 2, 0, 0, 0)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -181,13 +184,18 @@ def _all_source_files() -> Iterable[Path]:
             yield path
 
 
+def _root_filtered(path: Path) -> bool:
+    rel = path.relative_to(ROOT)
+    if len(rel.parts) == 1 and (rel.name in EXCLUDED_ROOT_FILES or rel.name.startswith(SCRATCH_PREFIX)):
+        return True
+    return False
+
+
 def _plugin_files() -> Iterable[Path]:
     for path in _all_source_files():
+        if _root_filtered(path):
+            continue
         rel = path.relative_to(ROOT)
-        if rel.name in EXCLUDED_ROOT_FILES and len(rel.parts) == 1:
-            continue
-        if rel.name.startswith(SCRATCH_PREFIX) and len(rel.parts) == 1:
-            continue
         if rel.name in PLUGIN_FILES and len(rel.parts) == 1:
             yield path
         elif rel.parts[0] in PLUGIN_ROOTS:
@@ -195,16 +203,10 @@ def _plugin_files() -> Iterable[Path]:
 
 
 def _source_files() -> Iterable[Path]:
-    """Public-source whitelist. Excludes tests/, .github/, presentations/,
-    scratch probes, conftest, and any other dev-internal material that
-    may exist in the working tree but is not part of the released
-    QECTOR source distribution."""
     for path in _all_source_files():
+        if _root_filtered(path):
+            continue
         rel = path.relative_to(ROOT)
-        if rel.name in EXCLUDED_ROOT_FILES and len(rel.parts) == 1:
-            continue
-        if rel.name.startswith(SCRATCH_PREFIX) and len(rel.parts) == 1:
-            continue
         if any(rel.as_posix().startswith(prefix) for prefix in SOURCE_EXCLUDE_PREFIXES):
             continue
         if rel.name in SOURCE_FILES and len(rel.parts) == 1:
@@ -213,63 +215,111 @@ def _source_files() -> Iterable[Path]:
             yield path
 
 
-# Fixed DOS timestamp so SHA-256 sidecars are rebuild-stable. ZipInfo
-# otherwise stamps writestr() entries with the current local time, which
-# made the Desktop MCPB hash change on every build.
-ZIP_TIMESTAMP = (2026, 8, 23, 0, 0, 0)
-
-
 def _zip_info(name: str) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(filename=name, date_time=ZIP_TIMESTAMP)
     info.compress_type = zipfile.ZIP_DEFLATED
     info.create_system = 3
-    # Deterministic permissions: launchers must survive extraction as 0755 so
-    # Claude Code / Claude Desktop can exec them directly after install.
-    # Launchers live in scripts/ (hosted plugins may not ship bin/ executables).
-    if name in ("scripts/qector-python", "scripts/qector-python.cmd"):
-        info.external_attr = 0o755 << 16
-    else:
-        info.external_attr = 0o644 << 16
+    info.external_attr = (0o755 if name in EXECUTABLE_ENTRIES else 0o644) << 16
     return info
 
 
-def _write_zip_bytes(archive: zipfile.ZipFile, name: str, payload: bytes) -> None:
-    archive.writestr(_zip_info(name), payload)
-
-
-def _write_zip(output: Path, files: Iterable[Path], extra: dict[str, bytes] | None = None) -> None:
+def _write_archive(output: Path, blobs: dict[str, bytes]) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for path in files:
-            _write_zip_bytes(
-                archive, path.relative_to(ROOT).as_posix(), path.read_bytes()
-            )
-        for name, contents in (extra or {}).items():
-            payload = contents if isinstance(contents, bytes) else contents.encode("utf-8")
-            _write_zip_bytes(archive, name, payload)
+        for name in sorted(blobs):
+            archive.writestr(_zip_info(name), blobs[name])
+
+
+_SIGNING_KEY: Any = None
+
+
+def _with_integrity(blobs: dict[str, bytes], version: str, prefix: str = "") -> dict[str, bytes]:
+    """Add RELEASE_COMMIT, INTEGRITY.json and (when a key is loaded) INTEGRITY.json.sig."""
+    blobs = dict(blobs)
+    blobs[prefix + COMMIT_FILE] = (_git_commit() + "\n").encode("ascii")
+    stripped = {name[len(prefix):]: payload for name, payload in blobs.items() if name.startswith(prefix)}
+    manifest = qector_integrity.build_manifest_from_blobs(stripped, version=version)
+    manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    blobs[prefix + qector_integrity.MANIFEST_NAME] = manifest_bytes
+    if _SIGNING_KEY is not None:
+        document = qector_signing.signature_document(_SIGNING_KEY, manifest_bytes, subject=qector_integrity.MANIFEST_NAME)
+        blobs[prefix + qector_integrity.MANIFEST_NAME + qector_signing.SIGNATURE_SUFFIX] = (
+            json.dumps(document, indent=2, sort_keys=True) + "\n"
+        ).encode("utf-8")
+    return blobs
+
+
+def _check_signing_key_matches_release(release: dict[str, Any]) -> None:
+    declared = release.get("signing", {}).get("public_key")
+    actual = qector_signing.public_key_b64(_SIGNING_KEY)
+    if declared != actual:
+        raise RuntimeError(
+            "signing key does not match release-manifest.json signing.public_key "
+            f"(declared fingerprint {qector_signing.fingerprint(declared) if declared else 'none'}, "
+            f"key fingerprint {qector_signing.fingerprint(actual)}); run scripts/sign_release.py --register-key first"
+        )
+
+
+def _pin_public_key(blobs: dict[str, bytes]) -> dict[str, bytes]:
+    """When signing, make the shipped server configs pin the signing key.
+
+    ``QECTOR_INTEGRITY_PUBKEY`` in ``plugin.json`` / ``.mcp.json`` / the
+    Desktop manifest turns the startup gate from "consistent with the
+    embedded key" into "signed by this key" for every install of the
+    archive. It is not origin proof on its own (the archive carries the
+    key) but it refuses unsigned or re-keyed trees out of the box; pinning
+    the published fingerprint out-of-band remains the lab's job.
+    """
+    if _SIGNING_KEY is None:
+        return blobs
+    public = qector_signing.public_key_b64(_SIGNING_KEY)
+    blobs = dict(blobs)
+    for name in (".claude-plugin/plugin.json", ".mcp.json"):
+        if name in blobs:
+            document = json.loads(blobs[name].decode("utf-8"))
+            for server in document.get("mcpServers", {}).values():
+                server.setdefault("env", {})["QECTOR_INTEGRITY_PUBKEY"] = public
+            blobs[name] = (json.dumps(document, indent=2) + "\n").encode("utf-8")
+    return blobs
+
+
+def _tree_blobs(files: Iterable[Path]) -> dict[str, bytes]:
+    return _pin_public_key({path.relative_to(ROOT).as_posix(): path.read_bytes() for path in files})
 
 
 def _write_sha256_sidecar(path: Path) -> str:
     digest = _sha256(path)
-    path.with_suffix(path.suffix + ".sha256").write_text(
-        f"{digest}  {path.name}\n", encoding="ascii"
-    )
+    path.with_suffix(path.suffix + ".sha256").write_text(f"{digest}  {path.name}\n", encoding="ascii")
     return digest
 
 
 def _git_commit() -> str:
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=True,
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, timeout=10, check=True
         )
-        return result.stdout.strip()
+        commit = result.stdout.strip()
+        if commit:
+            return commit
     except Exception:
-        return "unavailable"
+        pass
+    recorded = ROOT / COMMIT_FILE
+    if recorded.is_file():
+        return recorded.read_text(encoding="ascii").strip() or "unavailable"
+    return "unavailable"
+
+
+def _git_dirty() -> bool:
+    if not (ROOT / ".git").exists():
+        return False  # extracted archive: provenance comes from RELEASE_COMMIT
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=ROOT, capture_output=True, text=True, timeout=10, check=True,
+        )
+    except Exception:
+        return False
+    return any(line and not line.endswith("INTEGRITY.json") for line in result.stdout.splitlines())
 
 
 def _validate_versions(release: dict[str, Any]) -> None:
@@ -283,101 +333,220 @@ def _validate_versions(release: dict[str, Any]) -> None:
             raise RuntimeError(f"{path.relative_to(ROOT)} does not match release version {version}")
 
 
-def _runtime_python_relative(runtime_root: Path) -> Path:
-    candidates = (Path("Scripts/python.exe"), Path("bin/python"))
-    for relative in candidates:
-        if (runtime_root / relative).is_file():
-            return relative
-    raise RuntimeError(
-        "runtime root must be a virtual environment containing Scripts/python.exe or bin/python"
-    )
+def _vendor_runtime(wheelhouse: Path) -> dict[str, bytes]:
+    """pip install --no-index --target into a temp dir; return server/lib blobs."""
+    with tempfile.TemporaryDirectory() as tmp:
+        target = Path(tmp) / "lib"
+        cmd = [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--no-index",
+            "--find-links",
+            str(wheelhouse),
+            "--target",
+            str(target),
+            "--disable-pip-version-check",
+            "-r",
+            str(ROOT / "requirements.lock"),
+        ]
+        subprocess.run(cmd, check=True)
+        blobs: dict[str, bytes] = {}
+        for path in sorted(target.rglob("*")):
+            relative = path.relative_to(target)
+            # Console-script shims (bin/) are not importable code and are not
+            # needed by PYTHONPATH loading; leave them out of the bundle.
+            if path.is_file() and "__pycache__" not in path.parts and relative.parts[0] != "bin":
+                blobs["server/lib/" + relative.as_posix()] = path.read_bytes()
+        return blobs
 
 
-def _desktop_manifest(runtime_root: Path | None) -> tuple[dict[str, Any], dict[str, Any]]:
+def _desktop_manifest(*, bundled: bool) -> dict[str, Any]:
     manifest = _load_json(ROOT / ".claude-desktop-extension" / "manifest.json")
-    provenance: dict[str, Any] = {
+    if bundled:
+        mcp_config = manifest["server"]["mcp_config"]
+        mcp_config.setdefault("env", {})["PYTHONPATH"] = "${__dirname}/server/lib"
+        # A vendored server/lib holds compiled wheels for exactly one platform
+        # and one CPython minor; the manifest must say so rather than inherit
+        # the portable bundle's three-platform claim.
+        if sys.platform == "win32":
+            win32 = mcp_config.get("platform_overrides", {}).get("win32")
+            if win32 is not None:
+                win32.setdefault("env", {})["PYTHONPATH"] = "${__dirname}\\server\\lib"
+            manifest["compatibility"]["platforms"] = ["win32"]
+        else:
+            mcp_config.pop("platform_overrides", None)
+            manifest["compatibility"]["platforms"] = ["darwin" if sys.platform == "darwin" else "linux"]
+        minor = f"{sys.version_info.major}.{sys.version_info.minor}"
+        manifest["compatibility"]["runtimes"]["python"] = f">={minor},<{sys.version_info.major}.{sys.version_info.minor + 1}"
+        manifest["description"] += f" (runtime vendored for {sys.platform} {platform.machine()}, CPython {minor})"
+    return manifest
+
+
+def _local_import_closure(entry_points: Iterable[str]) -> set[str]:
+    """Every ``mcp/<module>.py`` reachable by static import from *entry_points*.
+
+    Walks ``import x`` / ``from x import y`` statements (module level and
+    inside functions, since several modules import lazily) and resolves the
+    names that exist as sibling files under ``mcp/``. An import that sits
+    directly inside a ``try`` whose handler catches ``ImportError`` is
+    optional by construction (the research server in the safe-profile
+    MCPB) and is not part of the required closure.
+    """
+    import ast
+
+    mcp_dir = ROOT / "mcp"
+    local = {path.stem for path in mcp_dir.glob("*.py")}
+    seen: set[str] = set()
+    todo = [Path(entry).stem for entry in entry_points]
+
+    def _optional_nodes(tree: ast.AST) -> set[int]:
+        optional: set[int] = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Try):
+                continue
+            catches_import_error = any(
+                handler.type is None
+                or (isinstance(handler.type, ast.Name) and handler.type.id in ("ImportError", "ModuleNotFoundError", "Exception"))
+                or (isinstance(handler.type, ast.Tuple) and any(isinstance(e, ast.Name) and e.id in ("ImportError", "ModuleNotFoundError", "Exception") for e in handler.type.elts))
+                for handler in node.handlers
+            )
+            if catches_import_error:
+                optional.update(id(child) for child in node.body)
+        return optional
+
+    while todo:
+        module = todo.pop()
+        if module in seen or module not in local:
+            continue
+        seen.add(module)
+        tree = ast.parse((mcp_dir / f"{module}.py").read_text(encoding="utf-8"))
+        optional = _optional_nodes(tree)
+        for node in ast.walk(tree):
+            if id(node) in optional:
+                continue
+            if isinstance(node, ast.Import):
+                todo.extend(alias.name.split(".")[0] for alias in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                todo.append(node.module.split(".")[0])
+    return {f"mcp/{name}.py" for name in seen}
+
+
+def _check_desktop_closure() -> None:
+    """Refuse to build a Desktop bundle whose server would fail to import."""
+    required = _local_import_closure(
+        name for name in DESKTOP_FILES if name.startswith("mcp/mcp_server_")
+    )
+    missing = sorted(required - DESKTOP_FILES)
+    if missing:
+        raise SystemExit(
+            "DESKTOP_FILES is missing modules the bundled servers import: "
+            + ", ".join(missing)
+            + " (add them to DESKTOP_FILES in scripts/build_release.py)"
+        )
+
+
+def _desktop_blobs(version: str, wheelhouse: Path | None) -> dict[str, bytes]:
+    _check_desktop_closure()
+    blobs: dict[str, bytes] = {}
+    for relative in sorted(DESKTOP_FILES):
+        name = DESKTOP_ARCHIVE_RENAMES.get(relative, relative)
+        if name is None:
+            continue
+        blobs[name] = (ROOT / relative).read_bytes()
+    bundled = wheelhouse is not None
+    manifest = _desktop_manifest(bundled=bundled)
+    if _SIGNING_KEY is not None:
+        public = qector_signing.public_key_b64(_SIGNING_KEY)
+        manifest["server"]["mcp_config"].setdefault("env", {})["QECTOR_INTEGRITY_PUBKEY"] = public
+        win32 = manifest["server"]["mcp_config"].get("platform_overrides", {}).get("win32")
+        if win32 is not None:
+            win32.setdefault("env", {})["QECTOR_INTEGRITY_PUBKEY"] = public
+    blobs["manifest.json"] = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    blobs = _with_integrity(blobs, version)
+    if bundled:
+        blobs.update(_vendor_runtime(wheelhouse))
+    provenance = {
         "release": _load_json(RELEASE_MANIFEST_PATH),
         "git_commit": _git_commit(),
-        "runtime_bundled": runtime_root is not None,
+        "git_tree_dirty": _git_dirty(),
+        "runtime_bundled": bundled,
+        "bundle_platform": platform.platform() if bundled else None,
+        "bundle_python": platform.python_version() if bundled else None,
     }
-    if runtime_root is not None:
-        relative = _runtime_python_relative(runtime_root)
-        manifest["server"]["mcp_config"]["command"] = (
-            "${__dirname}/runtime/" + relative.as_posix()
-        )
-        # Bundled-runtime builds own the interpreter on every platform, so the
-        # launcher-shim platform overrides must not fight the runtime path.
-        manifest.pop("platform_overrides", None)
-        provenance["runtime_root_name"] = runtime_root.name
-    return manifest, provenance
+    blobs["provenance.json"] = (json.dumps(provenance, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    return blobs
 
 
-def _desktop_entries(runtime_root: Path | None) -> list[Path]:
-    entries = [ROOT / relative for relative in sorted(DESKTOP_FILES)]
-    if runtime_root is not None:
-        for path in sorted(runtime_root.rglob("*")):
-            if path.is_file() and "__pycache__" not in path.parts:
-                entries.append(path)
+def _parse_lock(text: str) -> list[tuple[str, list[str]]]:
+    """Parse ``name==version [--hash=sha256:...]...`` entries (backslash continuations allowed)."""
+    entries: list[tuple[str, list[str]]] = []
+    logical = ""
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        logical += " " + line.rstrip("\\")
+        if line.endswith("\\"):
+            continue
+        tokens = logical.split()
+        logical = ""
+        requirement = tokens[0]
+        if "==" not in requirement:
+            continue
+        hashes = [tok.split("sha256:", 1)[1] for tok in tokens[1:] if tok.startswith("--hash=sha256:")]
+        entries.append((requirement, hashes))
     return entries
 
 
-def _write_desktop_bundle(output: Path, runtime_root: Path | None) -> None:
-    manifest, provenance = _desktop_manifest(runtime_root)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for path in _desktop_entries(runtime_root):
-            if runtime_root is not None and path.is_relative_to(runtime_root):
-                name = "runtime/" + path.relative_to(runtime_root).as_posix()
-            else:
-                name = path.relative_to(ROOT).as_posix()
-            if name in DESKTOP_ARCHIVE_RENAMES:
-                renamed = DESKTOP_ARCHIVE_RENAMES[name]
-                if renamed is None:
-                    continue
-                name = renamed
-            _write_zip_bytes(archive, name, path.read_bytes())
-        _write_zip_bytes(
-            archive,
-            "manifest.json",
-            (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8"),
-        )
-        _write_zip_bytes(
-            archive,
-            "provenance.json",
-            (json.dumps(provenance, indent=2, sort_keys=True) + "\n").encode("utf-8"),
-        )
-
-
 def _write_sbom(output: Path, release: dict[str, Any], artifacts: dict[str, str]) -> None:
-    runtime = release["runtime"]
+    packages = [
+        {
+            "SPDXID": "SPDXRef-QECTORPlugin",
+            "name": release["release"]["name"],
+            "versionInfo": release["release"]["version"],
+            "licenseConcluded": release["release"]["license"],
+            "downloadLocation": release["release"]["repository"],
+        }
+    ]
+    lock = (ROOT / "requirements.lock").read_text(encoding="utf-8")
+    for requirement, hashes in _parse_lock(lock):
+        name, version = requirement.split("==", 1)
+        packages.append(
+            {
+                "SPDXID": "SPDXRef-" + "".join(ch if ch.isalnum() else "-" for ch in name),
+                "name": name,
+                "versionInfo": version,
+                "licenseConcluded": "NOASSERTION",
+                "downloadLocation": f"https://pypi.org/project/{name}/{version}/",
+                "checksums": [{"algorithm": "SHA256", "checksumValue": digest} for digest in hashes],
+                "externalRefs": [
+                    {
+                        "referenceCategory": "PACKAGE-MANAGER",
+                        "referenceType": "purl",
+                        "referenceLocator": f"pkg:pypi/{name.lower()}@{version}",
+                    }
+                ],
+            }
+        )
     document = {
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
         "name": f"{release['release']['name']}-{release['release']['version']}",
-        "documentNamespace": release["release"]["repository"],
-        "packages": [
-            {
-                "SPDXID": "SPDXRef-QECTORPlugin",
-                "name": release["release"]["name"],
-                "versionInfo": release["release"]["version"],
-                "licenseConcluded": release["release"]["license"],
-            },
-            {
-                "SPDXID": "SPDXRef-QECTORDecoder",
-                "name": "qector-decoder-v3",
-                "versionInfo": runtime["qector_decoder_v3"],
-                "licenseConcluded": "NOASSERTION",
-            },
-            {
-                "SPDXID": "SPDXRef-MCP",
-                "name": "mcp",
-                "versionInfo": runtime["mcp"],
-                "licenseConcluded": "NOASSERTION",
-            },
+        "documentNamespace": f"{release['release']['repository']}/sbom/{release['release']['version']}",
+        "creationInfo": {"creators": ["Tool: scripts/build_release.py"], "created": "2026-11-02T00:00:00Z"},
+        "packages": packages,
+        "relationships": [
+            {"spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-QECTORPlugin"}
+        ]
+        + [
+            {"spdxElementId": "SPDXRef-QECTORPlugin", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": pkg["SPDXID"]}
+            for pkg in packages[1:]
         ],
         "annotations": [
-            {"annotationType": "OTHER", "comment": f"{name} sha256={digest}"}
+            {"annotationType": "OTHER", "annotationDate": "2026-11-02T00:00:00Z", "annotator": "Tool: scripts/build_release.py", "comment": f"{name} sha256={digest}"}
             for name, digest in sorted(artifacts.items())
         ],
     }
@@ -385,109 +554,123 @@ def _write_sbom(output: Path, release: dict[str, Any], artifacts: dict[str, str]
 
 
 def _patch_server_json(release: dict[str, Any], desktop_artifact: str, desktop_sha256: str) -> None:
-    """Rewrite the MCP Registry server descriptor with the just-built MCPB.
-
-    The descriptor carries four fields that depend on the freshly built
-    Desktop MCPB: the top-level ``version``, the package ``version``, the
-    ``fileSha256`` of the MCPB, and the ``identifier`` download URL. Every
-    other field is preserved verbatim so future schema additions in
-    ``server.json`` survive a rebuild. The download URL is composed from
-    ``release-manifest.json`` so the repository location stays in one
-    place. The local file is left untouched when it is missing, which
-    keeps this helper safe to call from builds that do not publish to
-    the MCP Registry.
-    """
     if not SERVER_JSON_PATH.is_file():
-        print(f"skip server.json patch: {SERVER_JSON_PATH.relative_to(ROOT)} not found")
+        print("skip server.json patch: server.json not found")
         return
     version = release["release"]["version"]
     repository = release["release"]["repository"]
-    identifier = (
-        f"{repository.rstrip('/')}/releases/download/v{version}/{desktop_artifact}"
-    )
     document = _load_json(SERVER_JSON_PATH)
     document["version"] = version
     package = document.get("packages", [{}])[0]
     package["version"] = version
     package["fileSha256"] = desktop_sha256
-    package["identifier"] = identifier
-    document["packages"] = document.get("packages", [])
-    document["packages"][0] = package
-    SERVER_JSON_PATH.write_text(
-        json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    print(f"patched {SERVER_JSON_PATH.relative_to(ROOT)} sha256={desktop_sha256}")
+    package["identifier"] = f"{repository.rstrip('/')}/releases/download/v{version}/{desktop_artifact}"
+    document["packages"] = [package] + document.get("packages", [])[1:]
+    SERVER_JSON_PATH.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"patched server.json sha256={desktop_sha256}")
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", action="store_true", help="Build source archive.")
-    parser.add_argument("--plugin", action="store_true", help="Build Claude Code plugin archive.")
-    parser.add_argument("--desktop", action="store_true", help="Build Claude Desktop MCPB bundle.")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--source", action="store_true", help="Build the public source archive.")
+    parser.add_argument("--plugin", action="store_true", help="Build the Claude Code plugin archive.")
+    parser.add_argument("--desktop", action="store_true", help="Build the Claude Desktop MCPB bundle.")
     parser.add_argument("--all", action="store_true", help="Build every release artifact.")
     parser.add_argument(
-        "--runtime-root",
+        "--bundle-lib",
         type=Path,
-        help="Optional virtual-environment root to bundle in the MCPB artifact.",
+        default=None,
+        help="Wheelhouse directory; vendor the pinned runtime into server/lib of the Desktop bundle (platform specific).",
     )
+    parser.add_argument("--patch-server-json", action="store_true", help="Rewrite server.json with the Desktop MCPB digest (release workflow only).")
+    parser.add_argument("--no-server-json", action="store_true", help="Accepted for compatibility; patching is off by default.")
+    parser.add_argument("--allow-dirty", action="store_true", help="Build from an uncommitted tree (provenance then names the last commit, not the tree).")
     parser.add_argument(
-        "--no-server-json",
-        action="store_true",
-        help=(
-            "Skip rewriting the MCP Registry server.json after a Desktop "
-            "MCPB build. The default is to keep server.json in sync with "
-            "the on-disk artifact so local publishes match the registry "
-            "descriptor."
-        ),
+        "--signing-key",
+        type=Path,
+        default=None,
+        help="Ed25519 private key (PEM) to sign INTEGRITY.json in every archive and dist/SHA256SUMS. Must match release-manifest.json signing.public_key.",
     )
     args = parser.parse_args(argv)
     if not any((args.source, args.plugin, args.desktop, args.all)):
         parser.error("specify --source, --plugin, --desktop, or --all")
-    if args.runtime_root and not args.desktop and not args.all:
-        parser.error("--runtime-root requires --desktop or --all")
 
     release = _load_json(RELEASE_MANIFEST_PATH)
     _validate_versions(release)
     version = release["release"]["version"]
-    build_source = args.source or args.all
-    build_plugin = args.plugin or args.all
-    build_desktop = args.desktop or args.all
-    runtime_root = args.runtime_root.resolve() if args.runtime_root else None
-    artifacts: dict[str, str] = {}
-
-    if build_source:
-        output = DIST / f"qector-claude-plugin-source-{version}.zip"
-        _write_zip(output, _source_files())
-        artifacts[output.name] = _write_sha256_sidecar(output)
-    if build_plugin:
-        output = DIST / f"qector-claude-plugin-{version}.zip"
-        _write_zip(output, _plugin_files())
-        artifacts[output.name] = _write_sha256_sidecar(output)
-    if build_desktop:
-        output = DIST / f"qector-claude-desktop-{version}.mcpb"
-        _write_desktop_bundle(output, runtime_root)
-        artifacts[output.name] = _write_sha256_sidecar(output)
-        if not args.no_server_json:
-            _patch_server_json(release, output.name, artifacts[output.name])
-
-    DIST.mkdir(parents=True, exist_ok=True)
-    (DIST / "release-manifest.json").write_text(
-        json.dumps(release, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
-    (DIST / "provenance.json").write_text(
-        json.dumps(
-            {"release": release, "git_commit": _git_commit(), "artifacts": artifacts},
-            indent=2,
-            sort_keys=True,
+    global _SIGNING_KEY
+    if args.signing_key is not None:
+        _SIGNING_KEY = qector_signing.load_private_key(args.signing_key.resolve())
+        _check_signing_key_matches_release(release)
+    elif release.get("signing", {}).get("public_key"):
+        print("WARNING: release-manifest.json declares a signing key but --signing-key was not given; archives will be unsigned and strict verification against a pinned key will fail")
+    if _git_dirty() and not args.allow_dirty:
+        parser.error(
+            "working tree has uncommitted changes; provenance.json would attest the wrong commit. "
+            "Commit first or pass --allow-dirty for a local test build."
         )
-        + "\n",
+    # Refresh the working-tree manifest so a source checkout validates too.
+    (ROOT / qector_integrity.MANIFEST_NAME).write_text(
+        json.dumps(qector_integrity.build_manifest(ROOT, version=version), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    _write_sbom(DIST / f"qector-claude-plugin-{version}.sbom.json", release, artifacts)
-    (DIST / "SHA256SUMS").write_text(
-        "".join(f"{digest}  {name}\n" for name, digest in sorted(artifacts.items())),
-        encoding="ascii",
+    artifacts: dict[str, str] = {}
+    DIST.mkdir(parents=True, exist_ok=True)
+
+    # Desktop first so a --patch-server-json release run has the MCPB digest
+    # before anything else is written (server.json itself stays out of the
+    # archives).
+    if args.desktop or args.all:
+        wheelhouse = args.bundle_lib.resolve() if args.bundle_lib else None
+        # The portable bundle is always built; with --bundle-lib the vendored,
+        # platform-specific bundle is built as well in the same invocation so
+        # one provenance record covers both.
+        variants: list[Path | None] = [None] + ([wheelhouse] if wheelhouse is not None else [])
+        for variant in variants:
+            suffix = ""
+            if variant is not None:
+                tag = f"{sys.platform}-{platform.machine()}-py{sys.version_info.major}{sys.version_info.minor}".lower()
+                suffix = f"-bundled-{tag}"
+            output = DIST / f"qector-claude-desktop-{version}{suffix}.mcpb"
+            _write_archive(output, _desktop_blobs(version, variant))
+            artifacts[output.name] = _write_sha256_sidecar(output)
+            if args.patch_server_json and variant is None:
+                _patch_server_json(release, output.name, artifacts[output.name])
+    if args.source or args.all:
+        output = DIST / f"qector-claude-plugin-source-{version}.zip"
+        _write_archive(output, _with_integrity(_tree_blobs(_source_files()), version))
+        artifacts[output.name] = _write_sha256_sidecar(output)
+    if args.plugin or args.all:
+        output = DIST / f"qector-claude-plugin-{version}.zip"
+        _write_archive(output, _with_integrity(_tree_blobs(_plugin_files()), version))
+        artifacts[output.name] = _write_sha256_sidecar(output)
+
+    (DIST / "release-manifest.json").write_text(json.dumps(release, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    # Provenance, SBOM and SHA256SUMS accumulate across invocations (a
+    # --desktop --bundle-lib run after --all must not drop the three core
+    # artifacts from the attestation), restricted to artifacts still on disk.
+    sums_path = DIST / "SHA256SUMS"
+    existing: dict[str, str] = {}
+    if sums_path.is_file():
+        for line in sums_path.read_text(encoding="ascii").splitlines():
+            if line.strip():
+                digest, name = line.split(None, 1)
+                if (DIST / name.strip()).is_file():
+                    existing[name.strip()] = digest
+    existing.update(artifacts)
+    all_artifacts = dict(sorted(existing.items()))
+    (DIST / PROVENANCE_FILE).write_text(
+        json.dumps({"release": release, "git_commit": _git_commit(), "git_tree_dirty": _git_dirty(), "artifacts": all_artifacts}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
+    _write_sbom(DIST / f"qector-claude-plugin-{version}.sbom.json", release, all_artifacts)
+    sums_path.write_text("".join(f"{digest}  {name}\n" for name, digest in all_artifacts.items()), encoding="ascii")
+    if _SIGNING_KEY is not None:
+        document = qector_signing.signature_document(_SIGNING_KEY, sums_path.read_bytes(), subject="SHA256SUMS")
+        (DIST / ("SHA256SUMS" + qector_signing.SIGNATURE_SUFFIX)).write_text(
+            json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        print(f"signed SHA256SUMS with key fingerprint {document['fingerprint']}")
     for name, digest in sorted(artifacts.items()):
         print(f"built {name} sha256={digest}")
     return 0

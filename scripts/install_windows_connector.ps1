@@ -35,4 +35,6 @@ Write-Host "====================================================================
 Write-Host "  QECTOR Claude Desktop Windows App Connector & Extension Installer" -ForegroundColor Cyan
 Write-Host "======================================================================" -ForegroundColor Cyan
 
-python $ConfigureScript @ArgsList
+$Launcher = Join-Path $ScriptDir "qector-python.cmd"
+& $Launcher $ConfigureScript @ArgsList
+exit $LASTEXITCODE

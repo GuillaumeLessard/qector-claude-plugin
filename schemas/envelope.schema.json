@@ -1,0 +1,244 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/envelope.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Machine-verifiable QECTOR MCP result envelope (contract 2.0).",
+  "properties": {
+    "artifact": {
+      "additionalProperties": true,
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "audit": {
+      "additionalProperties": false,
+      "properties": {
+        "record_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "sequence": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sequence",
+        "record_sha256"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "claim_class": {
+      "enum": [
+        "runtime_verified",
+        "verification_failed",
+        "reference_only",
+        "machine_scoped_measurement",
+        "metadata_or_unverified",
+        "none"
+      ],
+      "type": "string"
+    },
+    "contract_version": {
+      "const": "2.0",
+      "type": "string"
+    },
+    "error": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "INVALID_INPUT",
+            "UNKNOWN_TOOL",
+            "RESOURCE_LIMIT",
+            "LICENSE_DENIED",
+            "BACKEND_UNAVAILABLE",
+            "DEPENDENCY_MISSING",
+            "VERIFICATION_FAILED",
+            "CONTRACT_VIOLATION",
+            "INTEGRITY_FAILED",
+            "IO_ERROR",
+            "NETWORK_DISABLED",
+            "NETWORK_REQUIRED",
+            "PERMISSION_DENIED",
+            "PROTOCOL_ERROR",
+            "RUNTIME_ERROR"
+          ],
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "type",
+        "message"
+      ],
+      "type": "object"
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "mcp_sdk": {
+          "type": "string"
+        },
+        "reference_manual": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "server": {
+          "type": "string"
+        },
+        "server_version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "server",
+        "server_version",
+        "reference_manual",
+        "mcp_sdk"
+      ],
+      "type": "object"
+    },
+    "result": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "elapsed_ms": {
+          "minimum": 0,
+          "type": "number"
+        },
+        "qector_decoder_v3": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "scope": {
+      "additionalProperties": false,
+      "properties": {
+        "network": {
+          "enum": [
+            "local_only",
+            "opt_in_pypi_freshness",
+            "disabled_air_gapped",
+            "package_installation_after_explicit_confirmation",
+            "local_process_only"
+          ],
+          "type": "string"
+        },
+        "performance_claim": {
+          "enum": [
+            "none",
+            "machine_scoped"
+          ],
+          "type": "string"
+        },
+        "stability": {
+          "enum": [
+            "stable",
+            "provisional",
+            "admin",
+            "control"
+          ],
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "stability",
+        "network",
+        "performance_claim"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "reference_only",
+        "measured",
+        "not_checked",
+        "error"
+      ],
+      "type": "string"
+    },
+    "tool": {
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "type": "string"
+    },
+    "verification": {
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "verified",
+            "not_checked",
+            "failed",
+            "not_applicable",
+            "reference_only"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "checks"
+      ],
+      "type": "object"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "contract_version",
+    "tool",
+    "status",
+    "claim_class",
+    "provenance",
+    "runtime",
+    "scope",
+    "verification",
+    "artifact",
+    "warnings",
+    "result"
+  ],
+  "title": "QECTORToolResult",
+  "type": "object"
+}

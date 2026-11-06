@@ -1,255 +1,166 @@
-# QECTOR Claude Plugin
+# QECTOR Claude Plugin 2.0.1
 
-**Verified quantum error correction for Claude. Local, deterministic, and
-mathematically guaranteed on every machine you work on.**
+**Air-gapped, schema-validated, audited quantum error correction for
+Claude Code and Claude Desktop, built on `qector-decoder-v3==1.0.1`.**
 
-QECTOR integrates the published `qector-decoder-v3==1.0.0` engine with
-Claude Code and Claude Desktop, turning both into a production grade QEC
-engineering environment. Every correction returned by an MCP server is
-verified against the parity relation `H c = s (mod 2)` before it leaves
-the process, every claim carries a machine checkable provenance class,
-and the default configuration performs no network request of any kind.
+Every correction returned by an MCP tool is checked against the parity
+relation `H c = s (mod 2)` before it leaves the process. Every request is
+validated against a JSON Schema 2020-12 input schema before any decoder
+code runs, and every response is validated against the tool's advertised
+output schema before it is written. The default server opens no listening socket,
+launches no process, verifies its own files at startup, and can keep a
+hash-chained audit log.
 
-> **4 MCP servers · 8 stable / 29 research / 3 admin tools · 11 commands
-> · 5 agents · 28 skills · zero egress by default**
+> **1 secure MCP server (12 tools default, 41 in research profile) · 3
+> standalone servers · 11 commands · 5 agents · 28 skills · contract 2.0 ·
+> `mcp` 1.30+ and 2.x · Python 3.10–3.13 · air-gapped by default**
 
-> **Latest release — [v1.0.6](RELEASE_NOTES_v1.0.6.md)** · Claude.ai
-> marketplace compliance (launchers to `scripts/`, canonical manifests),
-> environment-agnostic `/qec-setup`, deterministic artifacts. See the
-> [release announcement](RELEASE_BODY_v1.0.6.md).
+## Why 2.0.0
 
----
+The 1.0.x line made claims its process could not enforce. 2.0.0 turns
+those claims into mechanisms and states what remains:
 
-## Why v1.0.6
-
-Version 1.0.6 completes the portability and compliance story that 1.0.5
-started, then layers on marketplace correctness and universal setup. Two
-problems drove it: modern operating systems no longer hand you Python on a
-predictable command name (macOS, Debian, Ubuntu, and Fedora ship `python3`
-without bare `python`, while Windows adds its own resolver quirks), and the
-claude.ai marketplace approval pipeline rejects plugins that ship
-executables in `bin/`. This release retires both failure classes, permanently.
-
-**1. A universal, compliant launcher ships inside every artifact.**
-
-* The plugin archive, the source distribution, and the Desktop bundle all
-  carry `scripts/qector-python` (POSIX sh) and `scripts/qector-python.cmd`
-  (Windows). They live in `scripts/`, not `bin/`: claude.ai-hosted plugins
-  may not ship `bin/` executables because they land on PATH without ever
-  appearing on the admin approval surface. A validator now hard-fails any
-  build that reintroduces `bin/`.
-* Resolution is governed, not guessed. An administrator pinned interpreter
-  wins first, then `python3`, then `python`, with the Windows `py` launcher
-  tried ahead of them all.
-* The supported window is enforced, not documented. Only Python 3.9
-  through 3.13 executes, matching the published native wheel matrix; an
-  out of range machine receives precise remediation guidance instead of
-  a deep import crash.
-* Pinning is first class on both surfaces. Set `QECTOR_PYTHON` to an
-  absolute interpreter path and every launcher honors it above discovery.
-
-**2. The marketplace surface is canonical.**
-
-Both `plugin.json` and `marketplace.json` use only documented fields and a
-relative same-repo plugin source — the form every official marketplace uses
-and the only form every sync path can resolve. The Desktop MCPB carries a
-`win32` platform override so Windows always selects the `.cmd` launcher.
-
-**3. Setup works in every environment.**
-
-`/qec-setup` detects sandboxed and remote environments (claude.ai code
-execution, Cowork, containers without a project checkout) and falls back to
-native diagnostics instead of dead ending on a missing local script — and it
-reports honestly which path it used.
-
-## Platform support
-
-| Surface | Install path | Status |
-|:--------|:-------------|:-------|
-| Claude Code CLI | marketplace plugin over local stdio | ✅ Windows, macOS, Linux |
-| Claude Desktop | `.mcpb` bundle with single click install | ✅ Windows, macOS |
-| Web, iOS, Android, Cowork | hosted remote connector (Streamable HTTP with OAuth) | 🗺️ roadmap 1.1.x |
-| Air gapped and restricted estates | local stdio, fully offline default | ✅ |
-
-Local stdio cannot reach web or mobile by architecture; the hosted
-connector is the engineered path to those surfaces and lands in 1.1.x.
+| | 1.0.6 | 2.0.0 |
+|:--|:--|:--|
+| Network | "zero egress" in the docs; `check_pypi=true` opened a connection | in-process guard installed before the first MCP frame (defence in depth; host egress rule documented for a hard guarantee); PyPI check refused |
+| Validation | SDK-dependent input check, no output check | own Draft 2020-12 validator both ways; 91 committed schema files |
+| Integrity | none | `INTEGRITY.json` verified at startup, strict by default |
+| Audit | none | optional hash-chained JSONL log |
+| SDK | `mcp==1.26.0` (3 CVEs), broke on `mcp` 2.x | `mcp>=1.30,<3`; same wire output on both generations |
+| Release | three different trees labelled 1.0.6 | deterministic builder that refuses a dirty tree, hashed `requirements.lock`, per-archive manifest + `RELEASE_COMMIT`, Ed25519-signed manifests and `SHA256SUMS`, Sigstore log entry |
+| Honesty about the wheel | not mentioned | native TLS client and billing endpoint disclosed in `airgap_status` and SECURITY.md |
+| Wheel defects | `color_code` d=3 (1 check, no logicals) exposed as decodable; `rotated_surface` labelled distance d while a weight-2 error is undetectable | per-family health probe with a checked `effective_distance` (exact for graphlike codes via the matching graph's shortest odd-parity cycle, bounded enumeration otherwise; never the wheel's label); degenerate refused, weak warned on every result; a corrected `rotated_surface_corrected` family built by the plugin and verified at construction (`mcp/qector_codes.py`). 2.0.1 pins `qector-decoder-v3==1.0.1`, which fixes these families upstream; the probe now verifies every one at its label |
+| Shipped bugs | `sinter_task_template` crashed on every call; DEM collapse ignored the 3rd+ mechanism | fixed, with regression tests |
 
 ## Installation
 
-### Prerequisites
-
-| Requirement | How to check | Expected |
-|:------------|:-------------|:---------|
-| **Python** 3.9–3.13 | `python --version` and `py -3 --version` (Windows) | `3.11.x` or `3.12.x` recommended; `3.14+` is rejected on purpose |
-| **pip** | `python -m pip --version` | any recent |
-| **Claude Code** ≥2.0 or **Claude Desktop** ≥0.10.0 | `claude --version` | `2.1.x` / `1.34+` |
-
-> **Python with spaces in path** (e.g. `Anthropic Skills and agents`) is now handled — the Desktop extension in `v1.0.6` uses `python` directly (no `${__dirname}` launcher) and the Code plugin uses `scripts/qector-python`. If you still see `Server disconnected`, set `QECTOR_PYTHON` (see Troubleshooting).
-
-### Option A — Claude Code (marketplace, 30 s)
+**Claude Code**
 
 ```bash
-# 1. Add the marketplace (once)
 claude plugin marketplace add GuillaumeLessard/qector-claude-plugin
-
-# 2. Install the plugin
 claude plugin install qector@qector-tools
-# When prompted for Python interpreter: leave empty for auto-resolve,
-# or paste an absolute path like C:\Program Files\Python311\python.exe
-
-# 3. Verify
-claude plugin list                          # → qector@qector-tools 1.0.6 enabled
-claude plugin validate . --strict           # → ✔ Validation passed
-python scripts/qector_runtime_check.py      # → status: ok, mcp 1.29.0
 ```
 
-### Option B — Claude Desktop (single click)
+The plugin registers `qector-secure` (`mcp/mcp_server_secure.py --profile
+safe`, `QECTOR_AIR_GAPPED=1`). Interpreter resolution goes through
+`scripts/qector-python` (`QECTOR_PYTHON` → `python3.13`…`python3.10` →
+`python3` → `python` → well-known Homebrew / python.org / pyenv locations,
+3.10–3.13), a POSIX `sh` script.
 
-**Via UI (recommended):**
+*Windows (Claude Code):* a plugin manifest has one `command` for every
+platform and a `sh` script is not a Win32 executable, so on native Windows
+the plugin's server starts only where `sh` is on `PATH` (Git for Windows
+with "Unix tools" selected, or WSL). Otherwise register the server once
+by hand with the Windows launcher, which also serves the hooks:
 
-1. Download `qector-claude-desktop-1.0.6.mcpb` from the [release page](https://github.com/GuillaumeLessard/qector-claude-plugin/releases/tag/v1.0.6).
-2. Claude Desktop → Settings → Extensions → Advanced settings → **Install Extension** → select the `.mcpb` → **Enable**.
-3. **Fully quit** Claude Desktop (system tray → Quit) and reopen — the extension needs a full restart to load the 8-tool safe profile.
-
-**Via script (same result, auditable):**
-
-```bash
-python scripts/configure_claude_desktop.py --check-only   # preview, no changes
-python scripts/configure_claude_desktop.py --confirm      # writes claude_desktop_config.json + installs extension
-# Restart Desktop afterwards
+```text
+claude mcp add qector-secure -e QECTOR_AIR_GAPPED=1 -e QECTOR_INTEGRITY_STRICT=1 -e QECTOR_SILENT=1 -- cmd /c "<plugin root>\scripts\qector-python.cmd" "<plugin root>\mcp\mcp_server_secure.py" --profile safe
 ```
 
-**Verify Desktop:**
+The Claude Desktop extension does not have this limitation: its manifest
+carries a `win32` override that launches `scripts/qector-python.ps1`
+through `powershell.exe`.
 
-- `C:\Users\<you>\AppData\Roaming\Claude\claude_desktop_config.json` contains `qector-library` (if you used the script) and `extensions-installations.json` contains `ant.dir.gh.guillaumelessard.qector`.
-- `C:\Users\<you>\AppData\Local\Claude\logs\mcp.log` shows `QECTOR Server started and connected → initialize → tools/list → result` (no `Server disconnected`).
+The hooks (`hooks/hooks.json`) run in shell form, which Claude Code
+executes with Git Bash on Windows; without Git for Windows they report an
+error on each session start and the (optional) usage log is not written.
+The server itself is unaffected.
 
-### Option C — From source (auditable, offline)
+**Claude Desktop**
+
+Install `qector-claude-desktop-2.0.1.mcpb` (Settings → Extensions →
+Advanced → Install Extension). The bundle runs the same secure server in
+strict-integrity mode; the optional *Audit log directory* setting enables
+the hash-chained log. A platform-specific bundle with the runtime vendored
+into `server/lib` can be built with `scripts/build_release.py --desktop
+--bundle-lib <wheelhouse>`.
+
+**Air-gapped laboratory**
+
+See [AIRGAP.md](AIRGAP.md): build a wheelhouse on a connected host
+(`scripts/build_wheelhouse.py`), carry it with `SHA256SUMS`, run
+`scripts/install_offline.sh` / `.ps1` on the lab machine, and apply a
+host egress rule.
+
+**From source**
 
 ```bash
 git clone https://github.com/GuillaumeLessard/qector-claude-plugin.git
 cd qector-claude-plugin
-
-# Install for every Python you use (Windows has both 3.11 and 3.12 via py launcher)
-python -m pip install -r requirements.txt          # → numpy 2.2.6, mcp 1.29.0, qector 1.0.0
-py -3 -m pip install -r requirements.txt           # ← do this too if py -3 exists
-
-# Verify
-python scripts/qector_runtime_check.py             # → status: ok, failures: []
-python scripts/qector_system_setup.py --check-only # → dry_run_pending_approval
-python scripts/qector_system_setup.py --confirm    # → ready, theorem_1_faithful: true
+python -m pip install -r requirements.lock      # exact tested closure (Python 3.10-3.13)
+QECTOR_SILENT=1 python scripts/qector_runtime_check.py
 ```
 
-### Troubleshooting
+## The tool surface
 
-| Symptom | Cause | Fix |
-|:--------|:------|:----|
-| `Server disconnected` / `Unable to connect to extension server` | Old `mcp 1.26.0` on one Python, or missing `scripts/` in installed extension, or path with spaces on old builds | `py -3 -m pip show mcp` and `python -m pip show mcp` must both be `≥1.28.1` — run `py -3 -m pip install -r requirements.txt --upgrade` for each. Re-run `python scripts/configure_claude_desktop.py --confirm` (now correctly copies launchers) and **fully restart** Desktop. If still failing, set the extension's **Python interpreter** field to `C:\Program Files\Python311\python.exe` (or `C:\Program Files\Python312\python.exe`). |
-| `No Python 3.9-3.13 interpreter found` | `python` not on PATH or only 3.14 available | Install Python 3.11/3.12 from python.org and/or set `QECTOR_PYTHON=C:\Program Files\Python311\python.exe` (environment variable or extension's interpreter field). |
-| `This extension may not work until all requirements are met` | Desktop version <0.10.0 or Python missing | Update Desktop (≥0.10.0, current 1.34+ is fine) and ensure `mcp`/`qector` installed for the Python Desktop actually uses (`py -3` on Windows). |
-| `qector-decoder-v3 not found` | `pip` installed to wrong Python | Run `python -m pip install -r requirements.txt` **and** `py -3 -m pip install -r requirements.txt` — check both with `* -m pip show qector-decoder-v3`. |
+| Server | Entry point | Tools | Default |
+|:-------|:------------|------:|:--------|
+| `qector-secure` | `mcp/mcp_server_secure.py --profile safe` | 12 | ✅ Claude Code & Desktop |
+| `qector-secure --profile research` | same | 41 | opt-in |
+| `qector-library` | `mcp/mcp_server_library.py` | 8 | legacy |
+| `qector-research` | `mcp/mcp_server_qector_bench.py` | 29 | opt-in |
+| `qector-admin` | `mcp/mcp_server_admin.py` | 3 | opt-in, `QECTOR_ADMIN_ENABLED=1` |
 
-## The QECTOR surface
+Control-plane tools of the secure server: `airgap_status`,
+`integrity_check`, `schema_catalog`, `audit_log_status`. Full contract in
+[MCP_API.md](MCP_API.md); every schema in [`schemas/`](schemas/).
 
-| MCP server | Purpose | Tools | Default |
-|:-----------|:--------|:------|:--------|
-| `qector-library` | Frozen stable decoding surface, every result verified | **8** | ✅ enabled |
-| `qector-research` | Provisional research and evidence tooling | **29** | explicit opt in |
-| `qector-admin` | Privileged local operations with double confirmation | **3** | explicit opt in |
-| `qector-desktop-mcp` | Claude Desktop safe profile adapter | **8** | ✅ on Desktop |
+## Verification gates
 
-Alongside the servers: **11 slash commands** for setup, facts, theorems,
-reproduction, threshold sweeps, Wilson intervals, detector error models,
-code inspection, benchmarking, sinter templates, and validation;
-**5 specialized agents** (researcher, developer, validator, sysadmin,
-hardware engineer); and **28 skills** spanning math foundations,
-architecture, BP OSD, two stage CSS, space time codes, decoders deep
-dive, DEM pipelines, LER methodology, pymatching compatibility, batch
-decoding, reproducibility, testing strategy, deployment, release
-engineering, licensing, education, and operations.
+```bash
+python scripts/release_validate.py                 # manifests, pins, disclosures
+python scripts/validate_source.py                  # tree shape
+python scripts/export_schemas.py --check           # schemas/ in sync with the servers
+python scripts/generate_integrity_manifest.py --check
+QECTOR_SILENT=1 python -m unittest discover -s tests -v   # unit, contract and live stdio conformance tests
+python mcp/tests/test_mcp_stdio.py                 # 5 servers over real stdio
+ruff check .
+python scripts/build_release.py --all --signing-key <pem> && python scripts/validate_plugin_bundle.py
+python scripts/sign_release.py --verify dist --pubkey <published key>     # see SECURITY.md
+```
 
-## Artifacts and integrity
-
-The builder is deterministic: fixed timestamps make every rebuild bit
-identical, so the hashes below are stable forever.
-
-| Artifact | SHA-256 |
-|:---------|:--------|
-| `dist/qector-claude-plugin-1.0.6.zip` | `46ae976105d9813ef615985f30fe23cd76cf2ca11d63ee5de86758e4402903c5` |
-| `dist/qector-claude-plugin-source-1.0.6.zip` | `4370c322b9e2fa083f841ee7a15e1468b6f991702db56d4779bd8ddb530def11` |
-| `dist/qector-claude-desktop-1.0.6.mcpb` | `fbf9bb9a1254d4867093279a07b715041862f8c9ce71aff1201409b6cccc616c` |
-
-Per artifact sidecars, a combined `SHA256SUMS`, an SPDX 2.3 SBOM, and
-provenance records binding each file to its release commit and runtime
-pins live under `dist/`. The MCP Registry descriptor in `server.json`
-matches the Desktop bundle byte for byte.
+CI runs the suite on Python 3.10–3.13 against both `mcp` 1.x (patched)
+and `mcp` 2.x.
 
 ## System requirements
 
 | Component | Requirement |
 |:----------|:------------|
-| Python | 3.9 through 3.13, enforced by the shipped launchers |
-| Platforms | Windows, macOS, Linux |
-| Backend engine | `qector-decoder-v3==1.0.0`, native Rust / PyO3 wheels |
-| MCP runtime | `mcp>=1.28.1,<2` |
-| Scientific stack | `numpy>=1.26,<2.3`, `cryptography>=48.0.1,<50` |
-| Network | none by default; one explicit PyPI freshness check exists |
-| GPU | optional at most; no portable performance claims are published |
+| Python | 3.10 through 3.13 (the MCP SDK needs 3.10+; the decoder wheels stop at 3.13) |
+| Platforms | Linux, macOS; Windows via the Desktop extension, WSL, or Git for Windows (see Installation) |
+| Backend | `qector-decoder-v3==1.0.1` (Rust / PyO3 wheel) |
+| MCP SDK | `mcp>=1.30,<3` |
+| Validation | `jsonschema>=4.18` |
+| Network | none required; the plugin's only network-capable option (PyPI check) is refused in air-gapped mode, and the wheel's native TLS client is disclosed, never called (see Security) |
 
 ## Security and privacy
 
-The default installation exposes exactly eight stable tools over local
-stdio. Research and administrative servers require deliberate enabling,
-privileged operations demand per call confirmation, and every process
-enforces its own call budgets so a runaway agent hits a ceiling instead
-of your machine. Session hooks persist nothing beyond a tool name and a
-timestamp. Full trust boundaries, risk classifications, scanner guidance,
-and advisory posture are documented in [SECURITY.md](SECURITY.md), with
-the network stance in [PRIVACY.md](PRIVACY.md).
+[SECURITY.md](SECURITY.md) (trust boundaries, tool classification, startup
+gates, the wheel's native network surface), [THREAT_MODEL.md](THREAT_MODEL.md)
+(assets, actors, controls, residual risks), [PRIVACY.md](PRIVACY.md),
+[AIRGAP.md](AIRGAP.md). Vulnerability reports: <admin@qector.store>.
 
 ## Documentation
 
 | Document | Path |
 |:---------|:-----|
+| Ten-minute reviewer checklist | [REVIEWER_GUIDE.md](REVIEWER_GUIDE.md) |
+| MCP API contract 2.0 | [MCP_API.md](MCP_API.md) |
+| Air-gapped deployment | [AIRGAP.md](AIRGAP.md) |
+| Threat model | [THREAT_MODEL.md](THREAT_MODEL.md) |
+| Anthropic collaboration proposal | [ANTHROPIC_COLLABORATION_PROPOSAL.md](ANTHROPIC_COLLABORATION_PROPOSAL.md) |
+| Release notes | [RELEASE_NOTES_v2.0.1.md](RELEASE_NOTES_v2.0.1.md) · [RELEASE_NOTES_v2.0.0.md](RELEASE_NOTES_v2.0.0.md) · [CHANGELOG.md](CHANGELOG.md) |
+| Upstream wheel defect report (rotated surface distance) | [docs/UPSTREAM_ISSUE_rotated_surface_distance.md](docs/UPSTREAM_ISSUE_rotated_surface_distance.md) · `scripts/probe_wheel_distance.py` |
 | User manual | [docs/User_Manual.md](docs/User_Manual.md) |
-| MCP API reference | [MCP_API.md](MCP_API.md) |
-| v1.0.6 release announcement | [RELEASE_BODY_v1.0.6.md](RELEASE_BODY_v1.0.6.md) |
-| Release notes | [RELEASE_NOTES_v1.0.6.md](RELEASE_NOTES_v1.0.6.md) |
-| Changelog | [CHANGELOG.md](CHANGELOG.md) |
 | Desktop setup | [CLAUDE_DESKTOP.md](CLAUDE_DESKTOP.md) |
 | Validation gates | [RELEASE_VALIDATION.md](RELEASE_VALIDATION.md) |
-
-## Development
-
-```bash
-python -m unittest discover -s tests -v     # mathematical + protocol suite
-python scripts/validate_source.py           # source structure gate
-python scripts/validate_plugin_bundle.py    # built bundle gate
-python scripts/release_validate.py          # metadata cross check, zero deps
-python scripts/build_release.py --all       # deterministic artifacts
-```
-
-CI enforces the same gates on every push to main. Tagging with `v*`
-additionally builds all artifacts, publishes the GitHub release, and
-updates the MCP Registry entry automatically.
 
 ## License
 
 Proprietary. Copyright © 2026 Guillaume Lessard / iD01t Productions. See
 [LICENSE.md](LICENSE.md). The `qector-decoder-v3` backend is free for
-personal, academic, educational, and non commercial research; commercial
-use requires a license from
-[qector.store/pricing](https://qector.store/pricing).
+personal, academic, educational and non-commercial research; commercial
+use requires a licence from [qector.store/pricing](https://qector.store/pricing).
 
-## Contact
-
-Website <https://www.qector.store> · Licensing <admin@qector.store> ·
-Support <admin@qector.store> · Security disclosure
-<admin@qector.store> (private)
-
-<p align="center">
-<strong>QECTOR Claude Plugin v1.0.6</strong><br/>
-Built on <code>qector-decoder-v3</code> v1.0.0 · Rust / PyO3 core<br/>
-Every correction verified against <code>H c = s (mod 2)</code>
-</p>
-
+Website <https://www.qector.store> · Licensing, support and security
+disclosure <admin@qector.store>

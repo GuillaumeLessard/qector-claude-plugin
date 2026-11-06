@@ -183,14 +183,23 @@ def validate_manifests() -> None:
             mc = json.load(handle)
         servers = mc.get("mcpServers", {})
         check(
-            set(servers) == {"qector-library"},
-            "mcp.json defaults to qector-library only",
+            set(servers) == {"qector-secure"},
+            "mcp.json defaults to qector-secure only",
         )
-        for server_name in ("qector-library",):
-            server_env = servers.get(server_name, {}).get("env", {})
+        for server_name in ("qector-secure",):
+            server_cfg = servers.get(server_name, {})
+            server_env = server_cfg.get("env", {})
             check(
                 server_env.get("PYTHONUNBUFFERED") == "1",
                 f"mcp.json enables unbuffered stdio for {server_name}",
+            )
+            check(
+                server_env.get("QECTOR_AIR_GAPPED") == "1",
+                f"mcp.json runs {server_name} air-gapped",
+            )
+            check(
+                server_cfg.get("args", [])[-2:] == ["--profile", "safe"],
+                f"mcp.json selects the safe profile for {server_name}",
             )
 
     # Cross-manifest version consistency: plugin.json, marketplace.json, and
@@ -215,29 +224,41 @@ def validate_desktop_source() -> None:
     desktop_manifest_path = os.path.join(
         ROOT, ".claude-desktop-extension", "manifest.json"
     )
-    desktop_server_path = os.path.join(ROOT, "mcp", "mcp_server_desktop.py")
+    desktop_server_path = os.path.join(ROOT, "mcp", "mcp_server_secure.py")
     check(os.path.isfile(desktop_manifest_path), "Desktop extension manifest exists")
-    check(os.path.isfile(desktop_server_path), "combined Desktop MCP server exists")
+    check(os.path.isfile(desktop_server_path), "secure MCP server exists")
+    check(
+        os.path.isfile(os.path.join(ROOT, "mcp", "mcp_server_desktop.py")),
+        "Desktop compatibility shim exists",
+    )
     if os.path.isfile(desktop_manifest_path):
         with open(desktop_manifest_path, "r", encoding="utf-8") as handle:
             desktop_manifest = json.load(handle)
         desktop_server = desktop_manifest.get("server", {})
         check(
-            desktop_server.get("entry_point") == "mcp/mcp_server_desktop.py",
-            "Desktop extension uses the profiled MCP entry point",
+            desktop_server.get("entry_point") == "mcp/mcp_server_secure.py",
+            "Desktop extension uses the secure MCP entry point",
         )
         desktop_args = desktop_server.get("mcp_config", {}).get("args", [])
         check(
-            desktop_args == [
-                "${__dirname}/mcp/mcp_server_desktop.py",
-                "--profile",
-                "safe",
-            ],
-            "Desktop extension config selects the safe profile",
+            desktop_args[-3:] == ["${__dirname}/mcp/mcp_server_secure.py", "--profile", "safe"]
+            and desktop_server.get("mcp_config", {}).get("command") == "sh",
+            "Desktop extension config runs sh + launcher on the secure server, safe profile",
+        )
+        desktop_env = desktop_server.get("mcp_config", {}).get("env", {})
+        check(desktop_env.get("QECTOR_AIR_GAPPED") == "1", "Desktop extension is air-gapped")
+        check(
+            desktop_env.get("QECTOR_INTEGRITY_STRICT") == "1",
+            "Desktop extension enforces strict integrity",
         )
         check(
-            len(desktop_manifest.get("tools", [])) == 8,
-            "Desktop extension advertises 8 stable tools",
+            len(desktop_manifest.get("tools", [])) == 12,
+            "Desktop extension advertises 12 tools (8 stable + 4 control)",
+        )
+        declared = {t.get("name") for t in desktop_manifest.get("tools", [])}
+        check(
+            {"airgap_status", "integrity_check", "schema_catalog", "audit_log_status"} <= declared,
+            "Desktop extension declares the four control-plane tools",
         )
         # License metadata must be proprietary to match LICENSE.md.
         check(
@@ -256,8 +277,8 @@ def validate_mcp_config_templates() -> None:
                 cfg_data = json.load(handle)
             cfg_servers = cfg_data.get("mcpServers", {})
             check(
-                set(cfg_servers) == {"qector-library"},
-                f"{cfg_rel} defaults to qector-library only",
+                set(cfg_servers) == {"qector-secure"},
+                f"{cfg_rel} defaults to qector-secure only",
             )
 
 

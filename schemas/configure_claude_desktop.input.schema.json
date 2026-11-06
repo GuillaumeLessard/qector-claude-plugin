@@ -1,0 +1,24 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/configure_claude_desktop.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "confirm": {
+      "default": false,
+      "type": "boolean"
+    },
+    "python_path": {
+      "default": null,
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "remove": {
+      "default": false,
+      "type": "boolean"
+    }
+  },
+  "title": "configure_claude_desktop",
+  "type": "object"
+}

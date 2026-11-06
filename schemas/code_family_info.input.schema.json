@@ -1,0 +1,32 @@
+{
+  "$id": "https://qector.store/schemas/mcp/2.0.0/code_family_info.input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "family": {
+      "default": "rotated_surface",
+      "enum": [
+        "color_code",
+        "heavy_hex",
+        "repetition",
+        "ring",
+        "rotated_surface",
+        "rotated_surface_corrected",
+        "toric",
+        "unrotated_surface"
+      ],
+      "type": "string"
+    },
+    "size": {
+      "default": 5,
+      "minimum": 2,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "family",
+    "size"
+  ],
+  "title": "code_family_info",
+  "type": "object"
+}

@@ -23,39 +23,43 @@ non-graphlike (and therefore require BP-OSD).
 | ------------------ | ----------------------------- | ------------ | ------------------------------- |
 | `repetition`       | `codes.repetition_code(d)`    | 1D open      | boundary edge `{0}`             |
 | `ring`             | `codes.ring_code(n)`          | 1D periodic  | the full cycle                  |
-| `rotated_surface`  | `codes.rotated_surface_code(d)` | 2D graphlike | top-row horizontal string     |
-| `unrotated_surface`| `codes.unrotated_surface_code(d)` | 2D graphlike| k = 0; no logicals_matrix       |
+| `rotated_surface`  | `codes.rotated_surface_code(d)` | 2D graphlike | top-row horizontal string; n = d², k = 1, distance d (1.0.1; 1.0.0 had distance 2) |
+| `rotated_surface_corrected` | plugin `qector_codes.rotated_surface_corrected(d)` | 2D graphlike | plugin's own construction from 2.0.0, verified at construction; same parameters as `rotated_surface` since 1.0.1 |
+| `unrotated_surface`| `codes.unrotated_surface_code(d)` | 2D graphlike| left boundary column; n = d² + (d−1)², k = 1 (1.0.1; 1.0.0 had k = 0) |
 | `toric`            | `codes.toric_code(L)`         | 2D torus     | two logicals (Lx, Lz)           |
-| `heavy_hex`        | `codes.heavy_hex_code(d)`     | 1.5D graphlike| top-row string                 |
-| `color_code`       | `codes.color_code(d)`         | triangular   | two logicals (k = 2)            |
+| `heavy_hex`        | `codes.heavy_hex_code(d)`     | 1.5D graphlike| top-row string; odd d, distance d (Z sector; `sector="x"` gives the Bacon–Shor sector) |
+| `color_code`       | `codes.color_code(d)`         | triangular 6.6.6 | one side of the triangle; n = (3d²+1)/4, k = 1, distance d; **not graphlike**: the matching decoders refuse it |
 
-All matching-graph families return `is_matching_graph() == True` and
-`max_qubit_degree() <= 2`. They are single-sector; for LER studies
-use the family whose `logicals_matrix()` is not `None`.
+The matching-graph families (`rotated_surface`, `unrotated_surface`,
+`toric`, `heavy_hex`) return `is_matching_graph() == True` and
+`max_qubit_degree() <= 2`; `color_code` is graphlike only at d=3 and
+non-graphlike (degree 5-6) at d >= 5, which routes it to BP-OSD. They
+are single-sector; for LER studies use a family whose
+`logicals_matrix()` is not `None`.
 
 ## `logicals_matrix()` returns - what to expect (verified)
 
-- `rotated_surface(d)`: `n_logicals == 1`, returns a 1 x n_qubits
+- `rotated_surface(d)`: `num_logical_qubits == 1`, returns a 1 x n_qubits
   `uint8` matrix.
-- `toric(L)`: `n_logicals == 2`, returns a 2 x n_qubits matrix.
-- `color_code(d)`: `n_logicals == 2`, returns a 2 x n_qubits matrix.
-- `unrotated_surface(d)`: `n_logicals == 0`, returns `None`.
-  Theorem 2 logical-coset scoring is **unavailable**; the code can
-  still be decoded (Theorem 1 holds), but LER cannot be defined
-  without an explicit observable basis.
+- `toric(L)`: `num_logical_qubits == 2`, returns a 2 x n_qubits matrix.
+- `color_code(d)`: `num_logical_qubits == 1` since wheel 1.0.1 (1.0.0
+  returned `None`); not graphlike, so use BP-OSD-class decoders.
+- `unrotated_surface(d)`: `num_logical_qubits == 1` since wheel 1.0.1,
+  a 1 x n_qubits matrix (1.0.0 returned `None` and LER was undefined).
 - `repetition(d)` and `ring(n)`: each has one logical; returns
-  `n_logicals == 1`.
+  `num_logical_qubits == 1`.
 
-The library `qector-research.code_logicals_inspect` returns the same
+The research-profile tool `code_logicals_inspect` returns the same
 information plus the explicit scoring note for `None`-matrix
 families.
 
 ## Constructing a `Code` from a parity-check matrix
 
 The library `codes.from_parity_check_matrix(H, name=..., distance=...)`
-accepts a dense `numpy.ndarray` or a `scipy.sparse` matrix. Rows
+accepts a dense 0/1 `numpy.ndarray` (sparse input is not verified in
+this package: `scipy` is not a dependency). Rows
 are checks, columns are qubits. The MCP tool
-`qector-library.build_code_from_matrix` validates an `(n_checks,
+`qector-secure.build_code_from_matrix` validates an `(n_checks,
 n_qubits)` 0/1 matrix and reports the rank, shape, and whether the
 code is graphlike.
 
@@ -90,7 +94,7 @@ checks, n = generate_repetition_code_checks(5)  # (4 checks, 5 qubits)
 decoder = BlossomDecoder(checks, n_qubits=n)
 ```
 
-Never pass the tuple as `c2q` — the decoder constructor expects a
+Never pass the tuple as `c2q` - the decoder constructor expects a
 list of lists, and a tuple would be a silent shape error.
 
 ## Distinguishing graphlike from non-graphlike
@@ -101,7 +105,7 @@ list of lists, and a tuple would be a silent shape error.
   degree.
 - Bench server: `qector-research.code_family_info` reports both
   plus a routing hint (`matching decoders` vs `BP-OSD`).
-- DEM path: `dem.is_graphlike` on the parsed model; non-graphlike
+- DEM path: the parsed `DemModel.is_graphlike` attribute; non-graphlike
   models must route to BP-OSD.
 
 ## Common pitfalls
@@ -114,10 +118,11 @@ list of lists, and a tuple would be a silent shape error.
 - **Forgetting `random_error(p, rng=...)`** -> `seed=` is not a
   keyword of `random_error`; pass `rng=np.random.default_rng(seed)`
   (manual M3).
-- **Stable symbols only in delivered code** -> the seven stable
-  symbols in manual 16.1 are the only ones safe to use in shipped
-  libraries. The seven provisional classes (manual 16.2) must be
-  labelled Provisional.
+- **Stable symbols only in delivered code** -> the stable symbols
+  of manual 16.1 (the five stable decoder classes plus the frozen
+  helpers listed in `skills/qector-core`) are the only ones safe to
+  use in shipped libraries. The Provisional classes (manual 16.2)
+  must be labelled Provisional.
 
 ## Worked example (manual 2.7, 2.8)
 
@@ -126,5 +131,5 @@ list of lists, and a tuple would be a silent shape error.
   hand-build using `codes.repetition_code(3)` as a smaller starting
   point. The X and Z sectors coincide up to relabelling.
 - **Rotated surface d=3**: `codes.rotated_surface_code(3)` returns
-  a 9-qubit, 4-check matching graph with `n_logicals == 1`. The
+  a 9-qubit, 4-check matching graph with `num_logical_qubits == 1`. The
   logical observable is the top row.

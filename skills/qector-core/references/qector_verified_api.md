@@ -66,11 +66,31 @@ method, not a matrix. `seed=` is NOT valid; use
 `rng=np.random.default_rng(seed)`.
 
 **Matching-graph codes:** `rotated_surface_code(d)`, `unrotated_surface_code(d)`,
-`toric_code(d)`, `heavy_hex_code(d)`, and `color_code(d)` return single-sector
-matching-graph codes (`is_matching_graph()` is True) whose H is not
-self-orthogonal: H H^T != 0 (e.g. `rotated_surface_code(5)` has a 12 x 25 H).
+`toric_code(d)` and `heavy_hex_code(d)` return single-sector matching-graph
+codes (`is_matching_graph()` is True) whose H is not self-orthogonal:
+H H^T != 0 (e.g. `rotated_surface_code(5)` has a 12 x 25 H).
+`color_code(d)` is graphlike only at d=3 (one check, degenerate); at d=5 and
+d=7 `is_matching_graph()` is False (max qubit degree 5 and 6), so the matching
+decoders refuse it and `code_family_info` routes it to BP-OSD.
 They use the arbitrary-matrix/logical-coset branch of Theorem 2, not the
 self-orthogonal branch.
+
+**Distance labels are checked by the plugin, never assumed:**
+`list_code_families`, `decode_single`, `threshold_sweep` and
+`code_distance_check` report `effective_distance` (`mcp_server_library.effective_distance`:
+exact for graphlike codes via the shortest odd-parity cycle of the matching
+graph, bounded enumeration otherwise) and mark a family `weak` when it falls
+short of its label. With the pinned `qector-decoder-v3==1.0.1` every built-in
+family verifies at its label: `rotated_surface_code(d)` (n = d², k = 1),
+`unrotated_surface_code(d)` (n = d² + (d−1)², k = 1), `heavy_hex_code(d)`
+(odd d), `toric_code(L)`, `repetition_code(d)`, `ring_code(n)` and
+`color_code(d)` (6.6.6, n = (3d²+1)/4, k = 1; not graphlike, so the matching
+decoders refuse it). The wheel also exposes `codes.code_distance(code)`.
+In 1.0.0 the wheel's rotated surface had distance 2 at every d, unrotated and
+colour encoded no logical qubit and heavy-hex had distance 2d−1; the plugin
+detected all of these live. `rotated_surface_corrected` (`mcp/qector_codes.py`,
+`source: "plugin"`), the plugin's own construction from 2.0.0, is kept for
+request compatibility and as an independent cross-check.
 
 **Logicals are per-code - verify, never assume:** `num_logical_qubits` and
 `logicals_matrix()` differ by family. `rotated_surface_code(d)` reports
@@ -89,8 +109,12 @@ using them; no Stim/DEM package is required for the library MCP server.
 - `pymatching_compat.Matching` drop-in (from_check_matrix,
   from_detector_error_model, add_edge, add_boundary_edge, decode,
   decode_batch, decode_to_edges_array).
-- `qector_sinter_decoders()` -> qector_blossom, qector_belief,
-  qector_unionfind, qector_bposd, qector_unionfind_unweighted.
+- `qector_decoder_v3.sinter_compat.qector_sinter_decoders()` (not a top-level
+  export) returns exactly four shims — qector_blossom, qector_belief,
+  qector_unionfind, qector_bposd (the manual's `qector_unionfind_unweighted`
+  is not in the 1.0.0 source) — and raises `ImportError: sinter is not
+  installed` unless the optional `sinter` package is present;
+  `sinter_decoder_list` reports exactly what the running build exposes.
 - License: `set_license_key(key)` (raises on invalid), `get_license_info()`;
   metered telemetry `record_shots(n)` / `get_accumulated_shots()`; structured
   results `DecodeResult`. GPU: `CUDABatchDecoder.is_available()` is hardware;
@@ -152,6 +176,6 @@ contract.
 
 ## MCP SDK note
 
-The production plugin pins `mcp>=1.28.1,<2` and uses the low-level
+The production plugin pins `mcp>=1.30,<3` and uses the low-level
 `mcp.server.Server` adapter, which gives the server explicit tool schemas and
 error envelopes. Other SDK versions are unsupported until separately tested.

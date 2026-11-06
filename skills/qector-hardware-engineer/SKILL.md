@@ -26,8 +26,8 @@ The bundled library MCP server accepts registered code
 families, binary syndromes, and binary parity-check matrices
 through its **eight documented tools**. It does **not** accept
 arbitrary `.stim` files or DEM objects. Use
-`qector-library.list_code_families` and
-`qector-library.build_code_from_matrix` for the supported
+`qector-secure.list_code_families` and
+`qector-secure.build_code_from_matrix` for the supported
 app-free path.
 
 The companion **bench server** adds:
@@ -75,8 +75,10 @@ structure; do not route by an invented tool name.
   `BPOSDDecoder`.
 - **Surface / topological**: `rotated_surface` (graphlike,
   one logical) or `toric` (two logicals).
-- **Color codes**: `color_code` (k=2 on the planar
-  triangular 6.6.6 C2).
+- **Color codes**: `color_code` is the triangular 6.6.6 code since
+  wheel 1.0.1 (k = 1, distance d, not graphlike; 1.0.0 exposed no
+  logical observables). Decode it with BP-OSD-class decoders; the
+  plugin's matching decoders refuse it.
 - **Verify with the library `list_code_families`** or the
   bench `code_family_info`. Any optional Workbench family
   analysis must be discovered through the target's
@@ -94,7 +96,7 @@ structure; do not route by an invented tool name.
 - Two-stage CSS DEM path (manual 12.1): parse the X DEM
   and Z DEM, run X decode, compute
   `s'_Z = s_Z + H_{Z,X} c_X`, run Z decode, XOR the
-  corrections. Theorem 13 guarantees joint faithfulness.
+  corrections. Theorem 15 guarantees joint faithfulness.
 
 ## Hardware Honesty
 

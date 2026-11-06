@@ -1,25 +1,15 @@
-# Production runtime for the library-first Claude MCP server.
-# Supports CPython 3.9-3.13. numpy is declared as a version RANGE, not an
-# exact pin, matching qector-decoder-v3==1.0.0's own published constraint
-# (numpy>=1.24.0,<2.3, verified against the installed wheel's metadata).
-# numpy itself has no single release spanning 3.9-3.13 (1.26.x is the last
-# to support 3.9; numpy 2.1+ drops 3.9 and requires 3.10+), so a range is
-# required for pip to resolve a working wheel per interpreter, and the
-# range must stay inside qector-decoder-v3's own bound or pip's resolver
-# will fail rather than silently pick something incompatible.
+# QECTOR Claude Plugin 2.0.1 - production runtime.
+# Supported interpreters: CPython 3.10-3.13 (mcp requires >=3.10; the
+# plugin is tested on 3.10-3.13, qector-decoder-v3 1.0.1 ships 3.9-3.14). Exact, tested versions of
+# the whole transitive closure live in requirements.lock, which is what the
+# offline wheelhouse and the air-gapped installers consume.
 numpy>=1.26,<2.3
-qector-decoder-v3==1.0.0
-# mcp>=1.28.1 fixes three high-severity GitHub Security Advisories against
-# the v1.x line (WebSocket transport Host/Origin validation, HTTP transport
-# session-request auth bypass, experimental task-handler cross-client
-# cancellation): GHSA-hvrp-rf83-w775 / CVE-2026-52870, GHSA-jpw9-pfvf-9f58 /
-# CVE-2026-52869, GHSA-vj7q-gjh5-988w / CVE-2026-59950. mcp 2.0.0 (stable,
-# released 2026-07-28) is a breaking major rework -- FastMCP renamed to
-# MCPServer, McpError renamed to MCPError, mcp.types split into a separate
-# package, and the WebSocket transport removed outright -- and this
-# codebase imports mcp.types directly (see mcp/mcp_server_library.py), so
-# the <2 upper bound is required to stay on the patched v1.x line rather
-# than silently resolving to the incompatible v2 release.
-mcp>=1.28.1,<2
-# Keep the installed pyOpenSSL ecosystem compatible with the wheel requirement.
-cryptography>=48.0.1,<50
+qector-decoder-v3==1.0.1
+# MCP Python SDK: the patched 1.x line (>=1.30 carries the fixes for
+# CVE-2026-52869, CVE-2026-52870 and CVE-2026-59950) or the 2.x line; the
+# servers run unmodified on both through mcp/qector_mcp_compat.py.
+mcp>=1.30,<3
+# Draft 2020-12 validation of every request and response (also an mcp dependency).
+jsonschema>=4.18,<5
+# Required by the decoder wheel's licence-token verification.
+cryptography>=48.0.1

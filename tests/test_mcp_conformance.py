@@ -26,13 +26,14 @@ import json
 import os
 import subprocess
 import sys
-import time
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MCP_DIR = ROOT / "mcp"
 SERVER = MCP_DIR / "mcp_server_library.py"
+SECURE_SERVER = MCP_DIR / "mcp_server_secure.py"
+CONTROL_TOOLS = {"airgap_status", "integrity_check", "schema_catalog", "audit_log_status"}
 
 EXPECTED_TOOLS = {
     "list_code_families",
@@ -65,28 +66,40 @@ def _send(proc, lines: list[str]) -> None:
 
 
 def _readline_with_timeout(proc, timeout: float) -> bytes:
-    if sys.platform == "win32":
+    """Read one line from the server's stdout, giving up after *timeout* seconds.
+
+    A reader thread makes this portable: ``select`` does not work on pipes
+    on Windows and a blocking ``readline`` would hang the suite if the
+    server stalled. On expiry the server is killed so the pipe closes and
+    the thread ends.
+    """
+    import threading
+
+    result: list[bytes] = []
+
+    def _read() -> None:
         try:
-            import msvcrt
-        except ImportError:
-            msvcrt = None
-        if msvcrt is not None:
-            start = time.monotonic()
-            while time.monotonic() - start < timeout:
-                line = proc.stdout.readline()
-                if line:
-                    return line
-                time.sleep(0.05)
-            return b""
-    return proc.stdout.readline()
+            result.append(proc.stdout.readline())
+        except (OSError, ValueError):
+            result.append(b"")
+
+    worker = threading.Thread(target=_read, daemon=True)
+    worker.start()
+    worker.join(timeout)
+    if worker.is_alive():
+        proc.kill()
+        worker.join(2.0)
+        return b""
+    return result[0] if result else b""
 
 
-def _spawn_server() -> subprocess.Popen:
+def _spawn_server(server: Path = SERVER, *extra_args: str) -> subprocess.Popen:
     env = os.environ.copy()
     env["QECTOR_SILENT"] = "1"
     env["PYTHONUNBUFFERED"] = "1"
+    env.pop("QECTOR_AUDIT_DIR", None)
     return subprocess.Popen(
-        [sys.executable, str(SERVER)],
+        [sys.executable, str(server), *extra_args],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
@@ -100,7 +113,7 @@ def _initialize(proc) -> dict:
         "id": 1,
         "method": "initialize",
         "params": {
-            "protocolVersion": "2025-03-26",
+            "protocolVersion": "2025-06-18",
             "capabilities": {},
             "clientInfo": {"name": "qector-conformance", "version": "1.0"},
         },
@@ -192,6 +205,8 @@ class TestMCPConformance(unittest.TestCase):
                 cls.proc.wait(timeout=2)
             except Exception:
                 pass
+        if cls.proc.stdout:
+            cls.proc.stdout.close()
 
     def test_initialize_reports_server_info(self) -> None:
         info = self.handshake["init"]["result"]["serverInfo"]
@@ -269,6 +284,79 @@ class TestMCPConformance(unittest.TestCase):
         envelope = _envelope(result)
         self.assertEqual(envelope["status"], "error")
         self.assertEqual(envelope["error"]["code"], "INVALID_INPUT")
+
+
+@unittest.skipUnless(
+    _runtime_available(), "qector-decoder-v3 + mcp SDK not installed"
+)
+class TestSecureServerConformance(unittest.TestCase):
+    """Same matrix against qector-secure (safe profile) over real stdio."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.proc = _spawn_server(SECURE_SERVER, "--profile", "safe", "--no-strict-integrity")
+        cls.handshake = _initialize(cls.proc)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        try:
+            if cls.proc.stdin:
+                cls.proc.stdin.close()
+        except Exception:
+            pass
+        try:
+            cls.proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            cls.proc.kill()
+            try:
+                cls.proc.wait(timeout=2)
+            except Exception:
+                pass
+        if cls.proc.stdout:
+            cls.proc.stdout.close()
+
+    def test_identity_and_inventory(self) -> None:
+        info = self.handshake["init"]["result"]["serverInfo"]
+        self.assertEqual(info["name"], "qector-secure-mcp")
+        names = {tool["name"] for tool in self.handshake["tools"]["result"]["tools"]}
+        self.assertEqual(names, EXPECTED_TOOLS | CONTROL_TOOLS)
+        listed = [tool["name"] for tool in self.handshake["tools"]["result"]["tools"]]
+        self.assertEqual(listed, sorted(listed))
+
+    def test_every_tool_has_2020_12_schemas(self) -> None:
+        for tool in self.handshake["tools"]["result"]["tools"]:
+            with self.subTest(tool=tool["name"]):
+                self.assertEqual(tool["inputSchema"]["$schema"], "https://json-schema.org/draft/2020-12/schema")
+                self.assertEqual(tool["outputSchema"]["$schema"], "https://json-schema.org/draft/2020-12/schema")
+                self.assertEqual(tool["outputSchema"]["properties"]["contract_version"]["const"], "2.0")
+                self.assertIn("readOnlyHint", tool["annotations"])
+
+    def test_verified_decode_over_stdio(self) -> None:
+        envelope = _envelope(_call_tool(self.proc, "decode_syndrome", {"syndrome": [1, 0, 0, 1]}, 201))
+        self.assertEqual(envelope["status"], "verified")
+        self.assertEqual(envelope["contract_version"], "2.0")
+        self.assertEqual(envelope["tool"], "decode_syndrome")
+
+    def test_schema_error_over_stdio_is_envelope_not_sdk_text(self) -> None:
+        result = _call_tool(self.proc, "decode_syndrome", {"syndrome": [0, 2, 0, 0]}, 202)
+        self.assertTrue(result["result"]["isError"])
+        envelope = result["result"]["structuredContent"]
+        self.assertEqual(envelope["error"]["code"], "INVALID_INPUT")
+        self.assertEqual(envelope["error"]["path"], "$.syndrome[1]")
+
+    def test_unknown_tool_over_stdio(self) -> None:
+        result = _call_tool(self.proc, "no_such_tool", {}, 203)
+        self.assertTrue(result["result"]["isError"])
+        self.assertEqual(result["result"]["structuredContent"]["error"]["code"], "UNKNOWN_TOOL")
+
+    def test_airgap_status_over_stdio(self) -> None:
+        envelope = _envelope(_call_tool(self.proc, "airgap_status", {}, 204))
+        self.assertTrue(envelope["result"]["air_gapped"])
+        self.assertTrue(envelope["result"]["guards"]["python_socket"])
+
+    def test_pypi_refused_over_stdio(self) -> None:
+        envelope = _envelope(_call_tool(self.proc, "compat_report", {"check_pypi": True}, 205))
+        self.assertEqual(envelope["result"]["pypi_freshness"]["status"], "disabled")
 
 
 if __name__ == "__main__":

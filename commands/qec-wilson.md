@@ -1,17 +1,19 @@
 ---
-description: Calculate Wilson 95% score confidence intervals and comparative statistical tables for Monte Carlo LER data.
+description: Compute Wilson 95% score intervals for Monte Carlo logical-error-rate data.
+argument-hint: "--errors 10 --trials 1000  (or several error counts for one trial count)"
 ---
 
-Calculate strict Wilson 95% binomial score confidence intervals for quantum error correction Monte Carlo trials.
+Compute Wilson score confidence intervals for quantum error correction Monte Carlo trials (Reference Manual chapter 15.2).
 
-Arguments: `$ARGUMENTS` (e.g. `--errors 10 --trials 1000`, or a matrix of multiple points).
+Arguments: `$ARGUMENTS` (e.g. `--errors 10 --trials 1000`, or several error counts sharing one trial count).
 
-1. **Step 1 - Compute Interval**:
-   - Call MCP tool `wilson_ci(k=errors, n=trials)` on `qector-research` or calculate using the analytical formula:
-     $$\hat{p} = \frac{k + \frac{z^2}{2}}{n + z^2} \pm \frac{z}{n + z^2} \sqrt{\frac{k(n-k)}{n} + \frac{z^2}{4}}$$
-     where $z = 1.959963985$ for 95% coverage (Reference Manual Chapter 15.2).
-   - If multiple data points are provided, call `wilson_table(data=...)`.
+The tools are on the research profile. If they are not listed, apply the formula below yourself and say the number is computed, not tool-verified.
 
-2. **Step 2 - Format Report**:
-   - Present the point estimate $k/n$, Wilson lower bound, Wilson upper bound, and margin of error.
-   - For comparing two decoders or configurations, perform a two-proportion test with explicit assumptions (do not rely on simple interval overlap).
+1. **Compute the interval**
+   - One point: call `wilson_ci(k=errors, n=trials)` (`z` defaults to `1.959963985`; it must be positive and `k <= n`).
+   - Several points with the same `n`: call `wilson_table(n=trials, k_list=[k1, k2, ...])`.
+   - Formula, for reference: with `p = k/n`, centre `(p + z²/2n) / (1 + z²/n)`, half-width `z·sqrt(p(1-p)/n + z²/4n²) / (1 + z²/n)`.
+
+2. **Format the report**
+   - Present the point estimate `k/n`, the Wilson lower and upper bounds and the half-width.
+   - When comparing two decoders or configurations, use a two-proportion test with explicit assumptions; interval overlap alone is not a test.

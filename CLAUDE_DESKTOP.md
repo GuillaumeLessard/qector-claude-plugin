@@ -9,18 +9,18 @@ Install with the Python environment that contains `requirements.txt`, then
 preview changes before writing them:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.lock
 python scripts/configure_claude_desktop.py --check-only
 python scripts/configure_claude_desktop.py --confirm
 ```
 
 The installer records the exact Python executable in Claude Desktop's Developer
-MCP configuration and installs the 8-tool safe Desktop extension. Restart
+MCP configuration and installs the 12-tool secure Desktop extension (`qector-secure`, air-gapped, strict integrity). Restart
 Claude Desktop completely after installation.
 
 ## Optional Profiles
 
-The default is deliberately limited to `qector-library`. Add profiles only
+The default is deliberately limited to `qector-secure`. Add profiles only
 when their scope is needed:
 
 ```bash
@@ -36,14 +36,14 @@ privileged setup, configuration, and Workbench-probe operations. It needs
 
 Copy `mcp/claude_desktop_config.json`, replace `<PYTHON_EXECUTABLE>` with the
 absolute interpreter path and `<PLUGIN_ROOT>` with this repository directory,
-then merge only the `qector-library` entry into `mcpServers`. On Windows,
+then merge only the `qector-secure` entry into `mcpServers`. On Windows,
 always use the absolute `python.exe` path rather than relying on `PATH`.
 
 ## Verification
 
 ```bash
 python scripts/qector_runtime_check.py
-python mcp/tests/test_mcp_stdio.py --server qector-library
+python mcp/tests/test_mcp_stdio.py --server qector-secure
 ```
 
 For mobile or web control of this local workflow, use Claude Code Remote
