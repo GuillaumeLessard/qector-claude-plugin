@@ -154,7 +154,7 @@ jobs:
           $env:PATH = "C:\Windows\System32"
           $out = & cmd /c "scripts\qector-python.cmd -c pass" 2>&1
           if ($LASTEXITCODE -ne 127) { throw "expected exit 127, got $LASTEXITCODE" }
-          $outPs = & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts\qector-python.ps1 -c pass 2>&1
+          $outPs = & "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts\qector-python.ps1 -c pass 2>&1
           if ($LASTEXITCODE -ne 127) { throw "expected exit 127 from .ps1, got $LASTEXITCODE" }
 
       - name: Unit, contract and stdio conformance tests
