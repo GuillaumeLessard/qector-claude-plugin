@@ -24,8 +24,8 @@ section 18.1.
 | Tier        | Max distance | GPU batch | Notes                                 |
 | ----------- | ------------ | --------- | ------------------------------------- |
 | Community   | d <= 7       | No        | Free, source-available wheel          |
-| Pro         | d <= 19      | Yes (1.0.1+) | Ed25519-signed token (trial, Pro, Pro Perpetual, Team, Pilot) |
-| Enterprise  | d <= 63      | Yes       | Ed25519-signed token (Lab, Enterprise) |
+| Pro         | d <= 19      | Yes (1.0.1+) | Ed25519-signed token (Pro, Pro Perpetual, Pilot; legacy Solo, Startup, Team) |
+| Enterprise  | d <= 63      | Yes       | Ed25519-signed token (Lab, Enterprise; legacy Professional) |
 
 The GPU gate is **always enforced by the Rust core**: CUDA/OpenCL batch
 decoders refuse to construct without a paid token (Pro or Enterprise from
@@ -133,5 +133,8 @@ calling any Workbench tool name.
   interactive REPLs that have already loaded the library).
 - Commercial use requires a license:
   `https://qector.store/pricing`.
-- A free 14-day commercial trial (Pro token by e-mail) is available on
-  the pricing page; paid plans start at Pro ($79/month).
+- There is no free trial. Every plan has a 14-day money-back guarantee
+  on the first payment, and the Pilot ($1,500, 60 days) is creditable
+  toward Lab; paid plans start at Pro ($79/month).
+- Licences cover the buying organisation's internal use, are verified
+  offline (air-gapped, no licence server) and have no seat counts.
