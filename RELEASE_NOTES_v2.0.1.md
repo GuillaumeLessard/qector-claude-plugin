@@ -20,12 +20,14 @@ peeling, GPU parity, Sinter entry points and network isolation. 2.0.1 pins it.
 5. Tool names, profiles, envelopes and every schema except `airgap_status`
    (one added boolean) are unchanged.
 
-## Before publishing
+## Install and verify
 
-`qector-decoder-v3==1.0.1` must be on PyPI before a plain `pip install -r
-requirements.lock` works off the bundled Desktop extension. The lock carries the
-Linux x86_64 digests of the release-build wheels; run `scripts/update_lock.py`
-after the decoder's release workflow publishes all 18 wheels to add Windows and
-macOS, then rebuild.
-
-See `CHANGELOG.md` for the full list.
+- `qector-decoder-v3==1.0.1` is on PyPI (18 wheels, CPython 3.9-3.14, Linux,
+  Windows, macOS, each with PyPI provenance). `requirements.lock` pins every
+  dependency by SHA-256 for Python 3.10-3.13 on Linux, Windows and macOS:
+  `pip install --require-hashes -r requirements.lock`.
+- `qector-claude-desktop-2.0.1-bundled-linux-x86_64-py313.mcpb` carries an
+  offline wheelhouse; the decoder wheel in it is byte-identical to PyPI's.
+- Verify the release: `sha256sum -c` against `SHA256SUMS`, then
+  `python scripts/sign_release.py --verify . --pubkey kYwkMApz4zMgQmJsOya1UZuByvnuikzlxQkQiA8NOJg=`
+  (full key and fingerprint `6726953d…99dc` in `release-manifest.json`).
