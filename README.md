@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/GuillaumeLessard/.github/main/profile/logo_banner.png" alt="QECTOR" width="70%" />
+</p>
+
 # QECTOR Claude Plugin 2.0.1
 
 **Air-gapped, schema-validated, audited quantum error correction for
